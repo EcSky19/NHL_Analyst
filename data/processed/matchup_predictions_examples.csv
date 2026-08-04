@@ -1,0 +1,7 @@
+example_id,source,matchup_key,home_team,away_team,location_relative_to_home_team,home_streak_adjustment,away_streak_adjustment,home_win_probability,away_win_probability,confidence_index,confidence_bucket
+baseline_01,weighted_win_predictions,2026-09-19T23:00Z_DAL_STL,STL,DAL,home,0.0,0.0,0.151694,0.848306,0.696612,high
+baseline_02,weighted_win_predictions,2026-09-19T23:00Z_MTL_TOR,TOR,MTL,home,0.0,0.0,0.148943,0.851057,0.702114,high
+baseline_03,weighted_win_predictions,2026-09-19T23:00Z_TOR_MTL,MTL,TOR,home,0.0,0.0,0.872978,0.127022,0.745956,high
+baseline_04,weighted_win_predictions,2026-09-20T00:00Z_CHI_MIN,MIN,CHI,home,0.0,0.0,0.888185,0.111815,0.77637,high
+baseline_05,weighted_win_predictions,2026-09-20T00:00Z_WPG_EDM,EDM,WPG,home,0.0,0.0,0.701615,0.298385,0.40323,medium
+streak_demo_plus2_minus2,interactive_override,2026-09-19T23:00Z_DAL_STL,STL,DAL,home,2.0,-2.0,0.161267,0.838733,0.677465,high

@@ -1,0 +1,33 @@
+cluster_id,canonical_name,canonical_abbreviation,canonical_city,source_count,row_count,sources,all_abbreviations,all_names,all_cities
+1,Anaheim Ducks,ANA,Anaheim,3,3,api.nhle.com/stats/rest|espn|nhl_api,ANA,Anaheim Ducks,Anaheim
+2,Boston Bruins,BOS,Boston,3,3,api.nhle.com/stats/rest|espn|nhl_api,BOS,Boston Bruins,Boston
+3,Buffalo Sabres,BUF,Buffalo,3,3,api.nhle.com/stats/rest|espn|nhl_api,BUF,Buffalo Sabres,Buffalo
+4,Calgary Flames,CGY,Calgary,3,3,api.nhle.com/stats/rest|espn|nhl_api,CGY,Calgary Flames,Calgary
+5,Carolina Hurricanes,CAR,Carolina,3,3,api.nhle.com/stats/rest|espn|nhl_api,CAR,Carolina Hurricanes,Carolina
+6,Chicago Blackhawks,CHI,Chicago,3,3,api.nhle.com/stats/rest|espn|nhl_api,CHI,Chicago Blackhawks,Chicago
+7,Colorado Avalanche,COL,Colorado,3,3,api.nhle.com/stats/rest|espn|nhl_api,COL,Colorado Avalanche,Colorado
+8,Columbus Blue Jackets,CBJ,Columbus,3,3,api.nhle.com/stats/rest|espn|nhl_api,CBJ,Columbus Blue Jackets,Columbus
+9,Dallas Stars,DAL,Dallas,3,3,api.nhle.com/stats/rest|espn|nhl_api,DAL,Dallas Stars,Dallas
+10,Detroit Red Wings,DET,Detroit,3,3,api.nhle.com/stats/rest|espn|nhl_api,DET,Detroit Red Wings,Detroit
+11,Edmonton Oilers,EDM,Edmonton,3,3,api.nhle.com/stats/rest|espn|nhl_api,EDM,Edmonton Oilers,Edmonton
+12,Florida Panthers,FLA,Florida,3,3,api.nhle.com/stats/rest|espn|nhl_api,FLA,Florida Panthers,Florida
+13,Los Angeles Kings,LAK,Los,3,3,api.nhle.com/stats/rest|espn|nhl_api,LA|LAK,Los Angeles Kings,Los|Los Angeles
+14,Minnesota Wild,MIN,Minnesota,3,3,api.nhle.com/stats/rest|espn|nhl_api,MIN,Minnesota Wild,Minnesota
+15,Montréal Canadiens,MTL,Montréal,3,3,api.nhle.com/stats/rest|espn|nhl_api,MTL,Montreal Canadiens|Montréal Canadiens,Montreal|Montréal
+16,Nashville Predators,NSH,Nashville,3,3,api.nhle.com/stats/rest|espn|nhl_api,NSH,Nashville Predators,Nashville
+17,New Jersey Devils,NJD,New,3,3,api.nhle.com/stats/rest|espn|nhl_api,NJ|NJD,New Jersey Devils,New|New Jersey
+18,New York Islanders,NYI,New,3,3,api.nhle.com/stats/rest|espn|nhl_api,NYI,New York Islanders,NY Islanders|New|New York
+19,New York Rangers,NYR,New,3,3,api.nhle.com/stats/rest|espn|nhl_api,NYR,New York Rangers,NY Rangers|New|New York
+20,Ottawa Senators,OTT,Ottawa,3,3,api.nhle.com/stats/rest|espn|nhl_api,OTT,Ottawa Senators,Ottawa
+21,Philadelphia Flyers,PHI,Philadelphia,3,3,api.nhle.com/stats/rest|espn|nhl_api,PHI,Philadelphia Flyers,Philadelphia
+22,Pittsburgh Penguins,PIT,Pittsburgh,3,3,api.nhle.com/stats/rest|espn|nhl_api,PIT,Pittsburgh Penguins,Pittsburgh
+23,San Jose Sharks,SJS,San,3,3,api.nhle.com/stats/rest|espn|nhl_api,SJ|SJS,San Jose Sharks,San|San Jose
+24,Seattle Kraken,SEA,Seattle,3,3,api.nhle.com/stats/rest|espn|nhl_api,SEA,Seattle Kraken,Seattle
+25,St. Louis Blues,STL,St.,3,3,api.nhle.com/stats/rest|espn|nhl_api,STL,St. Louis Blues,St.|St. Louis
+26,Tampa Bay Lightning,TBL,Tampa,3,3,api.nhle.com/stats/rest|espn|nhl_api,TB|TBL,Tampa Bay Lightning,Tampa|Tampa Bay
+27,Toronto Maple Leafs,TOR,Toronto,3,3,api.nhle.com/stats/rest|espn|nhl_api,TOR,Toronto Maple Leafs,Toronto
+28,Utah Mammoth,UTA,Utah,3,3,api.nhle.com/stats/rest|espn|nhl_api,UTA|UTAH,Utah Mammoth,Utah
+29,Vancouver Canucks,VAN,Vancouver,3,3,api.nhle.com/stats/rest|espn|nhl_api,VAN,Vancouver Canucks,Vancouver
+30,Vegas Golden Knights,VGK,Vegas,3,3,api.nhle.com/stats/rest|espn|nhl_api,VGK,Vegas Golden Knights,Vegas
+31,Washington Capitals,WSH,Washington,3,3,api.nhle.com/stats/rest|espn|nhl_api,WSH,Washington Capitals,Washington
+32,Winnipeg Jets,WPG,Winnipeg,3,3,api.nhle.com/stats/rest|espn|nhl_api,WPG,Winnipeg Jets,Winnipeg

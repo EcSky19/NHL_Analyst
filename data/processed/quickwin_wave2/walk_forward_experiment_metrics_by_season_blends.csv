@@ -1,0 +1,13 @@
+recency_candidate_id,model_id,season,season_label,games,accuracy,log_loss,brier_score,recency_selector_mode,recency_mode,recency_season_half_life,recency_game_half_life,recency_min_weight,recency_normalize_mean_one,recency_base_mode,recency_base_season_half_life,recency_base_game_half_life,recency_base_min_weight,recency_base_normalize_mean_one
+single,blend_logistic_weighted_60_40,20252026,2025-2026,1312,0.564024,0.674463,0.240976,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,blend_logistic_weighted_70_30,20252026,2025-2026,1312,0.563262,0.673066,0.240398,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned,20252026,2025-2026,1312,0.556402,0.678646,0.24299,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned,20252026,2025-2026,1312,0.560213,0.675114,0.241405,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,blend_top2_validated__logistic_engineered__elo_form_tuned,20252026,2025-2026,1312,0.559451,0.674241,0.241031,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated,20252026,2025-2026,1312,0.565549,0.677002,0.242179,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated,20252026,2025-2026,1312,0.565549,0.677002,0.242179,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,elo_form_tuned,20252026,2025-2026,1312,0.535823,0.700845,0.253267,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,logistic_engineered,20252026,2025-2026,1312,0.556402,0.67241,0.240396,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,weighted_calibrated,20252026,2025-2026,1312,0.532774,0.694361,0.250499,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,weighted_calibrated_isotonic,20252026,2025-2026,1312,0.536585,0.703613,0.25074,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True
+single,weighted_calibrated_platt,20252026,2025-2026,1312,0.532774,0.694361,0.250499,static,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True

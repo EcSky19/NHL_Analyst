@@ -1,0 +1,13 @@
+rank,recency_candidate_id,model_id,games,accuracy,log_loss,brier_score,recency_selector_mode,recency_mode,recency_season_half_life,recency_game_half_life,recency_min_weight,recency_normalize_mean_one,recency_base_mode,recency_base_season_half_life,recency_base_game_half_life,recency_base_min_weight,recency_base_normalize_mean_one
+1,single,blend_logistic_weighted_70_30,3936,0.590447,0.662053,0.23512,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+2,single,logistic_engineered,3936,0.590193,0.658939,0.233885,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+3,single,blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned,3936,0.589177,0.664595,0.236307,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+4,single,blend_logistic_weighted_60_40,3936,0.58562,0.664133,0.236038,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+5,single,blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated,3936,0.58562,0.664488,0.236215,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+6,single,blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned,3936,0.585366,0.661434,0.234886,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+7,single,blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated,3936,0.58435,0.664731,0.23633,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+8,single,blend_top2_validated__logistic_engineered__elo_form_tuned,3936,0.583841,0.661553,0.234967,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+9,single,elo_form_tuned,3936,0.567073,0.684379,0.245339,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+10,single,weighted_calibrated,3936,0.547002,0.686955,0.246877,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+11,single,weighted_calibrated_platt,3936,0.547002,0.686955,0.246877,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True
+12,single,weighted_calibrated_isotonic,3936,0.537856,0.706134,0.24781,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True

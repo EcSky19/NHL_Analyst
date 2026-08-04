@@ -1,0 +1,33 @@
+canonical_abbrev,canonical_name,alias_abbrevs,alias_names,validity_notes
+ANA,Anaheim Ducks,ANA,Anaheim Ducks,Standard current-team mapping from canonical + active API aliases.
+BOS,Boston Bruins,BOS,Boston Bruins,Standard current-team mapping from canonical + active API aliases.
+BUF,Buffalo Sabres,BUF,Buffalo Sabres,Standard current-team mapping from canonical + active API aliases.
+CAR,Carolina Hurricanes,CAR,Carolina Hurricanes,Standard current-team mapping from canonical + active API aliases.
+CBJ,Columbus Blue Jackets,CBJ,Columbus Blue Jackets,Standard current-team mapping from canonical + active API aliases.
+CGY,Calgary Flames,CGY,Calgary Flames,Standard current-team mapping from canonical + active API aliases.
+CHI,Chicago Blackhawks,CHI,Chicago Blackhawks,Standard current-team mapping from canonical + active API aliases.
+COL,Colorado Avalanche,COL,Colorado Avalanche,Standard current-team mapping from canonical + active API aliases.
+DAL,Dallas Stars,DAL,Dallas Stars,Standard current-team mapping from canonical + active API aliases.
+DET,Detroit Red Wings,DET,Detroit Red Wings,Standard current-team mapping from canonical + active API aliases.
+EDM,Edmonton Oilers,EDM,Edmonton Oilers,Standard current-team mapping from canonical + active API aliases.
+FLA,Florida Panthers,FLA,Florida Panthers,Standard current-team mapping from canonical + active API aliases.
+LAK,Los Angeles Kings,LA|LAK,Los Angeles Kings,Standard current-team mapping from canonical + active API aliases.
+MIN,Minnesota Wild,MIN,Minnesota Wild,Standard current-team mapping from canonical + active API aliases.
+MTL,Montréal Canadiens,MTL,Montreal Canadiens|Montréal Canadiens,Accent normalization: map both Montréal and Montreal spellings.
+NJD,New Jersey Devils,NJ|NJD,New Jersey Devils,Standard current-team mapping from canonical + active API aliases.
+NSH,Nashville Predators,NSH,Nashville Predators,Standard current-team mapping from canonical + active API aliases.
+NYI,New York Islanders,NYI,New York Islanders,Standard current-team mapping from canonical + active API aliases.
+NYR,New York Rangers,NYR,New York Rangers,Standard current-team mapping from canonical + active API aliases.
+OTT,Ottawa Senators,OTT,Ottawa Senators,Standard current-team mapping from canonical + active API aliases.
+PHI,Philadelphia Flyers,PHI,Philadelphia Flyers,Standard current-team mapping from canonical + active API aliases.
+PIT,Pittsburgh Penguins,PIT,Pittsburgh Penguins,Standard current-team mapping from canonical + active API aliases.
+SEA,Seattle Kraken,SEA,Seattle Kraken,Standard current-team mapping from canonical + active API aliases.
+SJS,San Jose Sharks,SJ|SJS,San Jose Sharks,Standard current-team mapping from canonical + active API aliases.
+STL,St. Louis Blues,STL,St. Louis Blues,Standard current-team mapping from canonical + active API aliases.
+TBL,Tampa Bay Lightning,TB|TBL,Tampa Bay Lightning,Standard current-team mapping from canonical + active API aliases.
+TOR,Toronto Maple Leafs,TOR,Toronto Maple Leafs,Standard current-team mapping from canonical + active API aliases.
+UTA,Utah Mammoth,ARI|UTA|UTAH,Arizona Coyotes|Utah Mammoth,"Franchise relocation/rename handling: map historical Arizona Coyotes aliases (ARI, Arizona Coyotes) to UTA for pre-2024-25 joins; ESPN also emits UTAH. Current APIs can emit both UTA and UTAH abbreviations for Utah Mammoth."
+VAN,Vancouver Canucks,VAN,Vancouver Canucks,Standard current-team mapping from canonical + active API aliases.
+VGK,Vegas Golden Knights,VGK,Vegas Golden Knights,Standard current-team mapping from canonical + active API aliases.
+WPG,Winnipeg Jets,WPG,Winnipeg Jets,Standard current-team mapping from canonical + active API aliases.
+WSH,Washington Capitals,WSH,Washington Capitals,Standard current-team mapping from canonical + active API aliases.

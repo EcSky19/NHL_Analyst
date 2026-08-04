@@ -1,0 +1,63 @@
+{
+  "by_season": [
+    {
+      "accuracy": 0.602896,
+      "accuracy_delta_vs_baseline": 0.024085,
+      "baseline_accuracy": 0.578811,
+      "brier_score": 0.237418,
+      "games": 1312,
+      "log_loss": 0.669173,
+      "season": 20222023,
+      "season_label": "2022-2023"
+    },
+    {
+      "accuracy": 0.617378,
+      "accuracy_delta_vs_baseline": 0.038567,
+      "baseline_accuracy": 0.578811,
+      "brier_score": 0.228793,
+      "games": 1312,
+      "log_loss": 0.649656,
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.606707,
+      "accuracy_delta_vs_baseline": 0.027896,
+      "baseline_accuracy": 0.578811,
+      "brier_score": 0.22759,
+      "games": 1312,
+      "log_loss": 0.64471,
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.561738,
+      "accuracy_delta_vs_baseline": -0.017073,
+      "baseline_accuracy": 0.578811,
+      "brier_score": 0.24,
+      "games": 1312,
+      "log_loss": 0.67154,
+      "season": 20252026,
+      "season_label": "2025-2026"
+    }
+  ],
+  "deterministic_metrics": {
+    "accuracy_threshold": 0.5,
+    "brier_score_formula": "mean((p_home - y)^2)",
+    "log_loss_formula": "-mean(y*ln(p_home) + (1-y)*ln(p_away))",
+    "probability_clamp_max": 0.999999,
+    "probability_clamp_min": 1e-06
+  },
+  "model_name": "improved_roster_aware",
+  "overall": {
+    "accuracy": 0.59718,
+    "accuracy_delta_vs_baseline": 0.018369,
+    "accuracy_delta_vs_baseline_pct_points": 1.8369,
+    "baseline_accuracy": 0.578811,
+    "brier_score": 0.23345,
+    "games": 5248,
+    "log_loss": 0.65877
+  },
+  "prediction_source": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\roster_aware_walk_forward_predictions.csv",
+  "predictions_regenerated_this_run": false
+}

@@ -1,0 +1,206 @@
+{
+  "best_model_overall": {
+    "accuracy": 0.593242,
+    "brier_score": 0.231946,
+    "games": 3936,
+    "log_loss": 0.654813,
+    "model_id": "blend_fixed_50_50"
+  },
+  "deterministic": true,
+  "first_season_default": "blend_fixed_50_50",
+  "focus_model_families": [
+    "logistic_engineered",
+    "improved_roster_aware"
+  ],
+  "fold_safe_weight_selection": [
+    {
+      "candidate_metrics": [],
+      "selected_variant": "blend_fixed_50_50",
+      "selected_weights": {
+        "improved_roster_aware": 0.5,
+        "logistic_engineered": 0.5
+      },
+      "test_season": 20232024,
+      "test_season_label": "2023-2024",
+      "validation_games": 0
+    },
+    {
+      "candidate_metrics": [
+        {
+          "accuracy": 0.60747,
+          "blend_id": "blend_fixed_50_50",
+          "brier_score": 0.228596,
+          "games": 1312,
+          "log_loss": 0.648826,
+          "weights": {
+            "improved_roster_aware": 0.5,
+            "logistic_engineered": 0.5
+          }
+        },
+        {
+          "accuracy": 0.609756,
+          "blend_id": "blend_fixed_55_45",
+          "brier_score": 0.228625,
+          "games": 1312,
+          "log_loss": 0.648862,
+          "weights": {
+            "improved_roster_aware": 0.45,
+            "logistic_engineered": 0.55
+          }
+        },
+        {
+          "accuracy": 0.610518,
+          "blend_id": "blend_fixed_60_40",
+          "brier_score": 0.228663,
+          "games": 1312,
+          "log_loss": 0.648918,
+          "weights": {
+            "improved_roster_aware": 0.4,
+            "logistic_engineered": 0.6
+          }
+        },
+        {
+          "accuracy": 0.612805,
+          "blend_id": "blend_fixed_65_35",
+          "brier_score": 0.228711,
+          "games": 1312,
+          "log_loss": 0.648994,
+          "weights": {
+            "improved_roster_aware": 0.35,
+            "logistic_engineered": 0.65
+          }
+        },
+        {
+          "accuracy": 0.615854,
+          "blend_id": "blend_fixed_70_30",
+          "brier_score": 0.228767,
+          "games": 1312,
+          "log_loss": 0.649091,
+          "weights": {
+            "improved_roster_aware": 0.3,
+            "logistic_engineered": 0.7
+          }
+        }
+      ],
+      "selected_variant": "blend_fixed_50_50",
+      "selected_weights": {
+        "improved_roster_aware": 0.5,
+        "logistic_engineered": 0.5
+      },
+      "test_season": 20242025,
+      "test_season_label": "2024-2025",
+      "validation_games": 1312
+    },
+    {
+      "candidate_metrics": [
+        {
+          "accuracy": 0.606707,
+          "blend_id": "blend_fixed_50_50",
+          "brier_score": 0.228137,
+          "games": 2624,
+          "log_loss": 0.646929,
+          "weights": {
+            "improved_roster_aware": 0.5,
+            "logistic_engineered": 0.5
+          }
+        },
+        {
+          "accuracy": 0.608232,
+          "blend_id": "blend_fixed_55_45",
+          "brier_score": 0.228163,
+          "games": 2624,
+          "log_loss": 0.646975,
+          "weights": {
+            "improved_roster_aware": 0.45,
+            "logistic_engineered": 0.55
+          }
+        },
+        {
+          "accuracy": 0.609756,
+          "blend_id": "blend_fixed_60_40",
+          "brier_score": 0.228193,
+          "games": 2624,
+          "log_loss": 0.647033,
+          "weights": {
+            "improved_roster_aware": 0.4,
+            "logistic_engineered": 0.6
+          }
+        },
+        {
+          "accuracy": 0.610518,
+          "blend_id": "blend_fixed_65_35",
+          "brier_score": 0.22823,
+          "games": 2624,
+          "log_loss": 0.647105,
+          "weights": {
+            "improved_roster_aware": 0.35,
+            "logistic_engineered": 0.65
+          }
+        },
+        {
+          "accuracy": 0.612043,
+          "blend_id": "blend_fixed_70_30",
+          "brier_score": 0.228271,
+          "games": 2624,
+          "log_loss": 0.647188,
+          "weights": {
+            "improved_roster_aware": 0.3,
+            "logistic_engineered": 0.7
+          }
+        }
+      ],
+      "selected_variant": "blend_fixed_50_50",
+      "selected_weights": {
+        "improved_roster_aware": 0.5,
+        "logistic_engineered": 0.5
+      },
+      "test_season": 20252026,
+      "test_season_label": "2025-2026",
+      "validation_games": 2624
+    }
+  ],
+  "overlap_games": 3936,
+  "ranking_rule": "lowest log_loss, then lowest brier_score, then highest accuracy",
+  "seasons": [
+    20232024,
+    20242025,
+    20252026
+  ],
+  "weight_grid": [
+    {
+      "blend_id": "blend_fixed_50_50",
+      "weights": {
+        "improved_roster_aware": 0.5,
+        "logistic_engineered": 0.5
+      }
+    },
+    {
+      "blend_id": "blend_fixed_55_45",
+      "weights": {
+        "improved_roster_aware": 0.45,
+        "logistic_engineered": 0.55
+      }
+    },
+    {
+      "blend_id": "blend_fixed_60_40",
+      "weights": {
+        "improved_roster_aware": 0.4,
+        "logistic_engineered": 0.6
+      }
+    },
+    {
+      "blend_id": "blend_fixed_65_35",
+      "weights": {
+        "improved_roster_aware": 0.35,
+        "logistic_engineered": 0.65
+      }
+    },
+    {
+      "blend_id": "blend_fixed_70_30",
+      "weights": {
+        "improved_roster_aware": 0.3,
+        "logistic_engineered": 0.7
+      }
+    }
+  ]
+}

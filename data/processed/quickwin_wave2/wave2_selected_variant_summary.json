@@ -1,0 +1,30 @@
+{
+  "selection_criteria": [
+    "highest accuracy",
+    "then lower log_loss",
+    "then lower brier_score"
+  ],
+  "selected_variant": {
+    "recency_candidate_id": "single",
+    "model_id": "blend_logistic_weighted_70_30",
+    "games": 3936,
+    "accuracy": 0.590447,
+    "log_loss": 0.662053,
+    "brier_score": 0.23512,
+    "recency_selector_mode": "season_regime",
+    "recency_mode": "hybrid_exponential",
+    "recency_season_half_life": 0.85,
+    "recency_game_half_life": 552.5,
+    "recency_min_weight": 0.09000000000000001
+  },
+  "artifact_bundle": {
+    "selected_variant_summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\wave2_selected_variant_summary.json",
+    "selected_predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\wave2_selected_predictions.csv",
+    "selected_metrics_overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\wave2_selected_metrics_overall.csv",
+    "selected_metrics_overall_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\wave2_selected_metrics_overall.json",
+    "selected_metrics_by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\wave2_selected_metrics_by_season.csv",
+    "selected_metrics_by_season_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\wave2_selected_metrics_by_season.json",
+    "full_variant_comparison_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\wave2_variant_comparison.csv"
+  },
+  "deterministic_rerun_command": "python .\\scripts\\run_walk_forward_experiments.py --require-roster-features --recency-selector-mode season_regime --recency-decay-mode hybrid_exponential --recency-season-half-life 1.0 --recency-game-half-life 650 --recency-min-weight 0.1 --output-predictions-csv .\\data\\processed\\quickwin_wave2\\wave2_full_matrix_predictions.csv --output-overall-csv .\\data\\processed\\quickwin_wave2\\wave2_full_matrix_metrics_overall.csv --output-by-season-csv .\\data\\processed\\quickwin_wave2\\wave2_full_matrix_metrics_by_season.csv --output-recency-comparison-csv .\\data\\processed\\quickwin_wave2\\wave2_full_matrix_comparison.csv --output-logistic-importance-csv .\\data\\processed\\quickwin_wave2\\wave2_full_matrix_logistic_importance.csv --output-summary-json .\\data\\processed\\quickwin_wave2\\wave2_full_matrix_summary.json"
+}

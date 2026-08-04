@@ -1,0 +1,8 @@
+model_version,matchup_key,game_id,game_date_utc,is_neutral_site,home_team_abbrev,away_team_abbrev,home_win_probability,away_win_probability,strength_diff_home_minus_away,location_adjustment_home,logit_diff_home_minus_away,confidence_index,confidence_bucket
+weighted_win_model_v1,2026-09-19T23:00Z_DAL_STL,401886427,2026-09-19T23:00Z,0,STL,DAL,0.151694,0.848306,-4.93132,-0.232805,-3.098475,0.696612,high
+weighted_win_model_v1,2026-09-19T23:00Z_MTL_TOR,401881922,2026-09-19T23:00Z,0,TOR,MTL,0.148943,0.851057,-5.083139,-0.14561,-3.137249,0.702114,high
+weighted_win_model_v1,2026-09-19T23:00Z_TOR_MTL,401881923,2026-09-19T23:00Z,0,MTL,TOR,0.872978,0.127022,5.083139,0.699512,3.469591,0.745956,high
+weighted_win_model_v1,2026-09-20T00:00Z_CHI_MIN,401886258,2026-09-20T00:00Z,0,MIN,CHI,0.888185,0.111815,5.476024,0.740976,3.7302,0.77637,high
+weighted_win_model_v1,2026-09-20T00:00Z_WPG_EDM,401878099,2026-09-20T00:00Z,0,EDM,WPG,0.701615,0.298385,2.050242,0.514756,1.538999,0.40323,medium
+weighted_win_model_v1,2026-09-20T01:00Z_VGK_LA,401879412,2026-09-20T01:00Z,1,LAK,VGK,0.382196,0.617804,-1.440709,0.0,-0.864425,0.235607,low
+weighted_win_model_v1,2026-09-20T02:00Z_VAN_SEA,401879652,2026-09-20T02:00Z,0,SEA,VAN,0.805253,0.194747,3.699103,0.559268,2.555023,0.610507,high

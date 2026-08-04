@@ -1,0 +1,4 @@
+model,games,accuracy,log_loss,brier_score
+baseline,,0.578811,,
+improved_roster_aware,5248,0.59718,0.65877,0.23345
+delta_improved_minus_baseline,,0.018369,,

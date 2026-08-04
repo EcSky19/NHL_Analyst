@@ -1,0 +1,518 @@
+{
+  "artifacts": {
+    "by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\walk_forward_experiment_metrics_by_season.csv",
+    "overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\walk_forward_experiment_metrics_overall.csv",
+    "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\walk_forward_experiment_predictions.csv",
+    "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\walk_forward_experiment_summary.json"
+  },
+  "blend_variants": {
+    "blend_logistic_weighted_60_40": {
+      "logistic_engineered": 0.6,
+      "weighted_calibrated": 0.4
+    },
+    "blend_logistic_weighted_70_30": {
+      "logistic_engineered": 0.7,
+      "weighted_calibrated": 0.3
+    }
+  },
+  "calibrator_impact_overall": [
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated"
+    },
+    {
+      "accuracy": 0.549035,
+      "brier_score": 0.247107,
+      "games": 3936,
+      "log_loss": 0.70447,
+      "model_id": "weighted_calibrated_isotonic"
+    },
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated_platt"
+    }
+  ],
+  "data_source": {
+    "dependency_status": "roster_features_available",
+    "feature_count": 27,
+    "feature_table": "backtest_features_last5_roster",
+    "historical_table": "historical_games_last5",
+    "row_count": 6560,
+    "sqlite_db": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\nhl_research.db"
+  },
+  "deterministic": true,
+  "folds": [
+    {
+      "blend_weights": {
+        "blend_logistic_weighted_60_40": {
+          "logistic_engineered": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_logistic_weighted_70_30": {
+          "logistic_engineered": 0.7,
+          "weighted_calibrated": 0.3
+        }
+      },
+      "elo_params": {
+        "form_goal_weight": 20.0,
+        "form_win_weight": 80.0,
+        "home_advantage": 35.0,
+        "k_factor": 14.0
+      },
+      "fold_test_season": 20232024,
+      "fold_train_end_season": 20222023,
+      "fold_train_start_season": 20212022,
+      "logistic_params": {
+        "epochs": 250,
+        "l2": 0.15,
+        "learning_rate": 0.02
+      },
+      "recency_weighting": {
+        "game_half_life": 800.0,
+        "min_weight": 0.2,
+        "mode": "none",
+        "normalize_mean_one": true,
+        "season_half_life": 1.5,
+        "train_weight_max": 1.0,
+        "train_weight_mean": 1.0,
+        "train_weight_min": 1.0
+      },
+      "test_games": 1312,
+      "train_games": 2624,
+      "weighted_calibration": {
+        "calibration_methods_by_variant": {
+          "weighted_calibrated": "platt",
+          "weighted_calibrated_isotonic": "isotonic",
+          "weighted_calibrated_platt": "platt"
+        },
+        "selected_fit_parameters": {
+          "a": 0.6503443974192841,
+          "b": 0.09944964391615327
+        },
+        "selected_method": "platt",
+        "selection_fit_games": 1312,
+        "selection_metrics": {
+          "isotonic": {
+            "accuracy": 0.570884,
+            "brier_score": 0.244285,
+            "games": 1312,
+            "log_loss": 0.698648
+          },
+          "platt": {
+            "accuracy": 0.573933,
+            "brier_score": 0.242386,
+            "games": 1312,
+            "log_loss": 0.677765
+          }
+        },
+        "selection_validation_games": 1312,
+        "validation_season": 20222023
+      }
+    },
+    {
+      "blend_weights": {
+        "blend_logistic_weighted_60_40": {
+          "logistic_engineered": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_logistic_weighted_70_30": {
+          "logistic_engineered": 0.7,
+          "weighted_calibrated": 0.3
+        }
+      },
+      "elo_params": {
+        "form_goal_weight": 20.0,
+        "form_win_weight": 80.0,
+        "home_advantage": 35.0,
+        "k_factor": 14.0
+      },
+      "fold_test_season": 20242025,
+      "fold_train_end_season": 20232024,
+      "fold_train_start_season": 20212022,
+      "logistic_params": {
+        "epochs": 450,
+        "l2": 0.08,
+        "learning_rate": 0.05
+      },
+      "recency_weighting": {
+        "game_half_life": 800.0,
+        "min_weight": 0.2,
+        "mode": "none",
+        "normalize_mean_one": true,
+        "season_half_life": 1.5,
+        "train_weight_max": 1.0,
+        "train_weight_mean": 1.0,
+        "train_weight_min": 1.0
+      },
+      "test_games": 1312,
+      "train_games": 3936,
+      "weighted_calibration": {
+        "calibration_methods_by_variant": {
+          "weighted_calibrated": "platt",
+          "weighted_calibrated_isotonic": "isotonic",
+          "weighted_calibrated_platt": "platt"
+        },
+        "selected_fit_parameters": {
+          "a": 0.5882266166850247,
+          "b": 0.12214381207482938
+        },
+        "selected_method": "platt",
+        "selection_fit_games": 2624,
+        "selection_metrics": {
+          "isotonic": {
+            "accuracy": 0.554116,
+            "brier_score": 0.246352,
+            "games": 1312,
+            "log_loss": 0.719956
+          },
+          "platt": {
+            "accuracy": 0.550305,
+            "brier_score": 0.245241,
+            "games": 1312,
+            "log_loss": 0.683593
+          }
+        },
+        "selection_validation_games": 1312,
+        "validation_season": 20232024
+      }
+    },
+    {
+      "blend_weights": {
+        "blend_logistic_weighted_60_40": {
+          "logistic_engineered": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_logistic_weighted_70_30": {
+          "logistic_engineered": 0.7,
+          "weighted_calibrated": 0.3
+        }
+      },
+      "elo_params": {
+        "form_goal_weight": 20.0,
+        "form_win_weight": 80.0,
+        "home_advantage": 35.0,
+        "k_factor": 14.0
+      },
+      "fold_test_season": 20252026,
+      "fold_train_end_season": 20242025,
+      "fold_train_start_season": 20212022,
+      "logistic_params": {
+        "epochs": 450,
+        "l2": 0.01,
+        "learning_rate": 0.05
+      },
+      "recency_weighting": {
+        "game_half_life": 800.0,
+        "min_weight": 0.2,
+        "mode": "none",
+        "normalize_mean_one": true,
+        "season_half_life": 1.5,
+        "train_weight_max": 1.0,
+        "train_weight_mean": 1.0,
+        "train_weight_min": 1.0
+      },
+      "test_games": 1312,
+      "train_games": 5248,
+      "weighted_calibration": {
+        "calibration_methods_by_variant": {
+          "weighted_calibrated": "platt",
+          "weighted_calibrated_isotonic": "isotonic",
+          "weighted_calibrated_platt": "platt"
+        },
+        "selected_fit_parameters": {
+          "a": 0.5563528217903906,
+          "b": 0.15209163026911496
+        },
+        "selected_method": "platt",
+        "selection_fit_games": 3936,
+        "selection_metrics": {
+          "isotonic": {
+            "accuracy": 0.556402,
+            "brier_score": 0.244227,
+            "games": 1312,
+            "log_loss": 0.689841
+          },
+          "platt": {
+            "accuracy": 0.554878,
+            "brier_score": 0.243851,
+            "games": 1312,
+            "log_loss": 0.680607
+          }
+        },
+        "selection_validation_games": 1312,
+        "validation_season": 20242025
+      }
+    }
+  ],
+  "leakage_controls": [
+    "season-expanding folds with train seasons strictly before each test season",
+    "robust scaling fit only on each fold's training rows",
+    "logistic tuning uses training-only split (latest train season as validation)",
+    "weighted calibration method selected from fold-local train/validation split and refit on fold training rows",
+    "Elo parameters tuned on training games only and evaluated on next season"
+  ],
+  "metrics_by_season": [
+    {
+      "accuracy": 0.609756,
+      "brier_score": 0.233308,
+      "games": 1312,
+      "log_loss": 0.658803,
+      "model_id": "blend_logistic_weighted_60_40",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.604421,
+      "brier_score": 0.231725,
+      "games": 1312,
+      "log_loss": 0.654987,
+      "model_id": "blend_logistic_weighted_60_40",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.570122,
+      "brier_score": 0.240387,
+      "games": 1312,
+      "log_loss": 0.673259,
+      "model_id": "blend_logistic_weighted_60_40",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.609756,
+      "brier_score": 0.232008,
+      "games": 1312,
+      "log_loss": 0.656043,
+      "model_id": "blend_logistic_weighted_70_30",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.602134,
+      "brier_score": 0.230464,
+      "games": 1312,
+      "log_loss": 0.652083,
+      "model_id": "blend_logistic_weighted_70_30",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.56936,
+      "brier_score": 0.239704,
+      "games": 1312,
+      "log_loss": 0.671629,
+      "model_id": "blend_logistic_weighted_70_30",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.587652,
+      "brier_score": 0.240524,
+      "games": 1312,
+      "log_loss": 0.674602,
+      "model_id": "elo_form_tuned",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.577744,
+      "brier_score": 0.242226,
+      "games": 1312,
+      "log_loss": 0.67769,
+      "model_id": "elo_form_tuned",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.535823,
+      "brier_score": 0.253267,
+      "games": 1312,
+      "log_loss": 0.700845,
+      "model_id": "elo_form_tuned",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.612805,
+      "brier_score": 0.229292,
+      "games": 1312,
+      "log_loss": 0.650094,
+      "model_id": "logistic_engineered",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.608232,
+      "brier_score": 0.227986,
+      "games": 1312,
+      "log_loss": 0.645798,
+      "model_id": "logistic_engineered",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.564024,
+      "brier_score": 0.239371,
+      "games": 1312,
+      "log_loss": 0.670159,
+      "model_id": "logistic_engineered",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.550305,
+      "brier_score": 0.245241,
+      "games": 1312,
+      "log_loss": 0.683593,
+      "model_id": "weighted_calibrated",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.554878,
+      "brier_score": 0.243851,
+      "games": 1312,
+      "log_loss": 0.680607,
+      "model_id": "weighted_calibrated",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.532774,
+      "brier_score": 0.250499,
+      "games": 1312,
+      "log_loss": 0.694361,
+      "model_id": "weighted_calibrated",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.554116,
+      "brier_score": 0.246352,
+      "games": 1312,
+      "log_loss": 0.719956,
+      "model_id": "weighted_calibrated_isotonic",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.556402,
+      "brier_score": 0.244227,
+      "games": 1312,
+      "log_loss": 0.689841,
+      "model_id": "weighted_calibrated_isotonic",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.536585,
+      "brier_score": 0.25074,
+      "games": 1312,
+      "log_loss": 0.703613,
+      "model_id": "weighted_calibrated_isotonic",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.550305,
+      "brier_score": 0.245241,
+      "games": 1312,
+      "log_loss": 0.683593,
+      "model_id": "weighted_calibrated_platt",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.554878,
+      "brier_score": 0.243851,
+      "games": 1312,
+      "log_loss": 0.680607,
+      "model_id": "weighted_calibrated_platt",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.532774,
+      "brier_score": 0.250499,
+      "games": 1312,
+      "log_loss": 0.694361,
+      "model_id": "weighted_calibrated_platt",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    }
+  ],
+  "models": [
+    "blend_logistic_weighted_60_40",
+    "blend_logistic_weighted_70_30",
+    "elo_form_tuned",
+    "logistic_engineered",
+    "weighted_calibrated",
+    "weighted_calibrated_isotonic",
+    "weighted_calibrated_platt"
+  ],
+  "overall_metrics": [
+    {
+      "accuracy": 0.594766,
+      "brier_score": 0.23514,
+      "games": 3936,
+      "log_loss": 0.66235,
+      "model_id": "blend_logistic_weighted_60_40"
+    },
+    {
+      "accuracy": 0.59375,
+      "brier_score": 0.234059,
+      "games": 3936,
+      "log_loss": 0.659918,
+      "model_id": "blend_logistic_weighted_70_30"
+    },
+    {
+      "accuracy": 0.567073,
+      "brier_score": 0.245339,
+      "games": 3936,
+      "log_loss": 0.684379,
+      "model_id": "elo_form_tuned"
+    },
+    {
+      "accuracy": 0.59502,
+      "brier_score": 0.232216,
+      "games": 3936,
+      "log_loss": 0.65535,
+      "model_id": "logistic_engineered"
+    },
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated"
+    },
+    {
+      "accuracy": 0.549035,
+      "brier_score": 0.247107,
+      "games": 3936,
+      "log_loss": 0.70447,
+      "model_id": "weighted_calibrated_isotonic"
+    },
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated_platt"
+    }
+  ],
+  "recency_weighting": {
+    "game_half_life": 800.0,
+    "min_weight": 0.2,
+    "mode": "none",
+    "normalize_mean_one": true,
+    "season_half_life": 1.5
+  }
+}

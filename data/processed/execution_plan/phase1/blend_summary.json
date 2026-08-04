@@ -1,0 +1,80 @@
+{
+  "artifacts": {
+    "by_season_metrics_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\phase1\\blend_metrics_by_season.csv",
+    "diagnostics_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\phase1\\blend_diagnostics.json",
+    "overall_metrics_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\phase1\\blend_metrics_overall.csv",
+    "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\phase1\\blend_predictions.csv",
+    "report_md": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\reports\\exec_oos_blending.md",
+    "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\phase1\\blend_summary.json"
+  },
+  "best_model_overall": {
+    "accuracy": 0.593242,
+    "brier_score": 0.231946,
+    "games": 3936,
+    "log_loss": 0.654813,
+    "model_id": "blend_fixed_50_50"
+  },
+  "deterministic": true,
+  "focus_model_families": [
+    "logistic_engineered",
+    "improved_roster_aware"
+  ],
+  "overall_metrics": [
+    {
+      "accuracy": 0.59502,
+      "brier_score": 0.232216,
+      "games": 3936,
+      "log_loss": 0.65535,
+      "model_id": "logistic_engineered"
+    },
+    {
+      "accuracy": 0.595274,
+      "brier_score": 0.232128,
+      "games": 3936,
+      "log_loss": 0.655302,
+      "model_id": "improved_roster_aware"
+    },
+    {
+      "accuracy": 0.593242,
+      "brier_score": 0.231946,
+      "games": 3936,
+      "log_loss": 0.654813,
+      "model_id": "blend_fixed_50_50"
+    },
+    {
+      "accuracy": 0.594004,
+      "brier_score": 0.231953,
+      "games": 3936,
+      "log_loss": 0.654822,
+      "model_id": "blend_fixed_55_45"
+    },
+    {
+      "accuracy": 0.594258,
+      "brier_score": 0.231964,
+      "games": 3936,
+      "log_loss": 0.654841,
+      "model_id": "blend_fixed_60_40"
+    },
+    {
+      "accuracy": 0.59502,
+      "brier_score": 0.23198,
+      "games": 3936,
+      "log_loss": 0.65487,
+      "model_id": "blend_fixed_65_35"
+    },
+    {
+      "accuracy": 0.595783,
+      "brier_score": 0.232,
+      "games": 3936,
+      "log_loss": 0.654908,
+      "model_id": "blend_fixed_70_30"
+    },
+    {
+      "accuracy": 0.593242,
+      "brier_score": 0.231946,
+      "games": 3936,
+      "log_loss": 0.654813,
+      "model_id": "blend_fold_validated_logistic_improved"
+    }
+  ]
+}

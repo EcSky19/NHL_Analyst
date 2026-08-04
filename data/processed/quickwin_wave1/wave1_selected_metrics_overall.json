@@ -1,0 +1,7 @@
+{
+  "model_id": "logistic_engineered",
+  "games": "3936",
+  "accuracy": "0.597561",
+  "log_loss": "0.655001",
+  "brier_score": "0.23206"
+}

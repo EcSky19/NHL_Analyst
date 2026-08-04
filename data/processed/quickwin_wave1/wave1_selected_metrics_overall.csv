@@ -1,0 +1,2 @@
+model_id,games,accuracy,log_loss,brier_score
+logistic_engineered,3936,0.597561,0.655001,0.23206

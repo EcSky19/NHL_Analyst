@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+
+# Large/local data artifacts
+data/raw/
+data/processed/*.db
+data/processed/*.sqlite
+data/processed/*.sqlite3
+
+# Session/runtime files
+.copilot/

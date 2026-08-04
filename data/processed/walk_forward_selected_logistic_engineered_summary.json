@@ -1,0 +1,51 @@
+{
+  "artifacts": {
+    "selected_predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\walk_forward_selected_logistic_engineered_predictions.csv"
+  },
+  "comparison": {
+    "baseline_accuracy": 0.578811,
+    "delta_vs_baseline": 0.016209,
+    "delta_vs_previous_best": -0.00216,
+    "previous_best_roster_aware_accuracy": 0.59718,
+    "selected_accuracy": 0.59502
+  },
+  "deterministic": true,
+  "overall_metrics": {
+    "accuracy": 0.59502,
+    "brier_score": 0.232216,
+    "games": 3936,
+    "log_loss": 0.65535,
+    "model_id": "logistic_engineered"
+  },
+  "per_season_metrics": [
+    {
+      "accuracy": 0.612805,
+      "brier_score": 0.229292,
+      "games": 1312,
+      "log_loss": 0.650094,
+      "model_id": "logistic_engineered",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.608232,
+      "brier_score": 0.227986,
+      "games": 1312,
+      "log_loss": 0.645798,
+      "model_id": "logistic_engineered",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.564024,
+      "brier_score": 0.239371,
+      "games": 1312,
+      "log_loss": 0.670159,
+      "model_id": "logistic_engineered",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    }
+  ],
+  "selected_model": "logistic_engineered",
+  "selection_rule": "highest out-of-sample accuracy; tie-breakers: lower log_loss then lower brier_score"
+}

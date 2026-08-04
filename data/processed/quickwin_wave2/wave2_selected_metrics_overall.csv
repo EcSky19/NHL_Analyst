@@ -1,0 +1,2 @@
+recency_candidate_id,model_id,games,accuracy,log_loss,brier_score,recency_selector_mode,recency_mode,recency_season_half_life,recency_game_half_life,recency_min_weight,recency_normalize_mean_one,recency_base_mode,recency_base_season_half_life,recency_base_game_half_life,recency_base_min_weight,recency_base_normalize_mean_one
+single,blend_logistic_weighted_70_30,3936,0.590447,0.662053,0.23512,season_regime,hybrid_exponential,0.85,552.5,0.09000000000000001,True,hybrid_exponential,1.0,650.0,0.1,True

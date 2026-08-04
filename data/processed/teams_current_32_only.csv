@@ -1,0 +1,33 @@
+team_id,abbreviation,name,city,active,source,external_team_id
+5,ANA,Anaheim Ducks,Anaheim,1,api.nhle.com/stats/rest,24
+13,BOS,Boston Bruins,Boston,1,api.nhle.com/stats/rest,6
+27,BUF,Buffalo Sabres,Buffalo,1,api.nhle.com/stats/rest,7
+28,CAR,Carolina Hurricanes,Carolina,1,api.nhle.com/stats/rest,12
+14,CBJ,Columbus Blue Jackets,Columbus,1,api.nhle.com/stats/rest,29
+16,CGY,Calgary Flames,Calgary,1,api.nhle.com/stats/rest,20
+15,CHI,Chicago Blackhawks,Chicago,1,api.nhle.com/stats/rest,16
+11,COL,Colorado Avalanche,Colorado,1,api.nhle.com/stats/rest,21
+7,DAL,Dallas Stars,Dallas,1,api.nhle.com/stats/rest,25
+8,DET,Detroit Red Wings,Detroit,1,api.nhle.com/stats/rest,17
+30,EDM,Edmonton Oilers,Edmonton,1,api.nhle.com/stats/rest,22
+31,FLA,Florida Panthers,Florida,1,api.nhle.com/stats/rest,13
+23,LAK,Los Angeles Kings,Los Angeles,1,api.nhle.com/stats/rest,26
+26,MIN,Minnesota Wild,Minnesota,1,api.nhle.com/stats/rest,30
+19,MTL,Montréal Canadiens,Montréal,1,api.nhle.com/stats/rest,8
+2,NJD,New Jersey Devils,New Jersey,1,api.nhle.com/stats/rest,1
+12,NSH,Nashville Predators,Nashville,1,api.nhle.com/stats/rest,18
+22,NYI,New York Islanders,NY Islanders,1,api.nhle.com/stats/rest,2
+21,NYR,New York Rangers,NY Rangers,1,api.nhle.com/stats/rest,3
+9,OTT,Ottawa Senators,Ottawa,1,api.nhle.com/stats/rest,9
+29,PHI,Philadelphia Flyers,Philadelphia,1,api.nhle.com/stats/rest,4
+18,PIT,Pittsburgh Penguins,Pittsburgh,1,api.nhle.com/stats/rest,5
+24,SEA,Seattle Kraken,Seattle,1,api.nhle.com/stats/rest,55
+20,SJS,San Jose Sharks,San Jose,1,api.nhle.com/stats/rest,28
+6,STL,St. Louis Blues,St. Louis,1,api.nhle.com/stats/rest,19
+17,TBL,Tampa Bay Lightning,Tampa Bay,1,api.nhle.com/stats/rest,14
+32,TOR,Toronto Maple Leafs,Toronto,1,api.nhle.com/stats/rest,10
+25,UTA,Utah Mammoth,Utah,1,api.nhle.com/stats/rest,68
+4,VAN,Vancouver Canucks,Vancouver,1,api.nhle.com/stats/rest,23
+3,VGK,Vegas Golden Knights,Vegas,1,api.nhle.com/stats/rest,54
+10,WPG,Winnipeg Jets,Winnipeg,1,api.nhle.com/stats/rest,52
+1,WSH,Washington Capitals,Washington,1,api.nhle.com/stats/rest,15

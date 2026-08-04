@@ -1,0 +1,19 @@
+{
+  "recency_candidate_id": "single",
+  "model_id": "logistic_engineered",
+  "games": 3936,
+  "accuracy": 0.592226,
+  "log_loss": 0.661336,
+  "brier_score": 0.234841,
+  "recency_selector_mode": "season_regime",
+  "recency_mode": "hybrid_exponential",
+  "recency_season_half_life": 0.85,
+  "recency_game_half_life": 552.5,
+  "recency_min_weight": 0.09,
+  "recency_normalize_mean_one": true,
+  "recency_base_mode": "hybrid_exponential",
+  "recency_base_season_half_life": 1.0,
+  "recency_base_game_half_life": 650.0,
+  "recency_base_min_weight": 0.1,
+  "recency_base_normalize_mean_one": true
+}

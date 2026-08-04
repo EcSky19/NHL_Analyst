@@ -1,0 +1,7 @@
+fold_test_season,fold_train_start_season,fold_train_end_season,recency_candidate_id,recency_selector_mode,recency_selector_regime,calibration_selector_mode,calibration_selector_view,calibration_selector_notes,calibration_selection_objective,calibration_objective_margin,calibration_validation_seasons,selection_fit_games,selection_validation_games,calibration_method,is_selected_method,accuracy,log_loss,brier_score
+20232024,20212022,20222023,single,static,static,season_regime,regime_late_window,regime_matched_static,joint,0.0005,"20212022,20222023",360,360,isotonic,1,0.6,0.644119,0.229726
+20232024,20212022,20222023,single,static,static,season_regime,regime_late_window,regime_matched_static,joint,0.0005,"20212022,20222023",360,360,platt,0,0.577778,0.672394,0.240048
+20242025,20212022,20232024,single,static,static,season_regime,regime_late_window,regime_matched_static,joint,0.0005,"20222023,20232024",180,360,isotonic,0,0.569444,0.988371,0.255578
+20242025,20212022,20232024,single,static,static,season_regime,regime_late_window,regime_matched_static,joint,0.0005,"20222023,20232024",180,360,platt,1,0.566667,0.688946,0.247518
+20252026,20212022,20242025,single,static,static,season_regime,regime_late_window,regime_matched_static,joint,0.0005,"20232024,20242025",360,360,isotonic,0,0.541667,0.8579,0.253389
+20252026,20212022,20242025,single,static,static,season_regime,regime_late_window,regime_matched_static,joint,0.0005,"20232024,20242025",360,360,platt,1,0.547222,0.68772,0.247345

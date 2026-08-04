@@ -1,0 +1,13 @@
+model_id,games,accuracy,log_loss,brier_score
+blend_logistic_weighted_60_40,3936,0.587907,0.664202,0.236024
+blend_logistic_weighted_70_30,3936,0.589685,0.662003,0.235042
+blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned,3936,0.584858,0.664791,0.236372
+blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned,3936,0.587907,0.661457,0.234853
+blend_top2_validated__logistic_engineered__elo_form_tuned,3936,0.586382,0.661647,0.234962
+blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated,3936,0.590701,0.664644,0.236257
+blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated,3936,0.590193,0.664923,0.23639
+elo_form_tuned,3936,0.567073,0.684379,0.245339
+logistic_engineered,3936,0.590955,0.65798,0.233411
+weighted_calibrated,3936,0.545986,0.686187,0.24653
+weighted_calibrated_isotonic,3936,0.549035,0.70447,0.247107
+weighted_calibrated_platt,3936,0.545986,0.686187,0.24653

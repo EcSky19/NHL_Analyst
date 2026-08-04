@@ -1,0 +1,2055 @@
+{
+  "artifacts": {
+    "by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\walk_forward_experiment_metrics_by_season_interactions.csv",
+    "logistic_importance_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\walk_forward_experiment_logistic_feature_importance_interactions.csv",
+    "overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\walk_forward_experiment_metrics_overall_interactions.csv",
+    "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\walk_forward_experiment_predictions_interactions.csv",
+    "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave2\\walk_forward_experiment_summary_interactions.json"
+  },
+  "blend_impact_overall": [
+    {
+      "accuracy": 0.587907,
+      "brier_score": 0.236024,
+      "games": 3936,
+      "log_loss": 0.664202,
+      "model_id": "blend_logistic_weighted_60_40"
+    },
+    {
+      "accuracy": 0.589685,
+      "brier_score": 0.235042,
+      "games": 3936,
+      "log_loss": 0.662003,
+      "model_id": "blend_logistic_weighted_70_30"
+    },
+    {
+      "accuracy": 0.584858,
+      "brier_score": 0.236372,
+      "games": 3936,
+      "log_loss": 0.664791,
+      "model_id": "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned"
+    },
+    {
+      "accuracy": 0.587907,
+      "brier_score": 0.234853,
+      "games": 3936,
+      "log_loss": 0.661457,
+      "model_id": "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned"
+    },
+    {
+      "accuracy": 0.586382,
+      "brier_score": 0.234962,
+      "games": 3936,
+      "log_loss": 0.661647,
+      "model_id": "blend_top2_validated__logistic_engineered__elo_form_tuned"
+    },
+    {
+      "accuracy": 0.590701,
+      "brier_score": 0.236257,
+      "games": 3936,
+      "log_loss": 0.664644,
+      "model_id": "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated"
+    },
+    {
+      "accuracy": 0.590193,
+      "brier_score": 0.23639,
+      "games": 3936,
+      "log_loss": 0.664923,
+      "model_id": "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated"
+    }
+  ],
+  "blend_model_ids": [
+    "blend_logistic_weighted_60_40",
+    "blend_logistic_weighted_70_30",
+    "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+    "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+    "blend_top2_validated__logistic_engineered__elo_form_tuned",
+    "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+    "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated"
+  ],
+  "blend_variants_static": {
+    "blend_logistic_weighted_60_40": {
+      "logistic_engineered": 0.6,
+      "weighted_calibrated": 0.4
+    },
+    "blend_logistic_weighted_70_30": {
+      "logistic_engineered": 0.7,
+      "weighted_calibrated": 0.3
+    }
+  },
+  "calibrator_impact_overall": [
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated"
+    },
+    {
+      "accuracy": 0.549035,
+      "brier_score": 0.247107,
+      "games": 3936,
+      "log_loss": 0.70447,
+      "model_id": "weighted_calibrated_isotonic"
+    },
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated_platt"
+    }
+  ],
+  "data_source": {
+    "dependency_status": "roster_features_available",
+    "feature_count": 31,
+    "feature_table": "backtest_features_last5_roster",
+    "historical_table": "historical_games_last5",
+    "row_count": 6560,
+    "sqlite_db": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\nhl_research.db"
+  },
+  "deterministic": true,
+  "folds": [
+    {
+      "blend_diagnostics": {
+        "blend_model_ids": [
+          "blend_logistic_weighted_60_40",
+          "blend_logistic_weighted_70_30",
+          "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+          "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+          "blend_top2_validated__logistic_engineered__elo_form_tuned",
+          "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+          "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated"
+        ],
+        "selected_top_families": [
+          "logistic_engineered",
+          "elo_form_tuned",
+          "weighted_calibrated"
+        ],
+        "top_family_candidates": [
+          {
+            "accuracy": 0.603659,
+            "brier_score": 0.236204,
+            "games": 1312,
+            "log_loss": 0.665504,
+            "model_id": "logistic_engineered"
+          },
+          {
+            "accuracy": 0.590701,
+            "brier_score": 0.236807,
+            "games": 1312,
+            "log_loss": 0.666389,
+            "model_id": "elo_form_tuned"
+          },
+          {
+            "accuracy": 0.573933,
+            "brier_score": 0.242386,
+            "games": 1312,
+            "log_loss": 0.677765,
+            "model_id": "weighted_calibrated"
+          }
+        ],
+        "validated_weight_selection": [
+          {
+            "best_metrics": {
+              "accuracy": 0.596037,
+              "brier_score": 0.232126,
+              "games": 1312,
+              "log_loss": 0.655912
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.5,
+              "logistic_engineered": 0.5
+            },
+            "blend_scope": "top2",
+            "families": [
+              "logistic_engineered",
+              "elo_form_tuned"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.596037,
+                "brier_score": 0.232126,
+                "games": 1312,
+                "log_loss": 0.655912,
+                "weights": {
+                  "elo_form_tuned": 0.5,
+                  "logistic_engineered": 0.5
+                }
+              },
+              {
+                "accuracy": 0.602896,
+                "brier_score": 0.232139,
+                "games": 1312,
+                "log_loss": 0.655922,
+                "weights": {
+                  "elo_form_tuned": 0.45,
+                  "logistic_engineered": 0.55
+                }
+              },
+              {
+                "accuracy": 0.601372,
+                "brier_score": 0.232241,
+                "games": 1312,
+                "log_loss": 0.656123,
+                "weights": {
+                  "elo_form_tuned": 0.4,
+                  "logistic_engineered": 0.6
+                }
+              },
+              {
+                "accuracy": 0.601372,
+                "brier_score": 0.232429,
+                "games": 1312,
+                "log_loss": 0.65652,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.65
+                }
+              },
+              {
+                "accuracy": 0.602896,
+                "brier_score": 0.232706,
+                "games": 1312,
+                "log_loss": 0.657117,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "logistic_engineered": 0.7
+                }
+              }
+            ]
+          },
+          {
+            "best_metrics": {
+              "accuracy": 0.592988,
+              "brier_score": 0.233127,
+              "games": 1312,
+              "log_loss": 0.658105
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.35,
+              "logistic_engineered": 0.45,
+              "weighted_calibrated": 0.2
+            },
+            "blend_scope": "top3",
+            "families": [
+              "logistic_engineered",
+              "elo_form_tuned",
+              "weighted_calibrated"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.596037,
+                "brier_score": 0.23317,
+                "games": 1312,
+                "log_loss": 0.658179,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "logistic_engineered": 0.5,
+                  "weighted_calibrated": 0.2
+                }
+              },
+              {
+                "accuracy": 0.592988,
+                "brier_score": 0.233127,
+                "games": 1312,
+                "log_loss": 0.658105,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.45,
+                  "weighted_calibrated": 0.2
+                }
+              },
+              {
+                "accuracy": 0.59375,
+                "brier_score": 0.233471,
+                "games": 1312,
+                "log_loss": 0.658864,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.4,
+                  "weighted_calibrated": 0.25
+                }
+              },
+              {
+                "accuracy": 0.595274,
+                "brier_score": 0.234109,
+                "games": 1312,
+                "log_loss": 0.660251,
+                "weights": {
+                  "elo_form_tuned": 0.33,
+                  "logistic_engineered": 0.34,
+                  "weighted_calibrated": 0.33
+                }
+              }
+            ]
+          }
+        ],
+        "validation_games": 1312,
+        "validation_season": 20222023
+      },
+      "blend_weights": {
+        "blend_logistic_weighted_60_40": {
+          "logistic_engineered": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_logistic_weighted_70_30": {
+          "logistic_engineered": 0.7,
+          "weighted_calibrated": 0.3
+        },
+        "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.5,
+          "logistic_engineered": 0.5
+        },
+        "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.35,
+          "logistic_engineered": 0.65
+        },
+        "blend_top2_validated__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.5,
+          "logistic_engineered": 0.5
+        },
+        "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.5,
+          "weighted_calibrated": 0.2
+        },
+        "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated": {
+          "elo_form_tuned": 0.35,
+          "logistic_engineered": 0.45,
+          "weighted_calibrated": 0.2
+        }
+      },
+      "elo_params": {
+        "form_goal_weight": 20.0,
+        "form_win_weight": 80.0,
+        "home_advantage": 35.0,
+        "k_factor": 14.0
+      },
+      "fold_test_season": 20232024,
+      "fold_train_end_season": 20222023,
+      "fold_train_start_season": 20212022,
+      "interaction_feature_importance": [
+        {
+          "abs_weight": 0.03423502,
+          "feature": "matchup_home_win_rate_prior",
+          "weight": -0.03423502
+        }
+      ],
+      "logistic_feature_importance_top": [
+        {
+          "abs_weight": 0.08790659,
+          "feature": "delta_roster_games_covered",
+          "weight": -0.08790659
+        },
+        {
+          "abs_weight": 0.08334716,
+          "feature": "delta_pregame_season_goal_diff_pg_home_minus_away",
+          "weight": 0.08334716
+        },
+        {
+          "abs_weight": 0.0749628,
+          "feature": "delta_pregame_season_points_pct_home_minus_away",
+          "weight": 0.0749628
+        },
+        {
+          "abs_weight": 0.06951063,
+          "feature": "delta_roster_coverage_pct",
+          "weight": 0.06951063
+        },
+        {
+          "abs_weight": 0.06027113,
+          "feature": "away_pregame_roster_data_coverage_pct",
+          "weight": -0.06027113
+        },
+        {
+          "abs_weight": 0.05456396,
+          "feature": "home_back_to_back",
+          "weight": -0.05456396
+        },
+        {
+          "abs_weight": 0.04988718,
+          "feature": "home_pregame_roster_games_covered",
+          "weight": -0.04988718
+        },
+        {
+          "abs_weight": 0.04929491,
+          "feature": "home_location_edge_points_pct",
+          "weight": 0.04929491
+        },
+        {
+          "abs_weight": 0.04584778,
+          "feature": "away_back_to_back",
+          "weight": 0.04584778
+        },
+        {
+          "abs_weight": 0.04219372,
+          "feature": "delta_pregame_injury_count_home_minus_away",
+          "weight": -0.04219372
+        },
+        {
+          "abs_weight": 0.04157119,
+          "feature": "away_pregame_roster_games_covered",
+          "weight": 0.04157119
+        },
+        {
+          "abs_weight": 0.03810131,
+          "feature": "home_pregame_roster_data_coverage_pct",
+          "weight": 0.03810131
+        },
+        {
+          "abs_weight": 0.03423502,
+          "feature": "matchup_home_win_rate_prior",
+          "weight": -0.03423502
+        },
+        {
+          "abs_weight": 0.02804324,
+          "feature": "delta_pregame_skater_two_way_idx_last5_home_minus_away",
+          "weight": 0.02804324
+        },
+        {
+          "abs_weight": 0.0279438,
+          "feature": "away_prior_prev_season_goal_diff_pg",
+          "weight": -0.0279438
+        },
+        {
+          "abs_weight": 0.02790894,
+          "feature": "home_pregame_streak_signed",
+          "weight": 0.02790894
+        },
+        {
+          "abs_weight": 0.02789253,
+          "feature": "home_prior_prev_season_goal_diff_pg",
+          "weight": 0.02789253
+        },
+        {
+          "abs_weight": 0.02630693,
+          "feature": "delta_pregame_last10_goal_diff_pg_home_minus_away",
+          "weight": 0.02630693
+        },
+        {
+          "abs_weight": 0.02449529,
+          "feature": "delta_pregame_last10_points_pct_home_minus_away",
+          "weight": 0.02449529
+        },
+        {
+          "abs_weight": 0.02364438,
+          "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+          "weight": 0.02364438
+        }
+      ],
+      "logistic_params": {
+        "epochs": 250,
+        "l2": 0.3,
+        "learning_rate": 0.02
+      },
+      "recency_weighting": {
+        "game_half_life": 800.0,
+        "min_weight": 0.2,
+        "mode": "none",
+        "normalize_mean_one": true,
+        "season_half_life": 1.5,
+        "train_weight_max": 1.0,
+        "train_weight_mean": 1.0,
+        "train_weight_min": 1.0
+      },
+      "test_games": 1312,
+      "train_games": 2624,
+      "weighted_calibration": {
+        "calibration_methods_by_variant": {
+          "weighted_calibrated": "platt",
+          "weighted_calibrated_isotonic": "isotonic",
+          "weighted_calibrated_platt": "platt"
+        },
+        "selected_fit_parameters": {
+          "a": 0.6503443974192841,
+          "b": 0.09944964391615327
+        },
+        "selected_method": "platt",
+        "selection_fit_games": 1312,
+        "selection_metrics": {
+          "isotonic": {
+            "accuracy": 0.570884,
+            "brier_score": 0.244285,
+            "games": 1312,
+            "log_loss": 0.698648
+          },
+          "platt": {
+            "accuracy": 0.573933,
+            "brier_score": 0.242386,
+            "games": 1312,
+            "log_loss": 0.677765
+          }
+        },
+        "selection_validation_games": 1312,
+        "validation_season": 20222023
+      }
+    },
+    {
+      "blend_diagnostics": {
+        "blend_model_ids": [
+          "blend_logistic_weighted_60_40",
+          "blend_logistic_weighted_70_30",
+          "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+          "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+          "blend_top2_validated__logistic_engineered__elo_form_tuned",
+          "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+          "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated"
+        ],
+        "selected_top_families": [
+          "logistic_engineered",
+          "elo_form_tuned",
+          "weighted_calibrated"
+        ],
+        "top_family_candidates": [
+          {
+            "accuracy": 0.617378,
+            "brier_score": 0.230898,
+            "games": 1312,
+            "log_loss": 0.653437,
+            "model_id": "logistic_engineered"
+          },
+          {
+            "accuracy": 0.587652,
+            "brier_score": 0.240524,
+            "games": 1312,
+            "log_loss": 0.674602,
+            "model_id": "elo_form_tuned"
+          },
+          {
+            "accuracy": 0.550305,
+            "brier_score": 0.245241,
+            "games": 1312,
+            "log_loss": 0.683593,
+            "model_id": "weighted_calibrated"
+          }
+        ],
+        "validated_weight_selection": [
+          {
+            "best_metrics": {
+              "accuracy": 0.608994,
+              "brier_score": 0.231476,
+              "games": 1312,
+              "log_loss": 0.654827
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.3,
+              "logistic_engineered": 0.7
+            },
+            "blend_scope": "top2",
+            "families": [
+              "logistic_engineered",
+              "elo_form_tuned"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.603659,
+                "brier_score": 0.232962,
+                "games": 1312,
+                "log_loss": 0.658001,
+                "weights": {
+                  "elo_form_tuned": 0.5,
+                  "logistic_engineered": 0.5
+                }
+              },
+              {
+                "accuracy": 0.605183,
+                "brier_score": 0.232508,
+                "games": 1312,
+                "log_loss": 0.657036,
+                "weights": {
+                  "elo_form_tuned": 0.45,
+                  "logistic_engineered": 0.55
+                }
+              },
+              {
+                "accuracy": 0.606707,
+                "brier_score": 0.232109,
+                "games": 1312,
+                "log_loss": 0.656186,
+                "weights": {
+                  "elo_form_tuned": 0.4,
+                  "logistic_engineered": 0.6
+                }
+              },
+              {
+                "accuracy": 0.605183,
+                "brier_score": 0.231765,
+                "games": 1312,
+                "log_loss": 0.65545,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.65
+                }
+              },
+              {
+                "accuracy": 0.608994,
+                "brier_score": 0.231476,
+                "games": 1312,
+                "log_loss": 0.654827,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "logistic_engineered": 0.7
+                }
+              }
+            ]
+          },
+          {
+            "best_metrics": {
+              "accuracy": 0.605945,
+              "brier_score": 0.233586,
+              "games": 1312,
+              "log_loss": 0.659336
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.3,
+              "logistic_engineered": 0.5,
+              "weighted_calibrated": 0.2
+            },
+            "blend_scope": "top3",
+            "families": [
+              "logistic_engineered",
+              "elo_form_tuned",
+              "weighted_calibrated"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.605945,
+                "brier_score": 0.233586,
+                "games": 1312,
+                "log_loss": 0.659336,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "logistic_engineered": 0.5,
+                  "weighted_calibrated": 0.2
+                }
+              },
+              {
+                "accuracy": 0.604421,
+                "brier_score": 0.233985,
+                "games": 1312,
+                "log_loss": 0.660174,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.45,
+                  "weighted_calibrated": 0.2
+                }
+              },
+              {
+                "accuracy": 0.602896,
+                "brier_score": 0.23465,
+                "games": 1312,
+                "log_loss": 0.661573,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.4,
+                  "weighted_calibrated": 0.25
+                }
+              },
+              {
+                "accuracy": 0.597561,
+                "brier_score": 0.235612,
+                "games": 1312,
+                "log_loss": 0.663588,
+                "weights": {
+                  "elo_form_tuned": 0.33,
+                  "logistic_engineered": 0.34,
+                  "weighted_calibrated": 0.33
+                }
+              }
+            ]
+          }
+        ],
+        "validation_games": 1312,
+        "validation_season": 20232024
+      },
+      "blend_weights": {
+        "blend_logistic_weighted_60_40": {
+          "logistic_engineered": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_logistic_weighted_70_30": {
+          "logistic_engineered": 0.7,
+          "weighted_calibrated": 0.3
+        },
+        "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.5,
+          "logistic_engineered": 0.5
+        },
+        "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.35,
+          "logistic_engineered": 0.65
+        },
+        "blend_top2_validated__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.7
+        },
+        "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.5,
+          "weighted_calibrated": 0.2
+        },
+        "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.5,
+          "weighted_calibrated": 0.2
+        }
+      },
+      "elo_params": {
+        "form_goal_weight": 20.0,
+        "form_win_weight": 80.0,
+        "home_advantage": 35.0,
+        "k_factor": 14.0
+      },
+      "fold_test_season": 20242025,
+      "fold_train_end_season": 20232024,
+      "fold_train_start_season": 20212022,
+      "interaction_feature_importance": [],
+      "logistic_feature_importance_top": [
+        {
+          "abs_weight": 0.10400225,
+          "feature": "delta_roster_games_covered",
+          "weight": -0.10400225
+        },
+        {
+          "abs_weight": 0.09458119,
+          "feature": "delta_pregame_season_goal_diff_pg_home_minus_away",
+          "weight": 0.09458119
+        },
+        {
+          "abs_weight": 0.09346312,
+          "feature": "delta_roster_coverage_pct",
+          "weight": 0.09346312
+        },
+        {
+          "abs_weight": 0.07167746,
+          "feature": "delta_pregame_season_points_pct_home_minus_away",
+          "weight": 0.07167746
+        },
+        {
+          "abs_weight": 0.0686151,
+          "feature": "home_pregame_roster_games_covered",
+          "weight": -0.0686151
+        },
+        {
+          "abs_weight": 0.06848628,
+          "feature": "away_pregame_roster_data_coverage_pct",
+          "weight": -0.06848628
+        },
+        {
+          "abs_weight": 0.05493271,
+          "feature": "home_back_to_back",
+          "weight": -0.05493271
+        },
+        {
+          "abs_weight": 0.05461135,
+          "feature": "away_pregame_roster_games_covered",
+          "weight": 0.05461135
+        },
+        {
+          "abs_weight": 0.05111161,
+          "feature": "home_pregame_roster_data_coverage_pct",
+          "weight": 0.05111161
+        },
+        {
+          "abs_weight": 0.0492403,
+          "feature": "delta_pregame_injury_count_home_minus_away",
+          "weight": -0.0492403
+        },
+        {
+          "abs_weight": 0.04486713,
+          "feature": "delta_prev_season_points_pct",
+          "weight": 0.04486713
+        },
+        {
+          "abs_weight": 0.04424067,
+          "feature": "away_back_to_back",
+          "weight": 0.04424067
+        },
+        {
+          "abs_weight": 0.03879696,
+          "feature": "home_location_edge_points_pct",
+          "weight": 0.03879696
+        },
+        {
+          "abs_weight": 0.03471934,
+          "feature": "away_prior_prev_season_goal_diff_pg",
+          "weight": -0.03471934
+        },
+        {
+          "abs_weight": 0.03156635,
+          "feature": "delta_prev_season_goal_diff_pg",
+          "weight": 0.03156635
+        },
+        {
+          "abs_weight": 0.0314658,
+          "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+          "weight": -0.0314658
+        },
+        {
+          "abs_weight": 0.02543039,
+          "feature": "delta_pregame_last10_goal_diff_pg_home_minus_away",
+          "weight": 0.02543039
+        },
+        {
+          "abs_weight": 0.02139861,
+          "feature": "home_prior_prev_season_goal_diff_pg",
+          "weight": 0.02139861
+        },
+        {
+          "abs_weight": 0.01852469,
+          "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+          "weight": 0.01852469
+        },
+        {
+          "abs_weight": 0.01741171,
+          "feature": "rest_days_delta_home_minus_away",
+          "weight": 0.01741171
+        }
+      ],
+      "logistic_params": {
+        "epochs": 350,
+        "l2": 0.15,
+        "learning_rate": 0.02
+      },
+      "recency_weighting": {
+        "game_half_life": 800.0,
+        "min_weight": 0.2,
+        "mode": "none",
+        "normalize_mean_one": true,
+        "season_half_life": 1.5,
+        "train_weight_max": 1.0,
+        "train_weight_mean": 1.0,
+        "train_weight_min": 1.0
+      },
+      "test_games": 1312,
+      "train_games": 3936,
+      "weighted_calibration": {
+        "calibration_methods_by_variant": {
+          "weighted_calibrated": "platt",
+          "weighted_calibrated_isotonic": "isotonic",
+          "weighted_calibrated_platt": "platt"
+        },
+        "selected_fit_parameters": {
+          "a": 0.5882266166850247,
+          "b": 0.12214381207482938
+        },
+        "selected_method": "platt",
+        "selection_fit_games": 2624,
+        "selection_metrics": {
+          "isotonic": {
+            "accuracy": 0.554116,
+            "brier_score": 0.246352,
+            "games": 1312,
+            "log_loss": 0.719956
+          },
+          "platt": {
+            "accuracy": 0.550305,
+            "brier_score": 0.245241,
+            "games": 1312,
+            "log_loss": 0.683593
+          }
+        },
+        "selection_validation_games": 1312,
+        "validation_season": 20232024
+      }
+    },
+    {
+      "blend_diagnostics": {
+        "blend_model_ids": [
+          "blend_logistic_weighted_60_40",
+          "blend_logistic_weighted_70_30",
+          "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+          "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+          "blend_top2_validated__logistic_engineered__elo_form_tuned",
+          "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+          "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated"
+        ],
+        "selected_top_families": [
+          "logistic_engineered",
+          "elo_form_tuned",
+          "weighted_calibrated"
+        ],
+        "top_family_candidates": [
+          {
+            "accuracy": 0.599085,
+            "brier_score": 0.22894,
+            "games": 1312,
+            "log_loss": 0.648093,
+            "model_id": "logistic_engineered"
+          },
+          {
+            "accuracy": 0.577744,
+            "brier_score": 0.242226,
+            "games": 1312,
+            "log_loss": 0.67769,
+            "model_id": "elo_form_tuned"
+          },
+          {
+            "accuracy": 0.554878,
+            "brier_score": 0.243851,
+            "games": 1312,
+            "log_loss": 0.680607,
+            "model_id": "weighted_calibrated"
+          }
+        ],
+        "validated_weight_selection": [
+          {
+            "best_metrics": {
+              "accuracy": 0.596037,
+              "brier_score": 0.230894,
+              "games": 1312,
+              "log_loss": 0.652698
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.3,
+              "logistic_engineered": 0.7
+            },
+            "blend_scope": "top2",
+            "families": [
+              "logistic_engineered",
+              "elo_form_tuned"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.594512,
+                "brier_score": 0.233165,
+                "games": 1312,
+                "log_loss": 0.657726,
+                "weights": {
+                  "elo_form_tuned": 0.5,
+                  "logistic_engineered": 0.5
+                }
+              },
+              {
+                "accuracy": 0.595274,
+                "brier_score": 0.232525,
+                "games": 1312,
+                "log_loss": 0.656321,
+                "weights": {
+                  "elo_form_tuned": 0.45,
+                  "logistic_engineered": 0.55
+                }
+              },
+              {
+                "accuracy": 0.596799,
+                "brier_score": 0.231933,
+                "games": 1312,
+                "log_loss": 0.655015,
+                "weights": {
+                  "elo_form_tuned": 0.4,
+                  "logistic_engineered": 0.6
+                }
+              },
+              {
+                "accuracy": 0.598323,
+                "brier_score": 0.231389,
+                "games": 1312,
+                "log_loss": 0.653808,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.65
+                }
+              },
+              {
+                "accuracy": 0.596037,
+                "brier_score": 0.230894,
+                "games": 1312,
+                "log_loss": 0.652698,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "logistic_engineered": 0.7
+                }
+              }
+            ]
+          },
+          {
+            "best_metrics": {
+              "accuracy": 0.60061,
+              "brier_score": 0.233006,
+              "games": 1312,
+              "log_loss": 0.657593
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.3,
+              "logistic_engineered": 0.5,
+              "weighted_calibrated": 0.2
+            },
+            "blend_scope": "top3",
+            "families": [
+              "logistic_engineered",
+              "elo_form_tuned",
+              "weighted_calibrated"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.60061,
+                "brier_score": 0.233006,
+                "games": 1312,
+                "log_loss": 0.657593,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "logistic_engineered": 0.5,
+                  "weighted_calibrated": 0.2
+                }
+              },
+              {
+                "accuracy": 0.596037,
+                "brier_score": 0.233614,
+                "games": 1312,
+                "log_loss": 0.658899,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.45,
+                  "weighted_calibrated": 0.2
+                }
+              },
+              {
+                "accuracy": 0.594512,
+                "brier_score": 0.23429,
+                "games": 1312,
+                "log_loss": 0.660389,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.4,
+                  "weighted_calibrated": 0.25
+                }
+              },
+              {
+                "accuracy": 0.589939,
+                "brier_score": 0.235196,
+                "games": 1312,
+                "log_loss": 0.66237,
+                "weights": {
+                  "elo_form_tuned": 0.33,
+                  "logistic_engineered": 0.34,
+                  "weighted_calibrated": 0.33
+                }
+              }
+            ]
+          }
+        ],
+        "validation_games": 1312,
+        "validation_season": 20242025
+      },
+      "blend_weights": {
+        "blend_logistic_weighted_60_40": {
+          "logistic_engineered": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_logistic_weighted_70_30": {
+          "logistic_engineered": 0.7,
+          "weighted_calibrated": 0.3
+        },
+        "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.5,
+          "logistic_engineered": 0.5
+        },
+        "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.35,
+          "logistic_engineered": 0.65
+        },
+        "blend_top2_validated__logistic_engineered__elo_form_tuned": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.7
+        },
+        "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.5,
+          "weighted_calibrated": 0.2
+        },
+        "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.5,
+          "weighted_calibrated": 0.2
+        }
+      },
+      "elo_params": {
+        "form_goal_weight": 20.0,
+        "form_win_weight": 80.0,
+        "home_advantage": 35.0,
+        "k_factor": 14.0
+      },
+      "fold_test_season": 20252026,
+      "fold_train_end_season": 20242025,
+      "fold_train_start_season": 20212022,
+      "interaction_feature_importance": [
+        {
+          "abs_weight": 0.04159523,
+          "feature": "matchup_home_games_prior_log",
+          "weight": 0.04159523
+        }
+      ],
+      "logistic_feature_importance_top": [
+        {
+          "abs_weight": 0.17515304,
+          "feature": "delta_pregame_season_goal_diff_pg_home_minus_away",
+          "weight": 0.17515304
+        },
+        {
+          "abs_weight": 0.12660819,
+          "feature": "delta_roster_games_covered",
+          "weight": -0.12660819
+        },
+        {
+          "abs_weight": 0.11486033,
+          "feature": "home_pregame_roster_data_coverage_pct",
+          "weight": 0.11486033
+        },
+        {
+          "abs_weight": 0.10572053,
+          "feature": "delta_roster_coverage_pct",
+          "weight": 0.10572053
+        },
+        {
+          "abs_weight": 0.10366717,
+          "feature": "home_pregame_roster_games_covered",
+          "weight": -0.10366717
+        },
+        {
+          "abs_weight": 0.09801963,
+          "feature": "away_pregame_roster_data_coverage_pct",
+          "weight": -0.09801963
+        },
+        {
+          "abs_weight": 0.09763558,
+          "feature": "delta_pregame_injury_count_home_minus_away",
+          "weight": -0.09763558
+        },
+        {
+          "abs_weight": 0.07620889,
+          "feature": "away_pregame_roster_games_covered",
+          "weight": 0.07620889
+        },
+        {
+          "abs_weight": 0.07566884,
+          "feature": "delta_pregame_season_points_pct_home_minus_away",
+          "weight": 0.07566884
+        },
+        {
+          "abs_weight": 0.06790901,
+          "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+          "weight": -0.06790901
+        },
+        {
+          "abs_weight": 0.06729771,
+          "feature": "delta_prev_season_points_pct",
+          "weight": 0.06729771
+        },
+        {
+          "abs_weight": 0.06710256,
+          "feature": "delta_pregame_last10_points_pct_home_minus_away",
+          "weight": -0.06710256
+        },
+        {
+          "abs_weight": 0.06694844,
+          "feature": "home_back_to_back",
+          "weight": -0.06694844
+        },
+        {
+          "abs_weight": 0.0492637,
+          "feature": "delta_prev_season_goal_diff_pg",
+          "weight": 0.0492637
+        },
+        {
+          "abs_weight": 0.0485552,
+          "feature": "away_back_to_back",
+          "weight": 0.0485552
+        },
+        {
+          "abs_weight": 0.04185299,
+          "feature": "away_prior_prev_season_points_pct",
+          "weight": -0.04185299
+        },
+        {
+          "abs_weight": 0.04159523,
+          "feature": "matchup_home_games_prior_log",
+          "weight": 0.04159523
+        },
+        {
+          "abs_weight": 0.03903934,
+          "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+          "weight": 0.03903934
+        },
+        {
+          "abs_weight": 0.03536971,
+          "feature": "home_prior_prev_season_goal_diff_pg",
+          "weight": 0.03536971
+        },
+        {
+          "abs_weight": 0.03221914,
+          "feature": "away_prior_prev_season_goal_diff_pg",
+          "weight": -0.03221914
+        }
+      ],
+      "logistic_params": {
+        "epochs": 450,
+        "l2": 0.01,
+        "learning_rate": 0.05
+      },
+      "recency_weighting": {
+        "game_half_life": 800.0,
+        "min_weight": 0.2,
+        "mode": "none",
+        "normalize_mean_one": true,
+        "season_half_life": 1.5,
+        "train_weight_max": 1.0,
+        "train_weight_mean": 1.0,
+        "train_weight_min": 1.0
+      },
+      "test_games": 1312,
+      "train_games": 5248,
+      "weighted_calibration": {
+        "calibration_methods_by_variant": {
+          "weighted_calibrated": "platt",
+          "weighted_calibrated_isotonic": "isotonic",
+          "weighted_calibrated_platt": "platt"
+        },
+        "selected_fit_parameters": {
+          "a": 0.5563528217903906,
+          "b": 0.15209163026911496
+        },
+        "selected_method": "platt",
+        "selection_fit_games": 3936,
+        "selection_metrics": {
+          "isotonic": {
+            "accuracy": 0.556402,
+            "brier_score": 0.244227,
+            "games": 1312,
+            "log_loss": 0.689841
+          },
+          "platt": {
+            "accuracy": 0.554878,
+            "brier_score": 0.243851,
+            "games": 1312,
+            "log_loss": 0.680607
+          }
+        },
+        "selection_validation_games": 1312,
+        "validation_season": 20242025
+      }
+    }
+  ],
+  "interaction_feature_importance_by_fold": [
+    {
+      "abs_weight": 0.0342350187,
+      "feature": "matchup_home_win_rate_prior",
+      "fold_test_season": 20232024,
+      "weight": -0.0342350187
+    },
+    {
+      "abs_weight": 0.0415952324,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20252026,
+      "weight": 0.0415952324
+    }
+  ],
+  "interaction_features": [
+    "matchup_home_win_rate_prior",
+    "matchup_home_games_prior_log",
+    "team_vs_opponent_win_rate_prior",
+    "team_vs_opponent_games_prior_log"
+  ],
+  "leakage_controls": [
+    "season-expanding folds with train seasons strictly before each test season",
+    "robust scaling fit only on each fold's training rows",
+    "logistic tuning uses training-only split (latest train season as validation)",
+    "weighted calibration method selected from fold-local train/validation split and refit on fold training rows",
+    "Elo parameters tuned on training games only and evaluated on next season",
+    "blend family ranking and validated blend-weight selection performed only on fold-local calibration split"
+  ],
+  "logistic_feature_importance_by_fold": [
+    {
+      "abs_weight": 0.0879065906,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20232024,
+      "weight": -0.0879065906
+    },
+    {
+      "abs_weight": 0.0833471633,
+      "feature": "delta_pregame_season_goal_diff_pg_home_minus_away",
+      "fold_test_season": 20232024,
+      "weight": 0.0833471633
+    },
+    {
+      "abs_weight": 0.0749628048,
+      "feature": "delta_pregame_season_points_pct_home_minus_away",
+      "fold_test_season": 20232024,
+      "weight": 0.0749628048
+    },
+    {
+      "abs_weight": 0.0695106257,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20232024,
+      "weight": 0.0695106257
+    },
+    {
+      "abs_weight": 0.06027113,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20232024,
+      "weight": -0.06027113
+    },
+    {
+      "abs_weight": 0.0545639598,
+      "feature": "home_back_to_back",
+      "fold_test_season": 20232024,
+      "weight": -0.0545639598
+    },
+    {
+      "abs_weight": 0.0498871841,
+      "feature": "home_pregame_roster_games_covered",
+      "fold_test_season": 20232024,
+      "weight": -0.0498871841
+    },
+    {
+      "abs_weight": 0.049294914,
+      "feature": "home_location_edge_points_pct",
+      "fold_test_season": 20232024,
+      "weight": 0.049294914
+    },
+    {
+      "abs_weight": 0.0458477821,
+      "feature": "away_back_to_back",
+      "fold_test_season": 20232024,
+      "weight": 0.0458477821
+    },
+    {
+      "abs_weight": 0.0421937245,
+      "feature": "delta_pregame_injury_count_home_minus_away",
+      "fold_test_season": 20232024,
+      "weight": -0.0421937245
+    },
+    {
+      "abs_weight": 0.0415711876,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20232024,
+      "weight": 0.0415711876
+    },
+    {
+      "abs_weight": 0.0381013072,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20232024,
+      "weight": 0.0381013072
+    },
+    {
+      "abs_weight": 0.0342350187,
+      "feature": "matchup_home_win_rate_prior",
+      "fold_test_season": 20232024,
+      "weight": -0.0342350187
+    },
+    {
+      "abs_weight": 0.0280432386,
+      "feature": "delta_pregame_skater_two_way_idx_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "weight": 0.0280432386
+    },
+    {
+      "abs_weight": 0.0279438015,
+      "feature": "away_prior_prev_season_goal_diff_pg",
+      "fold_test_season": 20232024,
+      "weight": -0.0279438015
+    },
+    {
+      "abs_weight": 0.0279089443,
+      "feature": "home_pregame_streak_signed",
+      "fold_test_season": 20232024,
+      "weight": 0.0279089443
+    },
+    {
+      "abs_weight": 0.0278925282,
+      "feature": "home_prior_prev_season_goal_diff_pg",
+      "fold_test_season": 20232024,
+      "weight": 0.0278925282
+    },
+    {
+      "abs_weight": 0.0263069319,
+      "feature": "delta_pregame_last10_goal_diff_pg_home_minus_away",
+      "fold_test_season": 20232024,
+      "weight": 0.0263069319
+    },
+    {
+      "abs_weight": 0.0244952944,
+      "feature": "delta_pregame_last10_points_pct_home_minus_away",
+      "fold_test_season": 20232024,
+      "weight": 0.0244952944
+    },
+    {
+      "abs_weight": 0.0236443836,
+      "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "weight": 0.0236443836
+    },
+    {
+      "abs_weight": 0.1040022521,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20242025,
+      "weight": -0.1040022521
+    },
+    {
+      "abs_weight": 0.0945811926,
+      "feature": "delta_pregame_season_goal_diff_pg_home_minus_away",
+      "fold_test_season": 20242025,
+      "weight": 0.0945811926
+    },
+    {
+      "abs_weight": 0.0934631216,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20242025,
+      "weight": 0.0934631216
+    },
+    {
+      "abs_weight": 0.0716774624,
+      "feature": "delta_pregame_season_points_pct_home_minus_away",
+      "fold_test_season": 20242025,
+      "weight": 0.0716774624
+    },
+    {
+      "abs_weight": 0.0686151041,
+      "feature": "home_pregame_roster_games_covered",
+      "fold_test_season": 20242025,
+      "weight": -0.0686151041
+    },
+    {
+      "abs_weight": 0.0684862787,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20242025,
+      "weight": -0.0684862787
+    },
+    {
+      "abs_weight": 0.0549327138,
+      "feature": "home_back_to_back",
+      "fold_test_season": 20242025,
+      "weight": -0.0549327138
+    },
+    {
+      "abs_weight": 0.0546113519,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20242025,
+      "weight": 0.0546113519
+    },
+    {
+      "abs_weight": 0.0511116057,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20242025,
+      "weight": 0.0511116057
+    },
+    {
+      "abs_weight": 0.0492403026,
+      "feature": "delta_pregame_injury_count_home_minus_away",
+      "fold_test_season": 20242025,
+      "weight": -0.0492403026
+    },
+    {
+      "abs_weight": 0.0448671256,
+      "feature": "delta_prev_season_points_pct",
+      "fold_test_season": 20242025,
+      "weight": 0.0448671256
+    },
+    {
+      "abs_weight": 0.0442406711,
+      "feature": "away_back_to_back",
+      "fold_test_season": 20242025,
+      "weight": 0.0442406711
+    },
+    {
+      "abs_weight": 0.038796963,
+      "feature": "home_location_edge_points_pct",
+      "fold_test_season": 20242025,
+      "weight": 0.038796963
+    },
+    {
+      "abs_weight": 0.034719345,
+      "feature": "away_prior_prev_season_goal_diff_pg",
+      "fold_test_season": 20242025,
+      "weight": -0.034719345
+    },
+    {
+      "abs_weight": 0.0315663484,
+      "feature": "delta_prev_season_goal_diff_pg",
+      "fold_test_season": 20242025,
+      "weight": 0.0315663484
+    },
+    {
+      "abs_weight": 0.0314657962,
+      "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+      "fold_test_season": 20242025,
+      "weight": -0.0314657962
+    },
+    {
+      "abs_weight": 0.0254303871,
+      "feature": "delta_pregame_last10_goal_diff_pg_home_minus_away",
+      "fold_test_season": 20242025,
+      "weight": 0.0254303871
+    },
+    {
+      "abs_weight": 0.0213986077,
+      "feature": "home_prior_prev_season_goal_diff_pg",
+      "fold_test_season": 20242025,
+      "weight": 0.0213986077
+    },
+    {
+      "abs_weight": 0.0185246851,
+      "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+      "fold_test_season": 20242025,
+      "weight": 0.0185246851
+    },
+    {
+      "abs_weight": 0.0174117085,
+      "feature": "rest_days_delta_home_minus_away",
+      "fold_test_season": 20242025,
+      "weight": 0.0174117085
+    },
+    {
+      "abs_weight": 0.175153044,
+      "feature": "delta_pregame_season_goal_diff_pg_home_minus_away",
+      "fold_test_season": 20252026,
+      "weight": 0.175153044
+    },
+    {
+      "abs_weight": 0.1266081862,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20252026,
+      "weight": -0.1266081862
+    },
+    {
+      "abs_weight": 0.1148603286,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20252026,
+      "weight": 0.1148603286
+    },
+    {
+      "abs_weight": 0.1057205311,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20252026,
+      "weight": 0.1057205311
+    },
+    {
+      "abs_weight": 0.103667175,
+      "feature": "home_pregame_roster_games_covered",
+      "fold_test_season": 20252026,
+      "weight": -0.103667175
+    },
+    {
+      "abs_weight": 0.0980196318,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20252026,
+      "weight": -0.0980196318
+    },
+    {
+      "abs_weight": 0.0976355795,
+      "feature": "delta_pregame_injury_count_home_minus_away",
+      "fold_test_season": 20252026,
+      "weight": -0.0976355795
+    },
+    {
+      "abs_weight": 0.0762088935,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20252026,
+      "weight": 0.0762088935
+    },
+    {
+      "abs_weight": 0.0756688383,
+      "feature": "delta_pregame_season_points_pct_home_minus_away",
+      "fold_test_season": 20252026,
+      "weight": 0.0756688383
+    },
+    {
+      "abs_weight": 0.0679090147,
+      "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+      "fold_test_season": 20252026,
+      "weight": -0.0679090147
+    },
+    {
+      "abs_weight": 0.0672977092,
+      "feature": "delta_prev_season_points_pct",
+      "fold_test_season": 20252026,
+      "weight": 0.0672977092
+    },
+    {
+      "abs_weight": 0.0671025634,
+      "feature": "delta_pregame_last10_points_pct_home_minus_away",
+      "fold_test_season": 20252026,
+      "weight": -0.0671025634
+    },
+    {
+      "abs_weight": 0.0669484396,
+      "feature": "home_back_to_back",
+      "fold_test_season": 20252026,
+      "weight": -0.0669484396
+    },
+    {
+      "abs_weight": 0.0492636984,
+      "feature": "delta_prev_season_goal_diff_pg",
+      "fold_test_season": 20252026,
+      "weight": 0.0492636984
+    },
+    {
+      "abs_weight": 0.0485551999,
+      "feature": "away_back_to_back",
+      "fold_test_season": 20252026,
+      "weight": 0.0485551999
+    },
+    {
+      "abs_weight": 0.0418529864,
+      "feature": "away_prior_prev_season_points_pct",
+      "fold_test_season": 20252026,
+      "weight": -0.0418529864
+    },
+    {
+      "abs_weight": 0.0415952324,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20252026,
+      "weight": 0.0415952324
+    },
+    {
+      "abs_weight": 0.0390393379,
+      "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+      "fold_test_season": 20252026,
+      "weight": 0.0390393379
+    },
+    {
+      "abs_weight": 0.0353697072,
+      "feature": "home_prior_prev_season_goal_diff_pg",
+      "fold_test_season": 20252026,
+      "weight": 0.0353697072
+    },
+    {
+      "abs_weight": 0.0322191351,
+      "feature": "away_prior_prev_season_goal_diff_pg",
+      "fold_test_season": 20252026,
+      "weight": -0.0322191351
+    }
+  ],
+  "metrics_by_season": [
+    {
+      "accuracy": 0.602896,
+      "brier_score": 0.234513,
+      "games": 1312,
+      "log_loss": 0.661273,
+      "model_id": "blend_logistic_weighted_60_40",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.596799,
+      "brier_score": 0.232585,
+      "games": 1312,
+      "log_loss": 0.65687,
+      "model_id": "blend_logistic_weighted_60_40",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.564024,
+      "brier_score": 0.240976,
+      "games": 1312,
+      "log_loss": 0.674463,
+      "model_id": "blend_logistic_weighted_60_40",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.606707,
+      "brier_score": 0.233344,
+      "games": 1312,
+      "log_loss": 0.6588,
+      "model_id": "blend_logistic_weighted_70_30",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.599085,
+      "brier_score": 0.231384,
+      "games": 1312,
+      "log_loss": 0.654142,
+      "model_id": "blend_logistic_weighted_70_30",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.563262,
+      "brier_score": 0.240398,
+      "games": 1312,
+      "log_loss": 0.673066,
+      "model_id": "blend_logistic_weighted_70_30",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.603659,
+      "brier_score": 0.232962,
+      "games": 1312,
+      "log_loss": 0.658001,
+      "model_id": "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.594512,
+      "brier_score": 0.233165,
+      "games": 1312,
+      "log_loss": 0.657726,
+      "model_id": "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.556402,
+      "brier_score": 0.24299,
+      "games": 1312,
+      "log_loss": 0.678646,
+      "model_id": "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.605183,
+      "brier_score": 0.231765,
+      "games": 1312,
+      "log_loss": 0.65545,
+      "model_id": "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.598323,
+      "brier_score": 0.231389,
+      "games": 1312,
+      "log_loss": 0.653808,
+      "model_id": "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.560213,
+      "brier_score": 0.241405,
+      "games": 1312,
+      "log_loss": 0.675114,
+      "model_id": "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.603659,
+      "brier_score": 0.232962,
+      "games": 1312,
+      "log_loss": 0.658001,
+      "model_id": "blend_top2_validated__logistic_engineered__elo_form_tuned",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.596037,
+      "brier_score": 0.230894,
+      "games": 1312,
+      "log_loss": 0.652698,
+      "model_id": "blend_top2_validated__logistic_engineered__elo_form_tuned",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.559451,
+      "brier_score": 0.241031,
+      "games": 1312,
+      "log_loss": 0.674241,
+      "model_id": "blend_top2_validated__logistic_engineered__elo_form_tuned",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.605945,
+      "brier_score": 0.233586,
+      "games": 1312,
+      "log_loss": 0.659336,
+      "model_id": "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.60061,
+      "brier_score": 0.233006,
+      "games": 1312,
+      "log_loss": 0.657593,
+      "model_id": "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.565549,
+      "brier_score": 0.242179,
+      "games": 1312,
+      "log_loss": 0.677002,
+      "model_id": "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.604421,
+      "brier_score": 0.233985,
+      "games": 1312,
+      "log_loss": 0.660174,
+      "model_id": "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.60061,
+      "brier_score": 0.233006,
+      "games": 1312,
+      "log_loss": 0.657593,
+      "model_id": "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.565549,
+      "brier_score": 0.242179,
+      "games": 1312,
+      "log_loss": 0.677002,
+      "model_id": "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.587652,
+      "brier_score": 0.240524,
+      "games": 1312,
+      "log_loss": 0.674602,
+      "model_id": "elo_form_tuned",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.577744,
+      "brier_score": 0.242226,
+      "games": 1312,
+      "log_loss": 0.67769,
+      "model_id": "elo_form_tuned",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.535823,
+      "brier_score": 0.253267,
+      "games": 1312,
+      "log_loss": 0.700845,
+      "model_id": "elo_form_tuned",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.617378,
+      "brier_score": 0.230898,
+      "games": 1312,
+      "log_loss": 0.653437,
+      "model_id": "logistic_engineered",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.599085,
+      "brier_score": 0.22894,
+      "games": 1312,
+      "log_loss": 0.648093,
+      "model_id": "logistic_engineered",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.556402,
+      "brier_score": 0.240396,
+      "games": 1312,
+      "log_loss": 0.67241,
+      "model_id": "logistic_engineered",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.550305,
+      "brier_score": 0.245241,
+      "games": 1312,
+      "log_loss": 0.683593,
+      "model_id": "weighted_calibrated",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.554878,
+      "brier_score": 0.243851,
+      "games": 1312,
+      "log_loss": 0.680607,
+      "model_id": "weighted_calibrated",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.532774,
+      "brier_score": 0.250499,
+      "games": 1312,
+      "log_loss": 0.694361,
+      "model_id": "weighted_calibrated",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.554116,
+      "brier_score": 0.246352,
+      "games": 1312,
+      "log_loss": 0.719956,
+      "model_id": "weighted_calibrated_isotonic",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.556402,
+      "brier_score": 0.244227,
+      "games": 1312,
+      "log_loss": 0.689841,
+      "model_id": "weighted_calibrated_isotonic",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.536585,
+      "brier_score": 0.25074,
+      "games": 1312,
+      "log_loss": 0.703613,
+      "model_id": "weighted_calibrated_isotonic",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    },
+    {
+      "accuracy": 0.550305,
+      "brier_score": 0.245241,
+      "games": 1312,
+      "log_loss": 0.683593,
+      "model_id": "weighted_calibrated_platt",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.554878,
+      "brier_score": 0.243851,
+      "games": 1312,
+      "log_loss": 0.680607,
+      "model_id": "weighted_calibrated_platt",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.532774,
+      "brier_score": 0.250499,
+      "games": 1312,
+      "log_loss": 0.694361,
+      "model_id": "weighted_calibrated_platt",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    }
+  ],
+  "models": [
+    "blend_logistic_weighted_60_40",
+    "blend_logistic_weighted_70_30",
+    "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned",
+    "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned",
+    "blend_top2_validated__logistic_engineered__elo_form_tuned",
+    "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated",
+    "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated",
+    "elo_form_tuned",
+    "logistic_engineered",
+    "weighted_calibrated",
+    "weighted_calibrated_isotonic",
+    "weighted_calibrated_platt"
+  ],
+  "overall_metrics": [
+    {
+      "accuracy": 0.587907,
+      "brier_score": 0.236024,
+      "games": 3936,
+      "log_loss": 0.664202,
+      "model_id": "blend_logistic_weighted_60_40"
+    },
+    {
+      "accuracy": 0.589685,
+      "brier_score": 0.235042,
+      "games": 3936,
+      "log_loss": 0.662003,
+      "model_id": "blend_logistic_weighted_70_30"
+    },
+    {
+      "accuracy": 0.584858,
+      "brier_score": 0.236372,
+      "games": 3936,
+      "log_loss": 0.664791,
+      "model_id": "blend_top2_fixed_50_50__logistic_engineered__elo_form_tuned"
+    },
+    {
+      "accuracy": 0.587907,
+      "brier_score": 0.234853,
+      "games": 3936,
+      "log_loss": 0.661457,
+      "model_id": "blend_top2_fixed_65_35__logistic_engineered__elo_form_tuned"
+    },
+    {
+      "accuracy": 0.586382,
+      "brier_score": 0.234962,
+      "games": 3936,
+      "log_loss": 0.661647,
+      "model_id": "blend_top2_validated__logistic_engineered__elo_form_tuned"
+    },
+    {
+      "accuracy": 0.590701,
+      "brier_score": 0.236257,
+      "games": 3936,
+      "log_loss": 0.664644,
+      "model_id": "blend_top3_fixed_50_30_20__logistic_engineered__elo_form_tuned__weighted_calibrated"
+    },
+    {
+      "accuracy": 0.590193,
+      "brier_score": 0.23639,
+      "games": 3936,
+      "log_loss": 0.664923,
+      "model_id": "blend_top3_validated__logistic_engineered__elo_form_tuned__weighted_calibrated"
+    },
+    {
+      "accuracy": 0.567073,
+      "brier_score": 0.245339,
+      "games": 3936,
+      "log_loss": 0.684379,
+      "model_id": "elo_form_tuned"
+    },
+    {
+      "accuracy": 0.590955,
+      "brier_score": 0.233411,
+      "games": 3936,
+      "log_loss": 0.65798,
+      "model_id": "logistic_engineered"
+    },
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated"
+    },
+    {
+      "accuracy": 0.549035,
+      "brier_score": 0.247107,
+      "games": 3936,
+      "log_loss": 0.70447,
+      "model_id": "weighted_calibrated_isotonic"
+    },
+    {
+      "accuracy": 0.545986,
+      "brier_score": 0.24653,
+      "games": 3936,
+      "log_loss": 0.686187,
+      "model_id": "weighted_calibrated_platt"
+    }
+  ],
+  "recency_weighting": {
+    "game_half_life": 800.0,
+    "min_weight": 0.2,
+    "mode": "none",
+    "normalize_mean_one": true,
+    "season_half_life": 1.5
+  }
+}

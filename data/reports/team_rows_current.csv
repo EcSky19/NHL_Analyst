@@ -1,0 +1,97 @@
+cluster_id,team_id,source,external_team_id,name,abbreviation,city,active,normalized_name,normalized_abbreviation,created_at,updated_at
+1,5,api.nhle.com/stats/rest,24,Anaheim Ducks,ANA,Anaheim,1,anaheimducks,ANA,2026-08-03 18:11:32,2026-08-03 18:11:32
+2,13,api.nhle.com/stats/rest,6,Boston Bruins,BOS,Boston,1,bostonbruins,BOS,2026-08-03 18:11:32,2026-08-03 18:11:32
+3,27,api.nhle.com/stats/rest,7,Buffalo Sabres,BUF,Buffalo,1,buffalosabres,BUF,2026-08-03 18:11:32,2026-08-03 18:11:32
+5,28,api.nhle.com/stats/rest,12,Carolina Hurricanes,CAR,Carolina,1,carolinahurricanes,CAR,2026-08-03 18:11:32,2026-08-03 18:11:32
+8,14,api.nhle.com/stats/rest,29,Columbus Blue Jackets,CBJ,Columbus,1,columbusbluejackets,CBJ,2026-08-03 18:11:32,2026-08-03 18:11:32
+4,16,api.nhle.com/stats/rest,20,Calgary Flames,CGY,Calgary,1,calgaryflames,CGY,2026-08-03 18:11:32,2026-08-03 18:11:32
+6,15,api.nhle.com/stats/rest,16,Chicago Blackhawks,CHI,Chicago,1,chicagoblackhawks,CHI,2026-08-03 18:11:32,2026-08-03 18:11:32
+7,11,api.nhle.com/stats/rest,21,Colorado Avalanche,COL,Colorado,1,coloradoavalanche,COL,2026-08-03 18:11:32,2026-08-03 18:11:32
+9,7,api.nhle.com/stats/rest,25,Dallas Stars,DAL,Dallas,1,dallasstars,DAL,2026-08-03 18:11:32,2026-08-03 18:11:32
+10,8,api.nhle.com/stats/rest,17,Detroit Red Wings,DET,Detroit,1,detroitredwings,DET,2026-08-03 18:11:32,2026-08-03 18:11:32
+11,30,api.nhle.com/stats/rest,22,Edmonton Oilers,EDM,Edmonton,1,edmontonoilers,EDM,2026-08-03 18:11:32,2026-08-03 18:11:32
+12,31,api.nhle.com/stats/rest,13,Florida Panthers,FLA,Florida,1,floridapanthers,FLA,2026-08-03 18:11:32,2026-08-03 18:11:32
+13,23,api.nhle.com/stats/rest,26,Los Angeles Kings,LAK,Los Angeles,1,losangeleskings,LAK,2026-08-03 18:11:32,2026-08-03 18:11:32
+14,26,api.nhle.com/stats/rest,30,Minnesota Wild,MIN,Minnesota,1,minnesotawild,MIN,2026-08-03 18:11:32,2026-08-03 18:11:32
+15,19,api.nhle.com/stats/rest,8,Montréal Canadiens,MTL,Montréal,1,montralcanadiens,MTL,2026-08-03 18:11:32,2026-08-03 18:11:32
+17,2,api.nhle.com/stats/rest,1,New Jersey Devils,NJD,New Jersey,1,newjerseydevils,NJD,2026-08-03 18:11:32,2026-08-03 18:11:32
+16,12,api.nhle.com/stats/rest,18,Nashville Predators,NSH,Nashville,1,nashvillepredators,NSH,2026-08-03 18:11:32,2026-08-03 18:11:32
+18,22,api.nhle.com/stats/rest,2,New York Islanders,NYI,NY Islanders,1,newyorkislanders,NYI,2026-08-03 18:11:32,2026-08-03 18:11:32
+19,21,api.nhle.com/stats/rest,3,New York Rangers,NYR,NY Rangers,1,newyorkrangers,NYR,2026-08-03 18:11:32,2026-08-03 18:11:32
+20,9,api.nhle.com/stats/rest,9,Ottawa Senators,OTT,Ottawa,1,ottawasenators,OTT,2026-08-03 18:11:32,2026-08-03 18:11:32
+21,29,api.nhle.com/stats/rest,4,Philadelphia Flyers,PHI,Philadelphia,1,philadelphiaflyers,PHI,2026-08-03 18:11:32,2026-08-03 18:11:32
+22,18,api.nhle.com/stats/rest,5,Pittsburgh Penguins,PIT,Pittsburgh,1,pittsburghpenguins,PIT,2026-08-03 18:11:32,2026-08-03 18:11:32
+24,24,api.nhle.com/stats/rest,55,Seattle Kraken,SEA,Seattle,1,seattlekraken,SEA,2026-08-03 18:11:32,2026-08-03 18:11:32
+23,20,api.nhle.com/stats/rest,28,San Jose Sharks,SJS,San Jose,1,sanjosesharks,SJS,2026-08-03 18:11:32,2026-08-03 18:11:32
+25,6,api.nhle.com/stats/rest,19,St. Louis Blues,STL,St. Louis,1,stlouisblues,STL,2026-08-03 18:11:32,2026-08-03 18:11:32
+26,17,api.nhle.com/stats/rest,14,Tampa Bay Lightning,TBL,Tampa Bay,1,tampabaylightning,TBL,2026-08-03 18:11:32,2026-08-03 18:11:32
+27,32,api.nhle.com/stats/rest,10,Toronto Maple Leafs,TOR,Toronto,1,torontomapleleafs,TOR,2026-08-03 18:11:32,2026-08-03 18:11:32
+28,25,api.nhle.com/stats/rest,68,Utah Mammoth,UTA,Utah,1,utahmammoth,UTA,2026-08-03 18:11:32,2026-08-03 18:11:32
+29,4,api.nhle.com/stats/rest,23,Vancouver Canucks,VAN,Vancouver,1,vancouvercanucks,VAN,2026-08-03 18:11:32,2026-08-03 18:11:32
+30,3,api.nhle.com/stats/rest,54,Vegas Golden Knights,VGK,Vegas,1,vegasgoldenknights,VGK,2026-08-03 18:11:32,2026-08-03 18:11:32
+32,10,api.nhle.com/stats/rest,52,Winnipeg Jets,WPG,Winnipeg,1,winnipegjets,WPG,2026-08-03 18:11:32,2026-08-03 18:11:32
+31,1,api.nhle.com/stats/rest,15,Washington Capitals,WSH,Washington,1,washingtoncapitals,WSH,2026-08-03 18:11:32,2026-08-03 18:11:32
+1,33,espn,25,Anaheim Ducks,ANA,Anaheim,1,anaheimducks,ANA,2026-08-03 18:11:56,2026-08-03 18:13:49
+2,34,espn,1,Boston Bruins,BOS,Boston,1,bostonbruins,BOS,2026-08-03 18:11:56,2026-08-03 18:13:49
+3,35,espn,2,Buffalo Sabres,BUF,Buffalo,1,buffalosabres,BUF,2026-08-03 18:11:56,2026-08-03 18:13:49
+5,37,espn,7,Carolina Hurricanes,CAR,Carolina,1,carolinahurricanes,CAR,2026-08-03 18:11:56,2026-08-03 18:13:49
+8,40,espn,29,Columbus Blue Jackets,CBJ,Columbus,1,columbusbluejackets,CBJ,2026-08-03 18:11:56,2026-08-03 18:13:49
+4,36,espn,3,Calgary Flames,CGY,Calgary,1,calgaryflames,CGY,2026-08-03 18:11:56,2026-08-03 18:13:49
+6,38,espn,4,Chicago Blackhawks,CHI,Chicago,1,chicagoblackhawks,CHI,2026-08-03 18:11:56,2026-08-03 18:13:49
+7,39,espn,17,Colorado Avalanche,COL,Colorado,1,coloradoavalanche,COL,2026-08-03 18:11:56,2026-08-03 18:13:49
+9,41,espn,9,Dallas Stars,DAL,Dallas,1,dallasstars,DAL,2026-08-03 18:11:56,2026-08-03 18:13:49
+10,42,espn,5,Detroit Red Wings,DET,Detroit,1,detroitredwings,DET,2026-08-03 18:11:56,2026-08-03 18:13:49
+11,43,espn,6,Edmonton Oilers,EDM,Edmonton,1,edmontonoilers,EDM,2026-08-03 18:11:56,2026-08-03 18:13:49
+12,44,espn,26,Florida Panthers,FLA,Florida,1,floridapanthers,FLA,2026-08-03 18:11:56,2026-08-03 18:13:49
+13,45,espn,8,Los Angeles Kings,LA,Los Angeles,1,losangeleskings,LA,2026-08-03 18:11:56,2026-08-03 18:13:49
+14,46,espn,30,Minnesota Wild,MIN,Minnesota,1,minnesotawild,MIN,2026-08-03 18:11:56,2026-08-03 18:13:49
+15,47,espn,10,Montreal Canadiens,MTL,Montreal,1,montrealcanadiens,MTL,2026-08-03 18:11:56,2026-08-03 18:13:49
+17,49,espn,11,New Jersey Devils,NJ,New Jersey,1,newjerseydevils,NJ,2026-08-03 18:11:56,2026-08-03 18:13:49
+16,48,espn,27,Nashville Predators,NSH,Nashville,1,nashvillepredators,NSH,2026-08-03 18:11:56,2026-08-03 18:13:49
+18,50,espn,12,New York Islanders,NYI,New York,1,newyorkislanders,NYI,2026-08-03 18:11:56,2026-08-03 18:13:49
+19,51,espn,13,New York Rangers,NYR,New York,1,newyorkrangers,NYR,2026-08-03 18:11:56,2026-08-03 18:13:49
+20,52,espn,14,Ottawa Senators,OTT,Ottawa,1,ottawasenators,OTT,2026-08-03 18:11:56,2026-08-03 18:13:49
+21,53,espn,15,Philadelphia Flyers,PHI,Philadelphia,1,philadelphiaflyers,PHI,2026-08-03 18:11:56,2026-08-03 18:13:49
+22,54,espn,16,Pittsburgh Penguins,PIT,Pittsburgh,1,pittsburghpenguins,PIT,2026-08-03 18:11:56,2026-08-03 18:13:49
+24,56,espn,124292,Seattle Kraken,SEA,Seattle,1,seattlekraken,SEA,2026-08-03 18:11:56,2026-08-03 18:13:49
+23,55,espn,18,San Jose Sharks,SJ,San Jose,1,sanjosesharks,SJ,2026-08-03 18:11:56,2026-08-03 18:13:49
+25,57,espn,19,St. Louis Blues,STL,St. Louis,1,stlouisblues,STL,2026-08-03 18:11:56,2026-08-03 18:13:49
+26,58,espn,20,Tampa Bay Lightning,TB,Tampa Bay,1,tampabaylightning,TB,2026-08-03 18:11:56,2026-08-03 18:13:49
+27,59,espn,21,Toronto Maple Leafs,TOR,Toronto,1,torontomapleleafs,TOR,2026-08-03 18:11:56,2026-08-03 18:13:49
+28,60,espn,129764,Utah Mammoth,UTAH,Utah,1,utahmammoth,UTAH,2026-08-03 18:11:56,2026-08-03 18:13:49
+29,61,espn,22,Vancouver Canucks,VAN,Vancouver,1,vancouvercanucks,VAN,2026-08-03 18:11:56,2026-08-03 18:13:49
+30,62,espn,37,Vegas Golden Knights,VGK,Vegas,1,vegasgoldenknights,VGK,2026-08-03 18:11:56,2026-08-03 18:13:49
+32,64,espn,28,Winnipeg Jets,WPG,Winnipeg,1,winnipegjets,WPG,2026-08-03 18:11:56,2026-08-03 18:13:49
+31,63,espn,23,Washington Capitals,WSH,Washington,1,washingtoncapitals,WSH,2026-08-03 18:11:56,2026-08-03 18:13:49
+1,87,nhl_api,24,Anaheim Ducks,ANA,Anaheim,1,anaheimducks,ANA,2026-08-03 18:22:25,2026-08-03 18:22:25
+2,70,nhl_api,6,Boston Bruins,BOS,Boston,1,bostonbruins,BOS,2026-08-03 18:22:25,2026-08-03 18:22:25
+3,71,nhl_api,7,Buffalo Sabres,BUF,Buffalo,1,buffalosabres,BUF,2026-08-03 18:22:25,2026-08-03 18:22:25
+5,75,nhl_api,12,Carolina Hurricanes,CAR,Carolina,1,carolinahurricanes,CAR,2026-08-03 18:22:25,2026-08-03 18:22:25
+8,91,nhl_api,29,Columbus Blue Jackets,CBJ,Columbus,1,columbusbluejackets,CBJ,2026-08-03 18:22:25,2026-08-03 18:22:25
+4,83,nhl_api,20,Calgary Flames,CGY,Calgary,1,calgaryflames,CGY,2026-08-03 18:22:25,2026-08-03 18:22:25
+6,79,nhl_api,16,Chicago Blackhawks,CHI,Chicago,1,chicagoblackhawks,CHI,2026-08-03 18:22:25,2026-08-03 18:22:25
+7,84,nhl_api,21,Colorado Avalanche,COL,Colorado,1,coloradoavalanche,COL,2026-08-03 18:22:25,2026-08-03 18:22:25
+9,88,nhl_api,25,Dallas Stars,DAL,Dallas,1,dallasstars,DAL,2026-08-03 18:22:25,2026-08-03 18:22:25
+10,80,nhl_api,17,Detroit Red Wings,DET,Detroit,1,detroitredwings,DET,2026-08-03 18:22:25,2026-08-03 18:22:25
+11,85,nhl_api,22,Edmonton Oilers,EDM,Edmonton,1,edmontonoilers,EDM,2026-08-03 18:22:25,2026-08-03 18:22:25
+12,76,nhl_api,13,Florida Panthers,FLA,Florida,1,floridapanthers,FLA,2026-08-03 18:22:25,2026-08-03 18:22:25
+13,89,nhl_api,26,Los Angeles Kings,LAK,Los,1,losangeleskings,LAK,2026-08-03 18:22:25,2026-08-03 18:22:25
+14,92,nhl_api,30,Minnesota Wild,MIN,Minnesota,1,minnesotawild,MIN,2026-08-03 18:22:25,2026-08-03 18:22:25
+15,72,nhl_api,8,Montréal Canadiens,MTL,Montréal,1,montralcanadiens,MTL,2026-08-03 18:22:25,2026-08-03 18:22:25
+17,65,nhl_api,1,New Jersey Devils,NJD,New,1,newjerseydevils,NJD,2026-08-03 18:22:25,2026-08-03 18:22:25
+16,81,nhl_api,18,Nashville Predators,NSH,Nashville,1,nashvillepredators,NSH,2026-08-03 18:22:25,2026-08-03 18:22:25
+18,66,nhl_api,2,New York Islanders,NYI,New,1,newyorkislanders,NYI,2026-08-03 18:22:25,2026-08-03 18:22:25
+19,67,nhl_api,3,New York Rangers,NYR,New,1,newyorkrangers,NYR,2026-08-03 18:22:25,2026-08-03 18:22:25
+20,73,nhl_api,9,Ottawa Senators,OTT,Ottawa,1,ottawasenators,OTT,2026-08-03 18:22:25,2026-08-03 18:22:25
+21,68,nhl_api,4,Philadelphia Flyers,PHI,Philadelphia,1,philadelphiaflyers,PHI,2026-08-03 18:22:25,2026-08-03 18:22:25
+22,69,nhl_api,5,Pittsburgh Penguins,PIT,Pittsburgh,1,pittsburghpenguins,PIT,2026-08-03 18:22:25,2026-08-03 18:22:25
+24,95,nhl_api,55,Seattle Kraken,SEA,Seattle,1,seattlekraken,SEA,2026-08-03 18:22:25,2026-08-03 18:22:25
+23,90,nhl_api,28,San Jose Sharks,SJS,San,1,sanjosesharks,SJS,2026-08-03 18:22:25,2026-08-03 18:22:25
+25,82,nhl_api,19,St. Louis Blues,STL,St.,1,stlouisblues,STL,2026-08-03 18:22:25,2026-08-03 18:22:25
+26,77,nhl_api,14,Tampa Bay Lightning,TBL,Tampa,1,tampabaylightning,TBL,2026-08-03 18:22:25,2026-08-03 18:22:25
+27,74,nhl_api,10,Toronto Maple Leafs,TOR,Toronto,1,torontomapleleafs,TOR,2026-08-03 18:22:25,2026-08-03 18:22:25
+28,96,nhl_api,68,Utah Mammoth,UTA,Utah,1,utahmammoth,UTA,2026-08-03 18:22:25,2026-08-03 18:22:25
+29,86,nhl_api,23,Vancouver Canucks,VAN,Vancouver,1,vancouvercanucks,VAN,2026-08-03 18:22:25,2026-08-03 18:22:25
+30,94,nhl_api,54,Vegas Golden Knights,VGK,Vegas,1,vegasgoldenknights,VGK,2026-08-03 18:22:25,2026-08-03 18:22:25
+32,93,nhl_api,52,Winnipeg Jets,WPG,Winnipeg,1,winnipegjets,WPG,2026-08-03 18:22:25,2026-08-03 18:22:25
+31,78,nhl_api,15,Washington Capitals,WSH,Washington,1,washingtoncapitals,WSH,2026-08-03 18:22:25,2026-08-03 18:22:25

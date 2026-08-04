@@ -1,0 +1,7 @@
+fold_test_season,fold_train_start_season,fold_train_end_season,recency_candidate_id,recency_selector_mode,recency_selector_regime,calibration_selector_mode,calibration_selector_view,calibration_selector_notes,calibration_selection_objective,calibration_objective_margin,calibration_validation_seasons,selection_fit_games,selection_validation_games,calibration_method,is_selected_method,accuracy,log_loss,brier_score
+20232024,20212022,20222023,single,static,static,static,overall,aggregate_validation,joint,0.0005,20222023,180,180,isotonic,0,0.566667,0.954445,0.254204
+20232024,20212022,20222023,single,static,static,static,overall,aggregate_validation,joint,0.0005,20222023,180,180,platt,1,0.561111,0.689006,0.247641
+20242025,20212022,20232024,single,static,static,static,overall,aggregate_validation,joint,0.0005,20232024,360,180,isotonic,0,0.555556,0.817019,0.249298
+20242025,20212022,20232024,single,static,static,static,overall,aggregate_validation,joint,0.0005,20232024,360,180,platt,1,0.588889,0.686466,0.246434
+20252026,20212022,20242025,single,static,static,static,overall,aggregate_validation,joint,0.0005,20242025,540,180,isotonic,0,0.516667,0.766885,0.255699
+20252026,20212022,20242025,single,static,static,static,overall,aggregate_validation,joint,0.0005,20242025,540,180,platt,1,0.505556,0.687724,0.247585

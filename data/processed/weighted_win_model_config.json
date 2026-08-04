@@ -1,0 +1,123 @@
+{
+  "constants": {
+    "home_advantage_logit": 0.18,
+    "location_goal_diff_weight": 0.35,
+    "location_points_weight": 0.65,
+    "logit_diff_shrink": 0.6,
+    "logit_temperature": 1.8,
+    "prior_blend": 0.33,
+    "recent_blend_max": 0.22,
+    "season_blend": 0.5
+  },
+  "feature_stats": {
+    "def_goals_against_per_game": {
+      "median": 3.060976,
+      "scale": 0.1898422905856192
+    },
+    "def_save_pct_5v5": {
+      "median": 0.905285,
+      "scale": 0.011489992587101526
+    },
+    "l10_goal_diff_per_game": {
+      "median": 0.25,
+      "scale": 1.4825796886582654
+    },
+    "l10_points_pct": {
+      "median": 0.625,
+      "scale": 0.2501853224610822
+    },
+    "off_goals_per_game": {
+      "median": 3.054878,
+      "scale": 0.3955051890289102
+    },
+    "off_shooting_pct_5v5": {
+      "median": 0.09547,
+      "scale": 0.010189028910303924
+    },
+    "player_goalie_save_pct_weighted": {
+      "median": 89.530863,
+      "scale": 1.0211658636026737
+    },
+    "player_top_scorer_points_share": {
+      "median": 0.123081,
+      "scale": 0.019825982209043726
+    },
+    "pressure_avg_shots_needed_per_goal": {
+      "median": 6.977611940298507,
+      "scale": 0.4746148713396203
+    },
+    "puck_faceoff_win_pct": {
+      "median": 0.4993745,
+      "scale": 0.022064677538917773
+    },
+    "puck_giveaways": {
+      "median": 1231.0,
+      "scale": 65.97479614529281
+    },
+    "puck_sat_pct": {
+      "median": 0.4932325,
+      "scale": 0.02676389918458116
+    },
+    "puck_takeaways": {
+      "median": 372.0,
+      "scale": 22.979985174203115
+    },
+    "st_special_teams_index": {
+      "median": 1.0044195,
+      "scale": 0.05302168272794664
+    },
+    "streak_signed": {
+      "median": 0.0,
+      "scale": 2.2238695329873983
+    },
+    "trend_goal_diff_pg_l10_minus_season": {
+      "median": 0.014634146341463428,
+      "scale": 0.9320363774430924
+    },
+    "trend_points_pct_l10_minus_season": {
+      "median": 0.04999999999999996,
+      "scale": 0.14848387694588583
+    }
+  },
+  "model_version": "weighted_win_model_v1",
+  "notes": {
+    "high_signal_examples": [
+      "off_goals_per_game",
+      "def_goals_against_per_game",
+      "def_save_pct_5v5",
+      "player_goalie_save_pct_weighted",
+      "st_special_teams_index",
+      "l10_points_pct",
+      "streak_signed"
+    ],
+    "light_signal_examples": [
+      "puck_faceoff_win_pct",
+      "puck_takeaways",
+      "puck_giveaways",
+      "player_top_scorer_points_share",
+      "pressure_avg_shots_needed_per_goal"
+    ],
+    "missing_value_strategy": "Per-feature median imputation, deterministic."
+  },
+  "recent_feature_weights": {
+    "l10_goal_diff_per_game": 0.9,
+    "l10_points_pct": 1.05,
+    "streak_signed": 0.55,
+    "trend_goal_diff_pg_l10_minus_season": 0.65,
+    "trend_points_pct_l10_minus_season": 0.7
+  },
+  "season_feature_weights": {
+    "def_goals_against_per_game": -1.25,
+    "def_save_pct_5v5": 1.05,
+    "off_goals_per_game": 1.15,
+    "off_shooting_pct_5v5": 0.7,
+    "player_goalie_save_pct_weighted": 0.95,
+    "player_top_scorer_points_share": -0.15,
+    "pressure_avg_shots_needed_per_goal": -0.35,
+    "puck_faceoff_win_pct": 0.25,
+    "puck_giveaways": -0.2,
+    "puck_sat_pct": 0.75,
+    "puck_takeaways": 0.2,
+    "st_special_teams_index": 0.9
+  }
+}

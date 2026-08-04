@@ -1,0 +1,40 @@
+{
+  "selection_criteria": [
+    "highest accuracy among full-coverage variants",
+    "then lower log_loss",
+    "then lower brier_score"
+  ],
+  "selection_filter": {
+    "required_games": 3936,
+    "excluded_partial_variants": 10
+  },
+  "selected_variant": {
+    "recency_candidate_id": "single",
+    "model_id": "logistic_engineered",
+    "games": 3936,
+    "accuracy": 0.592226,
+    "log_loss": 0.661336,
+    "brier_score": 0.234841,
+    "recency_selector_mode": "season_regime",
+    "recency_mode": "hybrid_exponential",
+    "recency_season_half_life": 0.85,
+    "recency_game_half_life": 552.5,
+    "recency_min_weight": 0.09
+  },
+  "comparison_to_wave1_sota": {
+    "wave1_best_accuracy": 0.597561,
+    "wave3_selected_accuracy": 0.592226,
+    "delta_accuracy": -0.005334999999999979,
+    "beats_sota": false
+  },
+  "artifact_bundle": {
+    "selected_variant_summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave3\\wave3_selected_variant_summary.json",
+    "selected_predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave3\\wave3_selected_predictions.csv",
+    "selected_metrics_overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave3\\wave3_selected_metrics_overall.csv",
+    "selected_metrics_overall_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave3\\wave3_selected_metrics_overall.json",
+    "selected_metrics_by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave3\\wave3_selected_metrics_by_season.csv",
+    "selected_metrics_by_season_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave3\\wave3_selected_metrics_by_season.json",
+    "full_variant_comparison_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave3\\wave3_variant_comparison.csv"
+  },
+  "deterministic_rerun_command": "python .\\scripts\\run_walk_forward_experiments.py --require-roster-features --recency-selector-mode season_regime --recency-decay-mode hybrid_exponential --recency-season-half-life 1.0 --recency-game-half-life 650 --recency-min-weight 0.1 --output-predictions-csv .\\data\\processed\\quickwin_wave3\\wave3_full_matrix_predictions.csv --output-overall-csv .\\data\\processed\\quickwin_wave3\\wave3_full_matrix_metrics_overall.csv --output-by-season-csv .\\data\\processed\\quickwin_wave3\\wave3_full_matrix_metrics_by_season.csv --output-recency-comparison-csv .\\data\\processed\\quickwin_wave3\\wave3_full_matrix_comparison.csv --output-logistic-importance-csv .\\data\\processed\\quickwin_wave3\\wave3_full_matrix_logistic_importance.csv --output-summary-json .\\data\\processed\\quickwin_wave3\\wave3_full_matrix_summary.json"
+}

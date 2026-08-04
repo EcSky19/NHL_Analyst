@@ -1,0 +1,8 @@
+model_id,games,accuracy,log_loss,brier_score
+blend_logistic_weighted_60_40,3936,0.590193,0.662073,0.235028
+blend_logistic_weighted_70_30,3936,0.594004,0.659618,0.233939
+elo_form_tuned,3936,0.567073,0.684379,0.245339
+logistic_engineered,3936,0.596037,0.655219,0.23216
+weighted_calibrated,3936,0.546748,0.686719,0.246772
+weighted_calibrated_isotonic,3936,0.542175,0.705241,0.247423
+weighted_calibrated_platt,3936,0.546748,0.686719,0.246772

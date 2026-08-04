@@ -1,0 +1,29 @@
+[
+  {
+    "model_id": "logistic_engineered",
+    "season": "20232024",
+    "season_label": "2023-2024",
+    "games": "1312",
+    "accuracy": "0.612805",
+    "log_loss": "0.650724",
+    "brier_score": "0.229517"
+  },
+  {
+    "model_id": "logistic_engineered",
+    "season": "20242025",
+    "season_label": "2024-2025",
+    "games": "1312",
+    "accuracy": "0.612043",
+    "log_loss": "0.644627",
+    "brier_score": "0.227562"
+  },
+  {
+    "model_id": "logistic_engineered",
+    "season": "20252026",
+    "season_label": "2025-2026",
+    "games": "1312",
+    "accuracy": "0.567835",
+    "log_loss": "0.669653",
+    "brier_score": "0.239101"
+  }
+]

@@ -1,0 +1,160 @@
+{
+  "selection_rule": {
+    "primary": "maximize_accuracy",
+    "tie_breakers": [
+      "min_log_loss",
+      "min_brier_score",
+      "model_id_asc"
+    ]
+  },
+  "selected_variant": {
+    "recency_mode": "hybrid_exponential",
+    "model_id": "logistic_engineered",
+    "games": 3936,
+    "accuracy": 0.597561,
+    "log_loss": 0.655001,
+    "brier_score": 0.23206
+  },
+  "artifact_bundle": {
+    "selected_predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\wave1_selected_predictions.csv",
+    "selected_overall_metrics_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\wave1_selected_metrics_overall.csv",
+    "selected_overall_metrics_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\wave1_selected_metrics_overall.json",
+    "selected_by_season_metrics_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\wave1_selected_metrics_by_season.csv",
+    "selected_by_season_metrics_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\wave1_selected_metrics_by_season.json",
+    "variant_comparison_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\wave1_variant_comparison.csv"
+  },
+  "experiment_outputs": {
+    "none": {
+      "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_none_predictions.csv",
+      "overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_none_metrics_overall.csv",
+      "by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_none_metrics_by_season.csv",
+      "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_none_summary.json"
+    },
+    "season_exponential": {
+      "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_season_exponential_predictions.csv",
+      "overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_season_exponential_metrics_overall.csv",
+      "by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_season_exponential_metrics_by_season.csv",
+      "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_season_exponential_summary.json"
+    },
+    "game_exponential": {
+      "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_game_exponential_predictions.csv",
+      "overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_game_exponential_metrics_overall.csv",
+      "by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_game_exponential_metrics_by_season.csv",
+      "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_game_exponential_summary.json"
+    },
+    "hybrid_exponential": {
+      "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_hybrid_exponential_predictions.csv",
+      "overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_hybrid_exponential_metrics_overall.csv",
+      "by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_hybrid_exponential_metrics_by_season.csv",
+      "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\quickwin_wave1\\walk_forward_hybrid_exponential_summary.json"
+    }
+  },
+  "deterministic_rerun": {
+    "commands": [
+      "python .\\scripts\\run_walk_forward_experiments.py --recency-decay-mode <none|season_exponential|game_exponential|hybrid_exponential> --output-predictions-csv .\\data\\processed\\quickwin_wave1\\walk_forward_<mode>_predictions.csv --output-overall-csv .\\data\\processed\\quickwin_wave1\\walk_forward_<mode>_metrics_overall.csv --output-by-season-csv .\\data\\processed\\quickwin_wave1\\walk_forward_<mode>_metrics_by_season.csv --output-summary-json .\\data\\processed\\quickwin_wave1\\walk_forward_<mode>_summary.json"
+    ],
+    "modes": [
+      "none",
+      "season_exponential",
+      "game_exponential",
+      "hybrid_exponential"
+    ]
+  },
+  "counts": {
+    "evaluated_variants": 28,
+    "selected_prediction_rows": 3936,
+    "input_prediction_rows_in_selected_mode_file": 27552
+  },
+  "top_10_variants": [
+    {
+      "rank": 1,
+      "recency_mode": "hybrid_exponential",
+      "model_id": "logistic_engineered",
+      "games": 3936,
+      "accuracy": 0.597561,
+      "log_loss": 0.655001,
+      "brier_score": 0.23206
+    },
+    {
+      "rank": 2,
+      "recency_mode": "game_exponential",
+      "model_id": "logistic_engineered",
+      "games": 3936,
+      "accuracy": 0.596037,
+      "log_loss": 0.655219,
+      "brier_score": 0.23216
+    },
+    {
+      "rank": 3,
+      "recency_mode": "season_exponential",
+      "model_id": "blend_logistic_weighted_70_30",
+      "games": 3936,
+      "accuracy": 0.595528,
+      "log_loss": 0.658882,
+      "brier_score": 0.233583
+    },
+    {
+      "rank": 4,
+      "recency_mode": "none",
+      "model_id": "logistic_engineered",
+      "games": 3936,
+      "accuracy": 0.59502,
+      "log_loss": 0.65535,
+      "brier_score": 0.232216
+    },
+    {
+      "rank": 5,
+      "recency_mode": "none",
+      "model_id": "blend_logistic_weighted_60_40",
+      "games": 3936,
+      "accuracy": 0.594766,
+      "log_loss": 0.66235,
+      "brier_score": 0.23514
+    },
+    {
+      "rank": 6,
+      "recency_mode": "game_exponential",
+      "model_id": "blend_logistic_weighted_70_30",
+      "games": 3936,
+      "accuracy": 0.594004,
+      "log_loss": 0.659618,
+      "brier_score": 0.233939
+    },
+    {
+      "rank": 7,
+      "recency_mode": "none",
+      "model_id": "blend_logistic_weighted_70_30",
+      "games": 3936,
+      "accuracy": 0.59375,
+      "log_loss": 0.659918,
+      "brier_score": 0.234059
+    },
+    {
+      "rank": 8,
+      "recency_mode": "season_exponential",
+      "model_id": "blend_logistic_weighted_60_40",
+      "games": 3936,
+      "accuracy": 0.593242,
+      "log_loss": 0.661279,
+      "brier_score": 0.23464
+    },
+    {
+      "rank": 9,
+      "recency_mode": "season_exponential",
+      "model_id": "logistic_engineered",
+      "games": 3936,
+      "accuracy": 0.592734,
+      "log_loss": 0.654664,
+      "brier_score": 0.231923
+    },
+    {
+      "rank": 10,
+      "recency_mode": "hybrid_exponential",
+      "model_id": "blend_logistic_weighted_70_30",
+      "games": 3936,
+      "accuracy": 0.592734,
+      "log_loss": 0.659502,
+      "brier_score": 0.233872
+    }
+  ]
+}

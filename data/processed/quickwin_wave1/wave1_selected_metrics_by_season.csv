@@ -1,0 +1,4 @@
+model_id,season,season_label,games,accuracy,log_loss,brier_score
+logistic_engineered,20232024,2023-2024,1312,0.612805,0.650724,0.229517
+logistic_engineered,20242025,2024-2025,1312,0.612043,0.644627,0.227562
+logistic_engineered,20252026,2025-2026,1312,0.567835,0.669653,0.239101
