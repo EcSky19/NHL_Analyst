@@ -1,0 +1,32 @@
+{
+  "evaluated_at_utc": "2026-08-05T20:22:42+00:00",
+  "unlock_token_supplied": true,
+  "holdout_seasons": [
+    2024,
+    2025
+  ],
+  "predictions_path": "data\\nfl\\nfl_final_model_holdout_predictions.csv",
+  "report_path": "data\\reports\\nfl_model_results.md",
+  "summaries": [
+    {
+      "label": "Market-free",
+      "games": 543,
+      "correct": 359,
+      "accuracy": 0.6611418047882136,
+      "wilson_low": 0.6203226180652729,
+      "wilson_high": 0.6996970095200258,
+      "log_loss": 0.6209996593307698,
+      "brier": 0.2155422979662697
+    },
+    {
+      "label": "Full",
+      "games": 543,
+      "correct": 366,
+      "accuracy": 0.6740331491712708,
+      "wilson_low": 0.6335049564527837,
+      "wilson_high": 0.7121162413393392,
+      "log_loss": 0.6034912772527881,
+      "brier": 0.20826789827110365
+    }
+  ]
+}

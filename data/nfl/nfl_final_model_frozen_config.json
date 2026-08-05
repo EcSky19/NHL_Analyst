@@ -1,0 +1,56 @@
+{
+  "created_at_utc": "2026-08-05T20:22:24+00:00",
+  "train_seasons": [
+    2010,
+    2023
+  ],
+  "holdout_seasons": [
+    2024,
+    2025
+  ],
+  "development_folds": "2014-2023",
+  "configuration_count_total": 16,
+  "configuration_count_per_model": 8,
+  "selected": {
+    "market_free": {
+      "model_id": "market_free_logreg_c0.03",
+      "model_label": "Market-free",
+      "feature_set": "market_free",
+      "family": "logistic_l2",
+      "params": {
+        "C": 0.03
+      },
+      "selection_rule": "simplest family within 1.00 percentage point of best walk-forward accuracy; tie-breaker lower log loss",
+      "development_summary": {
+        "games": 2597,
+        "correct": 1637,
+        "accuracy": 0.6303427031189834,
+        "wilson_low": 0.6115976818221315,
+        "wilson_high": 0.6487026904685248,
+        "log_loss": 0.6564278114572167,
+        "brier": 0.2301651946571607,
+        "folds": "2014-2023"
+      }
+    },
+    "full": {
+      "model_id": "full_logreg_c0.03",
+      "model_label": "Full",
+      "feature_set": "full",
+      "family": "logistic_l2",
+      "params": {
+        "C": 0.03
+      },
+      "selection_rule": "simplest family within 1.00 percentage point of best walk-forward accuracy; tie-breaker lower log loss",
+      "development_summary": {
+        "games": 2597,
+        "correct": 1693,
+        "accuracy": 0.6519060454370428,
+        "wilson_low": 0.6333726842096837,
+        "wilson_high": 0.6699906743388063,
+        "log_loss": 0.6402318526106315,
+        "brier": 0.22327346683248164,
+        "folds": "2014-2023"
+      }
+    }
+  }
+}

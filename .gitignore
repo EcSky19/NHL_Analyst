@@ -11,6 +11,8 @@ data/processed/*.sqlite3
 .copilot/
 # NFL local data artifacts
 data/nfl/*.db
+data/nfl/*.db-shm
+data/nfl/*.db-wal
 data/nfl/*.sqlite
 data/nfl/*.sqlite3
 data/nfl/games.csv
