@@ -1,0 +1,82 @@
+season,baseline,games,correct,accuracy,wilson_95_ci,skipped
+1999,Always pick home,248,148,59.68%,53.47%-65.59%,0
+1999,Vegas moneyline favorite,0,0,NA,NA-NA,248
+1999,Spread-implied favorite,244,163,66.80%,60.67%-72.41%,4
+2000,Always pick home,248,138,55.65%,49.42%-61.70%,0
+2000,Vegas moneyline favorite,0,0,NA,NA-NA,248
+2000,Spread-implied favorite,243,158,65.02%,58.83%-70.74%,5
+2001,Always pick home,248,136,54.84%,48.62%-60.91%,0
+2001,Vegas moneyline favorite,0,0,NA,NA-NA,248
+2001,Spread-implied favorite,245,161,65.71%,59.57%-71.37%,3
+2002,Always pick home,255,148,58.04%,51.91%-63.93%,1
+2002,Vegas moneyline favorite,0,0,NA,NA-NA,256
+2002,Spread-implied favorite,253,159,62.85%,56.74%-68.57%,3
+2003,Always pick home,256,157,61.33%,55.24%-67.08%,0
+2003,Vegas moneyline favorite,0,0,NA,NA-NA,256
+2003,Spread-implied favorite,253,171,67.59%,61.60%-73.06%,3
+2004,Always pick home,256,145,56.64%,50.52%-62.57%,0
+2004,Vegas moneyline favorite,0,0,NA,NA-NA,256
+2004,Spread-implied favorite,252,167,66.27%,60.23%-71.82%,4
+2005,Always pick home,256,151,58.98%,52.87%-64.83%,0
+2005,Vegas moneyline favorite,0,0,NA,NA-NA,256
+2005,Spread-implied favorite,251,188,74.90%,69.19%-79.86%,5
+2006,Always pick home,256,136,53.12%,47.01%-59.15%,0
+2006,Vegas moneyline favorite,208,121,58.17%,51.38%-64.67%,48
+2006,Spread-implied favorite,256,152,59.38%,53.26%-65.21%,0
+2007,Always pick home,256,147,57.42%,51.30%-63.33%,0
+2007,Vegas moneyline favorite,254,175,68.90%,62.96%-74.27%,2
+2007,Spread-implied favorite,256,177,69.14%,63.23%-74.48%,0
+2008,Always pick home,255,146,57.25%,51.12%-63.17%,1
+2008,Vegas moneyline favorite,182,121,66.48%,59.35%-72.94%,74
+2008,Spread-implied favorite,255,174,68.24%,62.29%-73.64%,1
+2009,Always pick home,256,146,57.03%,50.91%-62.95%,0
+2009,Vegas moneyline favorite,241,170,70.54%,64.50%-75.94%,15
+2009,Spread-implied favorite,256,178,69.53%,63.64%-74.85%,0
+2010,Always pick home,256,143,55.86%,49.73%-61.81%,0
+2010,Vegas moneyline favorite,256,169,66.02%,60.01%-71.54%,0
+2010,Spread-implied favorite,256,170,66.41%,60.42%-71.91%,0
+2011,Always pick home,256,145,56.64%,50.52%-62.57%,0
+2011,Vegas moneyline favorite,255,172,67.45%,61.48%-72.91%,1
+2011,Spread-implied favorite,256,171,66.80%,60.82%-72.28%,0
+2012,Always pick home,255,146,57.25%,51.12%-63.17%,1
+2012,Vegas moneyline favorite,255,164,64.31%,58.26%-69.94%,1
+2012,Spread-implied favorite,255,164,64.31%,58.26%-69.94%,1
+2013,Always pick home,255,153,60.00%,53.88%-65.82%,1
+2013,Vegas moneyline favorite,253,182,71.94%,66.10%-77.11%,3
+2013,Spread-implied favorite,255,182,71.37%,65.54%-76.57%,1
+2014,Always pick home,255,145,56.86%,50.73%-62.80%,1
+2014,Vegas moneyline favorite,253,168,66.40%,60.38%-71.94%,3
+2014,Spread-implied favorite,255,170,66.67%,60.67%-72.17%,1
+2015,Always pick home,256,138,53.91%,47.79%-59.91%,0
+2015,Vegas moneyline favorite,253,157,62.06%,55.94%-67.81%,3
+2015,Spread-implied favorite,256,160,62.50%,56.43%-68.20%,0
+2016,Always pick home,254,147,57.87%,51.73%-63.78%,2
+2016,Vegas moneyline favorite,252,162,64.29%,58.20%-69.95%,4
+2016,Spread-implied favorite,253,163,64.43%,58.35%-70.07%,3
+2017,Always pick home,256,145,56.64%,50.52%-62.57%,0
+2017,Vegas moneyline favorite,253,181,71.54%,65.69%-76.75%,3
+2017,Spread-implied favorite,253,179,70.75%,64.87%-76.01%,3
+2018,Always pick home,254,153,60.24%,54.11%-66.06%,2
+2018,Vegas moneyline favorite,252,168,66.67%,60.63%-72.20%,4
+2018,Spread-implied favorite,254,168,66.14%,60.12%-71.68%,2
+2019,Always pick home,255,132,51.76%,45.65%-57.83%,1
+2019,Vegas moneyline favorite,253,163,64.43%,58.35%-70.07%,3
+2019,Spread-implied favorite,255,164,64.31%,58.26%-69.94%,1
+2020,Always pick home,255,127,49.80%,43.72%-55.90%,1
+2020,Vegas moneyline favorite,255,173,67.84%,61.88%-73.27%,1
+2020,Spread-implied favorite,255,172,67.45%,61.48%-72.91%,1
+2021,Always pick home,271,140,51.66%,45.73%-57.55%,1
+2021,Vegas moneyline favorite,271,169,62.36%,56.46%-67.92%,1
+2021,Spread-implied favorite,271,169,62.36%,56.46%-67.92%,1
+2022,Always pick home,269,151,56.13%,50.16%-61.94%,2
+2022,Vegas moneyline favorite,268,176,65.67%,59.80%-71.10%,3
+2022,Spread-implied favorite,269,178,66.17%,60.32%-71.56%,2
+2023,Always pick home,272,151,55.51%,49.57%-61.30%,0
+2023,Vegas moneyline favorite,270,184,68.15%,62.37%-73.42%,2
+2023,Spread-implied favorite,272,185,68.01%,62.25%-73.27%,0
+2024,Always pick home,272,145,53.31%,47.38%-59.15%,0
+2024,Vegas moneyline favorite,271,194,71.59%,65.94%-76.63%,1
+2024,Spread-implied favorite,272,194,71.32%,65.68%-76.37%,0
+2025,Always pick home,271,146,53.87%,47.93%-59.71%,1
+2025,Vegas moneyline favorite,270,177,65.56%,59.70%-70.97%,2
+2025,Spread-implied favorite,271,177,65.31%,59.47%-70.73%,1

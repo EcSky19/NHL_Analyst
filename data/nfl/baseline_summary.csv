@@ -1,0 +1,4 @@
+baseline,games,correct,accuracy,wilson_95_ci,skipped
+Always pick home,6952,3905,56.17%,55.00%-57.33%,15
+Vegas moneyline favorite,5025,3346,66.59%,65.27%-67.88%,1942
+Spread-implied favorite,6922,4614,66.66%,65.54%-67.76%,45

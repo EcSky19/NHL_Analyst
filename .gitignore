@@ -9,3 +9,9 @@ data/processed/*.sqlite3
 
 # Session/runtime files
 .copilot/
+# NFL local data artifacts
+data/nfl/*.db
+data/nfl/*.sqlite
+data/nfl/*.sqlite3
+data/nfl/games.csv
+data/nfl/raw/

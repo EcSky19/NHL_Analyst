@@ -1,0 +1,18 @@
+{
+  "rows_ingested": 7548,
+  "seasons": "1999-2026",
+  "season_count": 28,
+  "overall_home_win_rate": 0.5642473488500207,
+  "betting_coverage": {
+    "away_moneyline": 0.7277350192413414,
+    "home_moneyline": 0.7277350192413414,
+    "spread_line": 1.0,
+    "total_line": 1.0
+  },
+  "ties": 15,
+  "unplayed": 272,
+  "unknown_aliases": [],
+  "team_validation_failures": [],
+  "report": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\reports\\nfl_ingestion_report.md",
+  "database": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\nfl\\nfl_research.db"
+}
