@@ -10,7 +10,7 @@ from typing import Dict, List, Sequence, Tuple
 import numpy as np
 
 
-MODEL_VERSION = "roster_aware_logreg_v2_interactions"
+MODEL_VERSION = "roster_aware_logreg_v3_interactions"
 BASELINE_ACCURACY = 0.578811
 EPS = 1e-9
 INTERACTION_PRIOR_STRENGTH = 8.0
@@ -24,6 +24,8 @@ FEATURE_SPECS: List[Tuple[str, str]] = [
     ("delta_injuries", "delta_pregame_injury_count_home_minus_away"),
     ("delta_roster_coverage_pct", "__derived__"),
     ("delta_roster_games_covered", "__derived__"),
+    ("delta_goalie_starter_quality_gap_last5", "__derived__"),
+    ("delta_goalie_starter_quality_gap_last10", "__derived__"),
     ("home_streak", "home_pregame_streak_signed"),
     ("away_streak", "away_pregame_streak_signed"),
     ("delta_last10_points_pct", "delta_pregame_last10_points_pct_home_minus_away"),
@@ -40,6 +42,30 @@ FEATURE_SPECS: List[Tuple[str, str]] = [
     ("roster_continuity_edge", "__derived__"),
     ("goalie_x_continuity", "__derived__"),
     ("quality_x_form", "__derived__"),
+    ("goalie_quality_gap_x_back_to_back", "__derived__"),
+    ("delta_power_play_pct_home_minus_away", "delta_power_play_pct_home_minus_away"),
+    ("delta_penalty_kill_pct_home_minus_away", "delta_penalty_kill_pct_home_minus_away"),
+    ("delta_pregame_top6_points_pg_home_minus_away", "delta_pregame_top6_points_pg_home_minus_away"),
+    ("delta_pregame_top4_avg_toi_home_minus_away", "delta_pregame_top4_avg_toi_home_minus_away"),
+    ("delta_pregame_skater_points_pg_last3_home_minus_away", "delta_pregame_skater_points_pg_last3_home_minus_away"),
+    ("delta_pregame_skater_points_pg_last10_home_minus_away", "delta_pregame_skater_points_pg_last10_home_minus_away"),
+    ("delta_pregame_skater_two_way_idx_last3_home_minus_away", "delta_pregame_skater_two_way_idx_last3_home_minus_away"),
+    ("delta_pregame_skater_two_way_idx_last10_home_minus_away", "delta_pregame_skater_two_way_idx_last10_home_minus_away"),
+    ("delta_pregame_skater_points_pg_ewm_home_minus_away", "delta_pregame_skater_points_pg_ewm_home_minus_away"),
+    ("delta_pregame_skater_two_way_idx_ewm_home_minus_away", "delta_pregame_skater_two_way_idx_ewm_home_minus_away"),
+    ("delta_pregame_goalie_save_pct_last10_home_minus_away", "delta_pregame_goalie_save_pct_last10_home_minus_away"),
+    ("delta_pregame_goalie_save_pct_ewm_home_minus_away", "delta_pregame_goalie_save_pct_ewm_home_minus_away"),
+    ("delta_pregame_goalie_save_pct_last3_home_minus_away", "delta_pregame_goalie_save_pct_last3_home_minus_away"),
+    ("delta_pregame_goalie_shots_against_pg_last5_home_minus_away", "delta_pregame_goalie_shots_against_pg_last5_home_minus_away"),
+    ("delta_pregame_recent_form_volatility_last10_home_minus_away", "delta_pregame_recent_form_volatility_last10_home_minus_away"),
+    ("delta_pregame_lineup_continuity_ewm_home_minus_away", "delta_pregame_lineup_continuity_ewm_home_minus_away"),
+    ("delta_pregame_lineup_stability_last5_home_minus_away", "delta_pregame_lineup_stability_last5_home_minus_away"),
+    ("delta_pregame_core_retention_pct_home_minus_away", "delta_pregame_core_retention_pct_home_minus_away"),
+    ("delta_pregame_key_contributor_change_rate_last5_home_minus_away", "delta_pregame_key_contributor_change_rate_last5_home_minus_away"),
+    ("delta_pregame_roster_games_covered_home_minus_away", "delta_pregame_roster_games_covered_home_minus_away"),
+    ("delta_pregame_roster_data_coverage_pct_home_minus_away", "delta_pregame_roster_data_coverage_pct_home_minus_away"),
+    ("delta_pregame_confirmed_starters_count_home_minus_away", "delta_pregame_confirmed_starters_count_home_minus_away"),
+    ("delta_gd_volatility_last5_home_minus_away", "delta_gd_volatility_last5_home_minus_away"),
 ]
 
 INTERACTION_FEATURE_NAMES = [
@@ -138,6 +164,8 @@ def build_features(raw: Dict[str, str]) -> Dict[str, float]:
     roster_continuity = (home_cov - away_cov) + 0.005 * (home_cov_games - away_cov_games)
     goalie_x_cont = delta_goalie * (1.0 + 0.35 * roster_continuity)
     quality_x_form = delta_quality * (1.0 + 0.5 * delta_last10_pts)
+    goalie_quality_gap_last5 = to_float(raw.get("delta_pregame_goalie_starter_quality_gap_last5_home_minus_away"))
+    goalie_quality_gap_last10 = to_float(raw.get("delta_pregame_goalie_starter_quality_gap_last10_home_minus_away"))
     features: Dict[str, float] = {}
     for output_name, source_col in FEATURE_SPECS:
         if source_col == "__derived__":
@@ -151,9 +179,119 @@ def build_features(raw: Dict[str, str]) -> Dict[str, float]:
     features["roster_continuity_edge"] = roster_continuity
     features["goalie_x_continuity"] = goalie_x_cont
     features["quality_x_form"] = quality_x_form
+    features["delta_goalie_starter_quality_gap_last5"] = goalie_quality_gap_last5
+    features["delta_goalie_starter_quality_gap_last10"] = goalie_quality_gap_last10
     features["home_streak"] = to_float(raw.get("home_pregame_streak_signed"))
     features["away_streak"] = to_float(raw.get("away_pregame_streak_signed"))
     features["delta_roster_quality"] = home_roster_q - away_roster_q
+
+    market_consensus_home_prob = to_float(raw.get("market_consensus_home_prob"), 0.5)
+    market_spread_magnitude = abs(to_float(raw.get("market_spread_magnitude"), 0.0))
+    market_public_vs_sharp_agreement = to_float(raw.get("market_public_vs_sharp_agreement"), 0.0)
+    features["market_consensus_home_prob"] = market_consensus_home_prob
+    features["market_spread_magnitude"] = market_spread_magnitude
+    features["market_public_vs_sharp_agreement"] = market_public_vs_sharp_agreement
+
+    lineup_continuity_gap = to_float(raw.get("delta_pregame_lineup_continuity_pct_home_minus_away"))
+    lineup_continuity_ewm = to_float(raw.get("delta_pregame_lineup_continuity_ewm_home_minus_away"))
+    lineup_stability_gap = to_float(raw.get("delta_pregame_lineup_stability_last5_home_minus_away"))
+    key_continuity_gap = to_float(raw.get("delta_pregame_key_contributor_continuity_pct_home_minus_away"))
+    roster_turnover_gap = to_float(raw.get("delta_pregame_roster_turnover_count_home_minus_away"))
+    roster_coverage_gap = to_float(raw.get("delta_pregame_roster_data_coverage_pct_home_minus_away"))
+    roster_games_gap = to_float(raw.get("delta_pregame_roster_games_covered_home_minus_away"))
+    goalie_certainty_gap = to_float(raw.get("delta_pregame_goalie_starter_certainty_home_minus_away"))
+    goalie_latency_gap = to_float(raw.get("delta_pregame_goalie_days_since_last_start_home_minus_away"))
+    goalie_quality_gap_last10 = to_float(raw.get("delta_pregame_goalie_starter_quality_gap_last10_home_minus_away"))
+    goalie_recent_starts_gap = to_float(raw.get("delta_pregame_goalie_recent_starts_last5_home_minus_away"))
+    goalie_save_gap_last3 = to_float(raw.get("delta_pregame_goalie_save_pct_last3_home_minus_away"))
+    goalie_save_gap_last10 = to_float(raw.get("delta_pregame_goalie_save_pct_last10_home_minus_away"))
+    goalie_save_gap_ewm = to_float(raw.get("delta_pregame_goalie_save_pct_ewm_home_minus_away"))
+    skater_pts_gap_last3 = to_float(raw.get("delta_pregame_skater_points_pg_last3_home_minus_away"))
+    skater_pts_gap_last10 = to_float(raw.get("delta_pregame_skater_points_pg_last10_home_minus_away"))
+    skater_two_way_gap_last3 = to_float(raw.get("delta_pregame_skater_two_way_idx_last3_home_minus_away"))
+    skater_two_way_gap_last10 = to_float(raw.get("delta_pregame_skater_two_way_idx_last10_home_minus_away"))
+    special_teams_pp = to_float(raw.get("delta_power_play_pct_home_minus_away"))
+    special_teams_pk = to_float(raw.get("delta_penalty_kill_pct_home_minus_away"))
+    home_split = to_float(raw.get("home_home_vs_away_win_pct_diff"))
+    away_split = to_float(raw.get("away_home_vs_away_win_pct_diff"))
+    home_momentum = to_float(raw.get("home_momentum_10game_trend"))
+    away_momentum = to_float(raw.get("away_momentum_10game_trend"))
+    home_momentum_dir = to_float(raw.get("home_momentum_trend_direction"))
+    away_momentum_dir = to_float(raw.get("away_momentum_trend_direction"))
+    home_b2b = to_float(raw.get("home_back_to_back"))
+    away_b2b = to_float(raw.get("away_back_to_back"))
+    home_three_in_four = to_float(raw.get("home_three_in_four"))
+    away_three_in_four = to_float(raw.get("away_three_in_four"))
+    home_four_in_six = to_float(raw.get("home_four_in_six"))
+    away_four_in_six = to_float(raw.get("away_four_in_six"))
+    rest_days_delta = to_float(raw.get("rest_days_delta_home_minus_away"))
+    games_until_deadline = to_float(raw.get("games_until_deadline"))
+    games_since_deadline = to_float(raw.get("games_since_deadline"))
+
+    model_confidence_proxy = (
+        abs(delta_last10_pts)
+        + 0.60 * abs(delta_quality)
+        + 0.35 * abs(delta_goalie)
+        + 0.25 * abs(to_float(raw.get("rest_days_delta_home_minus_away"), 0.0))
+    )
+    features["roster_continuity_x_opponent_quality"] = roster_continuity * delta_quality
+    features["special_teams_x_rest_fatigue"] = to_float(
+        raw.get("delta_pregame_special_teams_contributor_share_last5_home_minus_away")
+    ) * to_float(raw.get("rest_days_delta_home_minus_away"))
+    features["home_away_x_travel_schedule"] = to_float(raw.get("home_location_edge_points_pct")) * (
+        to_float(raw.get("delta_travel_miles_home_minus_away")) / 1000.0
+        + 0.5 * to_float(raw.get("delta_timezone_shift_hours_home_minus_away"))
+    )
+    features["goalie_fidelity_x_back_to_back"] = to_float(
+        raw.get("delta_pregame_goalie_starter_certainty_home_minus_away")
+    ) * (to_float(raw.get("away_back_to_back")) - to_float(raw.get("home_back_to_back")))
+    features["goalie_quality_gap_x_back_to_back"] = goalie_quality_gap_last10 * (
+        to_float(raw.get("away_back_to_back")) - to_float(raw.get("home_back_to_back"))
+    )
+    features["market_signals_x_model_confidence"] = (market_consensus_home_prob - 0.5) * model_confidence_proxy
+    features["lineup_continuity_gap"] = lineup_continuity_gap
+    features["lineup_stability_gap"] = lineup_stability_gap
+    features["core_retention_gap"] = to_float(raw.get("delta_pregame_core_retention_pct_home_minus_away"))
+    features["lineup_continuity_x_recent_form"] = lineup_continuity_gap * to_float(raw.get("delta_pregame_last10_points_pct_home_minus_away"))
+    features["lineup_stability_x_coverage"] = lineup_stability_gap * (1.0 + roster_coverage_gap)
+    features["lineup_turnover_relief"] = -roster_turnover_gap
+    features["goalie_certainty_gap"] = goalie_certainty_gap
+    features["goalie_latency_gap"] = goalie_latency_gap
+    features["goalie_certainty_x_latency"] = goalie_certainty_gap * (1.0 - 0.10 * abs(goalie_latency_gap))
+    features["goalie_certainty_x_quality_gap"] = goalie_certainty_gap * goalie_quality_gap_last10
+    features["goalie_freshness_edge"] = goalie_certainty_gap * (1.0 + 0.05 * goalie_recent_starts_gap - 0.05 * abs(goalie_latency_gap))
+    features["special_teams_net_edge"] = special_teams_pp + special_teams_pk
+    features["special_teams_balance_edge"] = special_teams_pp - special_teams_pk
+    features["special_teams_form_x_recent_form"] = (special_teams_pp + special_teams_pk) * to_float(
+        raw.get("delta_pregame_recent_form_adj_last5_home_minus_away")
+    )
+    features["special_teams_form_x_quality"] = (special_teams_pp + special_teams_pk) * delta_quality
+    features["opponent_adjusted_rest_edge"] = rest_days_delta - 0.50 * (
+        to_float(raw.get("home_three_in_four")) - to_float(raw.get("away_three_in_four"))
+    ) - 0.25 * (to_float(raw.get("home_four_in_six")) - to_float(raw.get("away_four_in_six")))
+    features["schedule_compression_relief"] = (
+        -(home_b2b + 0.50 * home_three_in_four + 0.25 * home_four_in_six)
+        + (away_b2b + 0.50 * away_three_in_four + 0.25 * away_four_in_six)
+    )
+    features["travel_adjusted_rest_edge"] = features["opponent_adjusted_rest_edge"] - 0.10 * (
+        to_float(raw.get("delta_travel_miles_home_minus_away")) / 1000.0
+    ) - 0.05 * to_float(raw.get("delta_timezone_shift_hours_home_minus_away"))
+    features["microtrend_skater_points_accel"] = skater_pts_gap_last3 - skater_pts_gap_last10
+    features["microtrend_two_way_accel"] = skater_two_way_gap_last3 - skater_two_way_gap_last10
+    features["microtrend_goalie_save_accel"] = goalie_save_gap_last3 - goalie_save_gap_last10
+    features["microtrend_form_accel"] = to_float(raw.get("delta_pregame_recent_form_adj_last5_home_minus_away")) - to_float(
+        raw.get("delta_pregame_recent_form_adj_last10_home_minus_away")
+    )
+    features["microtrend_volatility_penalty"] = to_float(raw.get("delta_pregame_recent_form_adj_last5_home_minus_away")) / (
+        1.0 + abs(to_float(raw.get("delta_pregame_recent_form_volatility_last5_home_minus_away")))
+    )
+    features["microtrend_goalie_workload_edge"] = goalie_recent_starts_gap - to_float(
+        raw.get("delta_pregame_goalie_shots_against_pg_last5_home_minus_away")
+    )
+    features["home_away_split_edge"] = home_split - away_split
+    features["home_away_split_form_edge"] = home_split * home_momentum - away_split * away_momentum
+    features["home_away_split_momentum_direction"] = home_momentum_dir - away_momentum_dir
+    features["deadline_pressure_edge"] = (1.0 / (1.0 + games_until_deadline)) - (1.0 / (1.0 + games_since_deadline))
     return features
 
 
@@ -182,9 +320,26 @@ def read_games_from_sqlite(sqlite_db: Path, table_name: str) -> List[GameRow]:
         cur = con.execute(f'SELECT * FROM "{table_name}" ORDER BY game_date ASC, game_id ASC')
         columns = [d[0] for d in cur.description]
         rows_raw = [dict(zip(columns, row)) for row in cur.fetchall()]
+        market_map: Dict[int, Dict[str, float]] = {}
+        if any(r[0] == "market_signals" for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()):
+            market_cur = con.execute(
+                """
+                SELECT game_id, market_consensus_home_prob, ABS(market_consensus_spread) AS market_spread_magnitude,
+                       market_public_vs_sharp_agreement
+                FROM market_signals
+                """
+            )
+            for game_id, consensus_prob, spread_mag, agreement in market_cur.fetchall():
+                market_map[int(game_id)] = {
+                    "market_consensus_home_prob": to_float(str(consensus_prob), 0.5),
+                    "market_spread_magnitude": to_float(str(spread_mag), 0.0),
+                    "market_public_vs_sharp_agreement": to_float(str(agreement), 0.0),
+                }
     rows: List[GameRow] = []
     for raw_obj in rows_raw:
         raw = {k: "" if v is None else str(v) for k, v in raw_obj.items()}
+        if int(raw.get("game_id", "0")) in market_map:
+            raw.update({k: str(v) for k, v in market_map[int(raw["game_id"])] .items()})
         rows.append(
             GameRow(
                 season=int(raw["season"]),
@@ -530,6 +685,7 @@ def write_report(
             "- Goalie signal: `delta_goalie_save_pct`, `goalie_x_continuity`.",
             "- Skater production/two-way: `delta_skater_points_last5`, `delta_skater_two_way_last5`, `quality_x_form`.",
             "- Roster quality/continuity: `delta_roster_quality`, `delta_roster_coverage_pct`, `delta_roster_games_covered`, `roster_continuity_edge`.",
+            "- New v4 families: lineup stability/continuity, goalie certainty latency, special teams net/balance, rest compression, microtrends, and home/away split momentum.",
             "- Streak/location/team-strength priors: streak features, `home_location_edge_points_pct`, rest/B2B, prior-season deltas.",
             "- Team-opponent interactions (regularized): `matchup_home_win_rate_prior`, `matchup_home_games_prior_log`, `team_vs_opponent_win_rate_prior`, `team_vs_opponent_games_prior_log`.",
             "",
@@ -597,7 +753,19 @@ def main() -> None:
         raise SystemExit("No rows available for training.")
 
     attach_interaction_features(games)
-    feature_names = [name for name, _ in FEATURE_SPECS] + INTERACTION_FEATURE_NAMES
+    feature_names = [name for name, _ in FEATURE_SPECS] + INTERACTION_FEATURE_NAMES + [
+        "market_consensus_home_prob",
+        "market_spread_magnitude",
+        "market_public_vs_sharp_agreement",
+        "roster_continuity_x_opponent_quality",
+        "special_teams_x_rest_fatigue",
+        "home_away_x_travel_schedule",
+        "goalie_fidelity_x_back_to_back",
+        "delta_goalie_starter_quality_gap_last5",
+        "delta_goalie_starter_quality_gap_last10",
+        "goalie_quality_gap_x_back_to_back",
+        "market_signals_x_model_confidence",
+    ]
     best_cfg = walk_forward_tuning(games, feature_names)
     predictions, by_season, rollup = walk_forward_backtest(games, feature_names, best_cfg)
 

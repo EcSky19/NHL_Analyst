@@ -1,0 +1,87 @@
+{
+  "by_season": [
+    {
+      "accuracy": 0.517021,
+      "brier_score": 0.260893,
+      "games": 470,
+      "log_loss": 0.718308,
+      "season": 20152016,
+      "season_label": "2015-2016"
+    },
+    {
+      "accuracy": 0.538462,
+      "brier_score": 0.258261,
+      "games": 468,
+      "log_loss": 0.712914,
+      "season": 20162017,
+      "season_label": "2016-2017"
+    },
+    {
+      "accuracy": 0.504274,
+      "brier_score": 0.266206,
+      "games": 468,
+      "log_loss": 0.730151,
+      "season": 20172018,
+      "season_label": "2017-2018"
+    },
+    {
+      "accuracy": 0.61814,
+      "brier_score": 0.235806,
+      "games": 1312,
+      "log_loss": 0.66733,
+      "season": 20212022,
+      "season_label": "2021-2022"
+    },
+    {
+      "accuracy": 0.589939,
+      "brier_score": 0.242309,
+      "games": 1312,
+      "log_loss": 0.679911,
+      "season": 20222023,
+      "season_label": "2022-2023"
+    },
+    {
+      "accuracy": 0.585366,
+      "brier_score": 0.246383,
+      "games": 1312,
+      "log_loss": 0.6894,
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.565549,
+      "brier_score": 0.24653,
+      "games": 1312,
+      "log_loss": 0.688307,
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.535823,
+      "brier_score": 0.259675,
+      "games": 1312,
+      "log_loss": 0.716593,
+      "season": 20252026,
+      "season_label": "2025-2026"
+    }
+  ],
+  "dependency_status": "backtest_features_available",
+  "evaluation_target": "historical_games_last5",
+  "model": {
+    "parameters": {
+      "ELO_HOME_ADVANTAGE": 55.0,
+      "ELO_K_FACTOR": 18.0,
+      "ELO_MEAN": 1500.0,
+      "ELO_REGRESSION": 0.75,
+      "FORM_GOAL_DIFF_ELO_WEIGHT": 35.0,
+      "FORM_WIN_PCT_ELO_WEIGHT": 120.0
+    },
+    "type": "deterministic_walk_forward_elo_form_blend"
+  },
+  "overall": {
+    "accuracy": 0.568541,
+    "brier_score": 0.248902,
+    "games": 7966,
+    "log_loss": 0.693982
+  }
+}

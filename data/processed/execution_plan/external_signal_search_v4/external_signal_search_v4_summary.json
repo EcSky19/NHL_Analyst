@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-08-05T16:12:03.471383+00:00",
+  "holdout_season": "20252026",
+  "row_count": 7966,
+  "baseline": {
+    "accuracy": 0.5594512195121951,
+    "log_loss": 0.6865251084680436,
+    "feature_count": 130
+  },
+  "with_markets": {
+    "accuracy": 0.5632621951219512,
+    "log_loss": 0.6846918461618082,
+    "feature_count": 147
+  },
+  "lift": {
+    "accuracy_delta": 0.003810975609756073,
+    "log_loss_delta": -0.0018332623062353726
+  },
+  "subset_results": [
+    {
+      "signal_set": "opening_plus_movement",
+      "features_added": [
+        "market_opening_home_implied_prob",
+        "market_spread_movement",
+        "market_consensus_home_prob"
+      ],
+      "accuracy": 0.5647865853658537,
+      "log_loss": 0.684661827437973,
+      "accuracy_delta_vs_baseline": 0.005335365853658569,
+      "log_loss_delta_vs_baseline": -0.001863281030070607
+    },
+    {
+      "signal_set": "full_market",
+      "features_added": [
+        "market_opening_spread",
+        "market_opening_ou",
+        "market_opening_home_moneyline",
+        "market_opening_away_moneyline",
+        "market_opening_home_implied_prob",
+        "market_closing_spread",
+        "market_closing_ou",
+        "market_closing_home_moneyline",
+        "market_closing_away_moneyline",
+        "market_closing_home_implied_prob",
+        "market_spread_movement",
+        "market_ou_movement",
+        "market_consensus_spread",
+        "market_consensus_home_prob",
+        "market_public_home_volume_ratio",
+        "market_sharp_home_volume_ratio",
+        "market_public_vs_sharp_agreement"
+      ],
+      "accuracy": 0.5632621951219512,
+      "log_loss": 0.6846918461618082,
+      "accuracy_delta_vs_baseline": 0.003810975609756073,
+      "log_loss_delta_vs_baseline": -0.0018332623062353726
+    },
+    {
+      "signal_set": "opening_probability",
+      "features_added": [
+        "market_opening_home_implied_prob",
+        "market_opening_spread"
+      ],
+      "accuracy": 0.5586890243902439,
+      "log_loss": 0.6845784256197448,
+      "accuracy_delta_vs_baseline": -0.0007621951219511924,
+      "log_loss_delta_vs_baseline": -0.0019466828482987975
+    }
+  ],
+  "market_coverage": {
+    "market_opening_spread": 0.8234998744664825,
+    "market_opening_ou": 0.8234998744664825,
+    "market_opening_home_moneyline": 0.8234998744664825,
+    "market_opening_away_moneyline": 0.8234998744664825,
+    "market_opening_home_implied_prob": 0.8234998744664825,
+    "market_closing_spread": 0.8234998744664825,
+    "market_closing_ou": 0.8234998744664825,
+    "market_closing_home_moneyline": 0.8234998744664825,
+    "market_closing_away_moneyline": 0.8234998744664825,
+    "market_closing_home_implied_prob": 0.8234998744664825,
+    "market_spread_movement": 0.8234998744664825,
+    "market_ou_movement": 0.8234998744664825,
+    "market_consensus_spread": 0.8234998744664825,
+    "market_consensus_home_prob": 0.8234998744664825,
+    "market_public_home_volume_ratio": 0.8234998744664825,
+    "market_sharp_home_volume_ratio": 0.8234998744664825,
+    "market_public_vs_sharp_agreement": 0.8234998744664825
+  }
+}

@@ -1,0 +1,222 @@
+{
+  "benchmark_accuracy": 0.5682,
+  "confidence_tiers": [
+    {
+      "accuracy": 0.604642,
+      "ci95_high": 0.615685,
+      "ci95_low": 0.593491,
+      "coverage_pct": 65.31,
+      "games": 7454,
+      "threshold": ">=0.55"
+    },
+    {
+      "accuracy": 0.628634,
+      "ci95_high": 0.643309,
+      "ci95_low": 0.613718,
+      "coverage_pct": 35.86,
+      "games": 4093,
+      "threshold": ">=0.60"
+    },
+    {
+      "accuracy": 0.676757,
+      "ci95_high": 0.697684,
+      "ci95_low": 0.655096,
+      "coverage_pct": 16.21,
+      "games": 1850,
+      "threshold": ">=0.65"
+    },
+    {
+      "accuracy": 0.715891,
+      "ci95_high": 0.749898,
+      "ci95_low": 0.679238,
+      "coverage_pct": 5.46,
+      "games": 623,
+      "threshold": ">=0.70"
+    },
+    {
+      "accuracy": 0.738854,
+      "ci95_high": 0.801273,
+      "ci95_low": 0.665025,
+      "coverage_pct": 1.38,
+      "games": 157,
+      "threshold": ">=0.75"
+    }
+  ],
+  "diagnostics": {
+    "by_season": [
+      {
+        "games": 1230,
+        "season": 20152016,
+        "sources": "real_nhl_api_web",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1230,
+        "season": 20162017,
+        "sources": "real_nhl_api_web",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1271,
+        "season": 20172018,
+        "sources": "real_nhl_api_web",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1271,
+        "season": 20182019,
+        "sources": "real_nhl_api_web",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1082,
+        "season": 20192020,
+        "sources": "real_nhl_api_web",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1312,
+        "season": 20212022,
+        "sources": "REAL_NHL_API_OR_DERIVED_FROM_REAL",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1312,
+        "season": 20222023,
+        "sources": "REAL_NHL_API_OR_DERIVED_FROM_REAL",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1312,
+        "season": 20232024,
+        "sources": "REAL_NHL_API_OR_DERIVED_FROM_REAL",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1312,
+        "season": 20242025,
+        "sources": "REAL_NHL_API_OR_DERIVED_FROM_REAL",
+        "synthetic_rows": 0
+      },
+      {
+        "games": 1312,
+        "season": 20252026,
+        "sources": "REAL_NHL_API_OR_DERIVED_FROM_REAL",
+        "synthetic_rows": 0
+      }
+    ],
+    "market_columns": [],
+    "roster_coverage": [
+      {
+        "avg_away_roster_coverage_pct": 0.98,
+        "avg_home_roster_coverage_pct": 0.98,
+        "both_roster_source_games": 1230,
+        "games": 1230,
+        "season": 20152016
+      },
+      {
+        "avg_away_roster_coverage_pct": 1.0,
+        "avg_home_roster_coverage_pct": 1.0,
+        "both_roster_source_games": 1230,
+        "games": 1230,
+        "season": 20162017
+      },
+      {
+        "avg_away_roster_coverage_pct": 1.0,
+        "avg_home_roster_coverage_pct": 1.0,
+        "both_roster_source_games": 1271,
+        "games": 1271,
+        "season": 20172018
+      },
+      {
+        "avg_away_roster_coverage_pct": 0.0,
+        "avg_home_roster_coverage_pct": 0.0,
+        "both_roster_source_games": 0,
+        "games": 1271,
+        "season": 20182019
+      },
+      {
+        "avg_away_roster_coverage_pct": 0.0,
+        "avg_home_roster_coverage_pct": 0.0,
+        "both_roster_source_games": 0,
+        "games": 1082,
+        "season": 20192020
+      },
+      {
+        "avg_away_roster_coverage_pct": 0.99,
+        "avg_home_roster_coverage_pct": 0.99,
+        "both_roster_source_games": 1312,
+        "games": 1312,
+        "season": 20212022
+      },
+      {
+        "avg_away_roster_coverage_pct": 1.0,
+        "avg_home_roster_coverage_pct": 1.0,
+        "both_roster_source_games": 1312,
+        "games": 1312,
+        "season": 20222023
+      },
+      {
+        "avg_away_roster_coverage_pct": 1.0,
+        "avg_home_roster_coverage_pct": 1.0,
+        "both_roster_source_games": 1312,
+        "games": 1312,
+        "season": 20232024
+      },
+      {
+        "avg_away_roster_coverage_pct": 1.0,
+        "avg_home_roster_coverage_pct": 1.0,
+        "both_roster_source_games": 1312,
+        "games": 1312,
+        "season": 20242025
+      },
+      {
+        "avg_away_roster_coverage_pct": 1.0,
+        "avg_home_roster_coverage_pct": 1.0,
+        "both_roster_source_games": 1312,
+        "games": 1312,
+        "season": 20252026
+      }
+    ]
+  },
+  "feature_table": "backtest_features_real_expanded_roster",
+  "overall": [
+    {
+      "accuracy": 0.568216,
+      "brier_score": 0.241798,
+      "games": 5248,
+      "log_loss": 0.676331,
+      "policy": "all_prior_real",
+      "test_scope": "benchmark_window",
+      "test_seasons": "20222023 20232024 20242025 20252026"
+    },
+    {
+      "accuracy": 0.568979,
+      "brier_score": 0.24249,
+      "games": 5248,
+      "log_loss": 0.677953,
+      "policy": "recent_2021_forward",
+      "test_scope": "benchmark_window",
+      "test_seasons": "20222023 20232024 20242025 20252026"
+    },
+    {
+      "accuracy": 0.567264,
+      "brier_score": 0.241981,
+      "games": 5248,
+      "log_loss": 0.676721,
+      "policy": "all_prior_real_recency_weighted",
+      "test_scope": "benchmark_window",
+      "test_seasons": "20222023 20232024 20242025 20252026"
+    },
+    {
+      "accuracy": 0.57412,
+      "brier_score": 0.241343,
+      "games": 11414,
+      "log_loss": 0.675524,
+      "policy": "all_prior_real",
+      "test_scope": "all_walk_forward",
+      "test_seasons": "20162017 20172018 20182019 20192020 20212022 20222023 20232024 20242025 20252026"
+    }
+  ],
+  "weighted_feature_count": 42
+}

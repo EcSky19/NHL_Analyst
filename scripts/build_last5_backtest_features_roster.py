@@ -1,5 +1,6 @@
 import argparse
 import csv
+import math
 import sqlite3
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -298,6 +299,17 @@ def safe_avg(values: Iterable[Optional[float]]) -> Optional[float]:
     return sum(materialized) / float(len(materialized))
 
 
+def clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def first_non_null(*values: Optional[float]) -> Optional[float]:
+    for value in values:
+        if value is not None:
+            return float(value)
+    return None
+
+
 def trailing_mean(values: Iterable[float], window: int) -> Optional[float]:
     materialized = list(values)
     if not materialized:
@@ -549,13 +561,17 @@ def load_pregame_context(
             home_team_abbrev,
             away_team_abbrev,
             home_pregame_season_points_pct,
-            away_pregame_season_points_pct
+            away_pregame_season_points_pct,
+            home_back_to_back,
+            away_back_to_back,
+            home_pregame_rest_days,
+            away_pregame_rest_days
         FROM "{table_name}"
         ORDER BY season, game_id
         """
     ).fetchall()
     out: Dict[Tuple[int, int, str], Dict[str, Optional[float]]] = {}
-    for season, game_id, home_abbrev, away_abbrev, home_ppct, away_ppct in rows:
+    for season, game_id, home_abbrev, away_abbrev, home_ppct, away_ppct, home_b2b, away_b2b, home_rest, away_rest in rows:
         home = canonical_team(home_abbrev, alias_map)
         away = canonical_team(away_abbrev, alias_map)
         key_home = (int(season), int(game_id), home)
@@ -563,10 +579,18 @@ def load_pregame_context(
         out[key_home] = {
             "opponent_pregame_points_pct": float(away_ppct) if away_ppct is not None else None,
             "team_pregame_points_pct": float(home_ppct) if home_ppct is not None else None,
+            "team_back_to_back": float(home_b2b) if home_b2b is not None else None,
+            "opponent_back_to_back": float(away_b2b) if away_b2b is not None else None,
+            "team_rest_days": float(home_rest) if home_rest is not None else None,
+            "opponent_rest_days": float(away_rest) if away_rest is not None else None,
         }
         out[key_away] = {
             "opponent_pregame_points_pct": float(home_ppct) if home_ppct is not None else None,
             "team_pregame_points_pct": float(away_ppct) if away_ppct is not None else None,
+            "team_back_to_back": float(away_b2b) if away_b2b is not None else None,
+            "opponent_back_to_back": float(home_b2b) if home_b2b is not None else None,
+            "team_rest_days": float(away_rest) if away_rest is not None else None,
+            "opponent_rest_days": float(home_rest) if home_rest is not None else None,
         }
     return out
 
@@ -688,6 +712,76 @@ def scorer_projection_from_history(history: PlayerHistory, is_goalie: bool) -> f
     return (1.6 * points_pg) + (0.04 * toi_pg) + (0.12 * plus_minus_pg)
 
 
+def goalie_start_likelihood(entry: Dict, history: Optional[PlayerHistory], team_context: Optional[Dict[str, Optional[float]]]) -> float:
+    role_confirm = 1.0 if entry.get("lineup_role") == "goalie_starter" else 0.0
+    api_confirm = 1.0 if int(entry.get("starter_goalie_api_flag") or 0) == 1 else 0.0
+    source_confirm = 1.0 if entry.get("starter_goalie_source") else 0.0
+    if history is not None:
+        start_rate5 = mean_of_deque(history.goalie_start_flags_last5)
+        start_rate10 = mean_of_deque(history.goalie_start_flags_last10)
+    else:
+        start_rate5 = first_non_null(entry.get("rolling_goalie_starts_last5"))
+        start_rate10 = first_non_null(entry.get("rolling_goalie_starts_last10"))
+        if start_rate5 is not None:
+            start_rate5 = clamp01(float(start_rate5) / 5.0)
+        if start_rate10 is not None:
+            start_rate10 = clamp01(float(start_rate10) / 10.0)
+    rest_days = entry.get("goalie_days_since_last_start")
+    rest_score = clamp01(float(rest_days) / 4.0) if rest_days is not None else 0.0
+    team_b2b = float((team_context or {}).get("team_back_to_back") or 0.0)
+    b2b_adjustment = 0.0
+    if team_b2b >= 1.0:
+        if rest_days is not None and float(rest_days) <= 1.0:
+            b2b_adjustment = -0.18
+        elif rest_days is not None and float(rest_days) >= 2.0:
+            b2b_adjustment = 0.10
+        else:
+            b2b_adjustment = -0.05
+    raw_score = (
+        (0.48 * role_confirm)
+        + (0.20 * api_confirm)
+        + (0.12 * source_confirm)
+        + (0.12 * (start_rate10 or 0.0))
+        + (0.06 * (start_rate5 or 0.0))
+        + (0.10 * rest_score)
+        + b2b_adjustment
+    )
+    return clamp01(raw_score)
+
+
+def goalie_quality_proxy(
+    entry: Dict,
+    history: Optional[PlayerHistory],
+    team_goalie_history: Optional[Deque[float]],
+    *,
+    window: int = 5,
+) -> float:
+    if window <= 5:
+        value = first_non_null(
+            entry.get("rolling_goalie_save_pct_last5"),
+            entry.get("rolling_goalie_save_pct_last3"),
+            entry.get("rolling_goalie_save_pct_ewm"),
+            entry.get("rolling_goalie_save_pct_last10"),
+        )
+    else:
+        value = first_non_null(
+            entry.get("rolling_goalie_save_pct_last10"),
+            entry.get("rolling_goalie_save_pct_ewm"),
+            entry.get("rolling_goalie_save_pct_last3"),
+            entry.get("rolling_goalie_save_pct_last5"),
+        )
+    if value is not None:
+        return float(value)
+    team_value = trailing_mean(team_goalie_history or [], window) if team_goalie_history else None
+    if team_value is not None:
+        return float(team_value)
+    if history is not None:
+        hist_value = mean_of_deque(history.goalie_save_pct_last10 if window > 5 else history.goalie_save_pct_last5)
+        if hist_value is not None:
+            return float(hist_value)
+    return 0.905
+
+
 def make_player_feature_row(entry: Dict, game_date: str, history: Optional[PlayerHistory]) -> Dict:
     points_pg = mean_of_deque(history.points_last5) if history else None
     goals_pg = mean_of_deque(history.goals_last5) if history else None
@@ -796,6 +890,8 @@ def build_team_feature_row(
     game_id: int,
     game_date: str,
     team_abbrev: str,
+    team_context: Optional[Dict[str, Optional[float]]],
+    team_goalie_history: Optional[Deque[float]],
     player_rows: List[Dict],
     active_player_ids: Set[int],
     team_contributor_history: Dict[int, Deque[float]],
@@ -825,45 +921,64 @@ def build_team_feature_row(
         reverse=True,
     )[:4]
 
-    starter_candidates = [r for r in active_goalies if r["lineup_role"] == "goalie_starter"]
-    starter_goalie = None
-    if starter_candidates:
-        starter_goalie = sorted(
-            starter_candidates,
-            key=lambda r: (
-                float(r.get("goalie_starter_certainty") or 0.0),
-                float(r.get("rolling_goalie_starts_last10") or 0.0),
-                float(r.get("rolling_toi_minutes_pg_last5") or 0.0),
-                -int(r.get("player_id") or 0),
-            ),
-            reverse=True,
-        )[0]
+    goalie_ranked = sorted(
+        [
+            (
+                goalie_start_likelihood(r, None, team_context),
+                r,
+            )
+            for r in active_goalies
+        ],
+        key=lambda item: (
+            item[0],
+            float(item[1].get("goalie_starter_certainty") or 0.0),
+            float(item[1].get("rolling_goalie_starts_last10") or 0.0),
+            float(item[1].get("rolling_toi_minutes_pg_last5") or 0.0),
+            -int(item[1].get("player_id") or 0),
+        ),
+        reverse=True,
+    )
+    starter_goalie = goalie_ranked[0][1] if goalie_ranked else None
+    starter_score = goalie_ranked[0][0] if goalie_ranked else 0.0
+    score_exp_sum = sum(math.exp(max(-6.0, min(6.0, score))) for score, _ in goalie_ranked) if goalie_ranked else 0.0
+    goalie_starter_certainty = (
+        (math.exp(max(-6.0, min(6.0, starter_score))) / score_exp_sum) if goalie_ranked and score_exp_sum > 0 else None
+    )
+    if goalie_starter_certainty is None and starter_goalie is not None:
+        goalie_starter_certainty = float(starter_goalie.get("goalie_starter_certainty") or 0.0)
+    if goalie_starter_certainty is None:
+        goalie_starter_certainty = 0.5
 
     backup_goalies = [r for r in active_goalies if starter_goalie is None or r["player_id"] != starter_goalie["player_id"]]
-    goalie_starter_certainty = (
-        float(starter_goalie.get("goalie_starter_certainty") or 0.0)
-        if starter_goalie
-        else safe_avg([r.get("goalie_starter_certainty") for r in active_goalies])
-    )
     pregame_goalie_save_pct = (
-        starter_goalie["rolling_goalie_save_pct_last5"]
-        if starter_goalie and starter_goalie["rolling_goalie_save_pct_last5"] is not None
-        else safe_avg([r["rolling_goalie_save_pct_last5"] for r in active_goalies])
+        goalie_quality_proxy(starter_goalie, None, team_goalie_history, window=5) if starter_goalie else safe_avg(
+            [goalie_quality_proxy(r, None, team_goalie_history, window=5) for r in active_goalies]
+        )
     )
     pregame_goalie_save_pct_last10 = (
-        starter_goalie["rolling_goalie_save_pct_last10"]
-        if starter_goalie and starter_goalie["rolling_goalie_save_pct_last10"] is not None
-        else safe_avg([r["rolling_goalie_save_pct_last10"] for r in active_goalies])
+        goalie_quality_proxy(starter_goalie, None, team_goalie_history, window=10) if starter_goalie else safe_avg(
+            [goalie_quality_proxy(r, None, team_goalie_history, window=10) for r in active_goalies]
+        )
     )
     pregame_goalie_save_pct_ewm = (
-        starter_goalie["rolling_goalie_save_pct_ewm"]
-        if starter_goalie and starter_goalie["rolling_goalie_save_pct_ewm"] is not None
-        else safe_avg([r["rolling_goalie_save_pct_ewm"] for r in active_goalies])
+        first_non_null(
+            starter_goalie.get("rolling_goalie_save_pct_ewm") if starter_goalie else None,
+            safe_avg([r.get("rolling_goalie_save_pct_ewm") for r in active_goalies]),
+            trailing_mean(team_goalie_history or [], 5) if team_goalie_history else None,
+            0.905,
+        )
+        if starter_goalie
+        else safe_avg([r.get("rolling_goalie_save_pct_ewm") for r in active_goalies]) or 0.905
     )
     pregame_goalie_save_pct_last3 = (
-        starter_goalie["rolling_goalie_save_pct_last3"]
-        if starter_goalie and starter_goalie["rolling_goalie_save_pct_last3"] is not None
-        else safe_avg([r["rolling_goalie_save_pct_last3"] for r in active_goalies])
+        first_non_null(
+            starter_goalie.get("rolling_goalie_save_pct_last3") if starter_goalie else None,
+            safe_avg([r.get("rolling_goalie_save_pct_last3") for r in active_goalies]),
+            trailing_mean(team_goalie_history or [], 5) if team_goalie_history else None,
+            0.905,
+        )
+        if starter_goalie
+        else safe_avg([r.get("rolling_goalie_save_pct_last3") for r in active_goalies]) or 0.905
     )
     pregame_goalie_shots_against_pg_last5 = (
         starter_goalie["rolling_goalie_shots_against_pg_last5"]
@@ -891,22 +1006,24 @@ def build_team_feature_row(
         if starter_goalie and starter_goalie["goalie_days_since_last_start"] is not None
         else safe_avg([r["goalie_days_since_last_start"] for r in active_goalies])
     )
-    pregame_goalie_starter_quality_gap_last5 = (
-        optional_subtract(
-            starter_goalie.get("rolling_goalie_save_pct_last5"),
-            safe_avg([r.get("rolling_goalie_save_pct_last5") for r in backup_goalies]),
-        )
-        if starter_goalie
-        else None
-    )
-    pregame_goalie_starter_quality_gap_last10 = (
-        optional_subtract(
-            starter_goalie.get("rolling_goalie_save_pct_last10"),
-            safe_avg([r.get("rolling_goalie_save_pct_last10") for r in backup_goalies]),
-        )
-        if starter_goalie
-        else None
-    )
+    backup_proxy_last5 = safe_avg([goalie_quality_proxy(r, None, team_goalie_history, window=5) for r in backup_goalies])
+    backup_proxy_last10 = safe_avg([goalie_quality_proxy(r, None, team_goalie_history, window=10) for r in backup_goalies])
+    if backup_proxy_last5 is None:
+        backup_proxy_last5 = trailing_mean(team_goalie_history or [], 5) if team_goalie_history else None
+    if backup_proxy_last10 is None:
+        backup_proxy_last10 = trailing_mean(team_goalie_history or [], 10) if team_goalie_history else None
+    if backup_proxy_last5 is None:
+        backup_proxy_last5 = 0.905
+    if backup_proxy_last10 is None:
+        backup_proxy_last10 = 0.905
+    starter_proxy_last5 = pregame_goalie_save_pct if pregame_goalie_save_pct is not None else 0.905
+    starter_proxy_last10 = pregame_goalie_save_pct_last10 if pregame_goalie_save_pct_last10 is not None else 0.905
+    pregame_goalie_starter_quality_gap_last5 = optional_subtract(starter_proxy_last5, backup_proxy_last5)
+    pregame_goalie_starter_quality_gap_last10 = optional_subtract(starter_proxy_last10, backup_proxy_last10)
+    if pregame_goalie_starter_quality_gap_last5 is None:
+        pregame_goalie_starter_quality_gap_last5 = 0.0
+    if pregame_goalie_starter_quality_gap_last10 is None:
+        pregame_goalie_starter_quality_gap_last10 = 0.0
 
     expected_prior_core = sorted(
         [
@@ -1106,6 +1223,7 @@ def build_roster_tables(
     player_histories: Dict[int, PlayerHistory] = {}
     team_contributor_history: Dict[str, Dict[int, Deque[float]]] = defaultdict(lambda: defaultdict(lambda: deque(maxlen=8)))
     team_last_active_players: Dict[str, Set[int]] = {}
+    team_goalie_save_history: Dict[str, Deque[float]] = defaultdict(lambda: deque(maxlen=20))
     team_form_history: Dict[str, Deque[float]] = defaultdict(lambda: deque(maxlen=10))
     team_adjusted_form_history: Dict[str, Deque[float]] = defaultdict(lambda: deque(maxlen=10))
     team_lineup_continuity_history: Dict[str, Deque[float]] = defaultdict(lambda: deque(maxlen=10))
@@ -1166,9 +1284,9 @@ def build_roster_tables(
                         "pregame_depth_points_share_last5": None,
                         "pregame_special_teams_contributor_share_last5": None,
                         "pregame_confirmed_starters_count": 0,
-                        "pregame_goalie_starter_certainty": None,
-                        "pregame_goalie_starter_quality_gap_last5": None,
-                        "pregame_goalie_starter_quality_gap_last10": None,
+                        "pregame_goalie_starter_certainty": 0.5,
+                        "pregame_goalie_starter_quality_gap_last5": 0.0,
+                        "pregame_goalie_starter_quality_gap_last10": 0.0,
                         "roster_source_tag": "missing_roster_rows",
                         "source_stats_through_date": None,
                     }
@@ -1191,6 +1309,8 @@ def build_roster_tables(
                 game_id=game_id,
                 game_date=game_date,
                 team_abbrev=team_abbrev,
+                team_context=pregame_context.get((season, game_id, team_abbrev), {}),
+                team_goalie_history=team_goalie_save_history[team_abbrev],
                 player_rows=per_team_player_rows,
                 active_player_ids=active_player_ids,
                 team_contributor_history=team_contributor_history[team_abbrev],
@@ -1231,6 +1351,7 @@ def build_roster_tables(
                     save_pct = safe_div(e["saves"], e["shots_against"])
                     if save_pct is not None:
                         goalie_save_samples.append(save_pct)
+                        team_goalie_save_history[team_abbrev].append(save_pct)
                 goalie_save_pg = safe_avg(goalie_save_samples)
                 postgame_form_score = (1.8 * (skater_points_pg or 0.0)) + (65.0 * ((goalie_save_pg or 0.885) - 0.885))
                 team_form_history[team_abbrev].append(postgame_form_score)
@@ -1357,6 +1478,18 @@ def build_rows(base_rows: List[Dict], roster_features: Dict[Tuple[int, int, str]
 
         home = roster_features.get((season, game_id, home_abbrev), {})
         away = roster_features.get((season, game_id, away_abbrev), {})
+        if not home:
+            home = {
+                "pregame_goalie_starter_certainty": 0.5,
+                "pregame_goalie_starter_quality_gap_last5": 0.0,
+                "pregame_goalie_starter_quality_gap_last10": 0.0,
+            }
+        if not away:
+            away = {
+                "pregame_goalie_starter_certainty": 0.5,
+                "pregame_goalie_starter_quality_gap_last5": 0.0,
+                "pregame_goalie_starter_quality_gap_last10": 0.0,
+            }
 
         row = dict(base)
         row["home_pregame_roster_quality_idx"] = home.get("pregame_roster_quality_idx")

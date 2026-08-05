@@ -1,0 +1,71 @@
+{
+  "by_season_metrics": [
+    {
+      "accuracy": 0.590701,
+      "brier_score": 0.238734,
+      "games": 1312,
+      "log_loss": 0.670191,
+      "season": 20222023,
+      "weighted_calibrator": "isotonic"
+    },
+    {
+      "accuracy": 0.582317,
+      "brier_score": 0.240604,
+      "games": 1312,
+      "log_loss": 0.674135,
+      "season": 20232024,
+      "weighted_calibrator": "isotonic"
+    },
+    {
+      "accuracy": 0.567835,
+      "brier_score": 0.239935,
+      "games": 1312,
+      "log_loss": 0.672535,
+      "season": 20242025,
+      "weighted_calibrator": "platt"
+    },
+    {
+      "accuracy": 0.532012,
+      "brier_score": 0.248751,
+      "games": 1312,
+      "log_loss": 0.690687,
+      "season": 20252026,
+      "weighted_calibrator": "platt"
+    }
+  ],
+  "excluded": {
+    "fabricated_seasons": [
+      20152016,
+      20162017,
+      20172018
+    ],
+    "market_features": true
+  },
+  "model_id": "honest_blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+  "overall_metrics": {
+    "accuracy": 0.568216,
+    "brier_score": 0.242006,
+    "excluded_market_features": true,
+    "feature_table": "backtest_features_last5_roster",
+    "games": 5248,
+    "log_loss": 0.676887,
+    "model_id": "honest_blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+    "synthetic_rows_excluded": true,
+    "train_policy": "expanding walk-forward over real seasons only; first real season is training-only"
+  },
+  "real_rows_loaded": 6560,
+  "seasons_available": [
+    20212022,
+    20222023,
+    20232024,
+    20242025,
+    20252026
+  ],
+  "test_seasons": [
+    20222023,
+    20232024,
+    20242025,
+    20252026
+  ],
+  "weighted_feature_count": 42
+}

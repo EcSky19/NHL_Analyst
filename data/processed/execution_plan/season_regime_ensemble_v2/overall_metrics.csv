@@ -1,0 +1,2 @@
+games,accuracy,log_loss,brier_score,phase1_winner_accuracy,accuracy_delta_vs_phase1_winner
+105420,0.588645,0.670073,0.238698,0.616616,-0.027971

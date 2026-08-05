@@ -1,0 +1,87 @@
+{
+  "coverage": [
+    {
+      "column": "home_pregame_goalie_starter_certainty",
+      "old_coverage_pct": 100.0,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 0.0,
+      "old_non_null_count": 6560,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "away_pregame_goalie_starter_certainty",
+      "old_coverage_pct": 100.0,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 0.0,
+      "old_non_null_count": 6560,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "home_pregame_goalie_starter_quality_gap_last5",
+      "old_coverage_pct": 5.899390243902439,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 94.10060975609755,
+      "old_non_null_count": 387,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "away_pregame_goalie_starter_quality_gap_last5",
+      "old_coverage_pct": 5.853658536585366,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 94.14634146341463,
+      "old_non_null_count": 384,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "home_pregame_goalie_starter_quality_gap_last10",
+      "old_coverage_pct": 5.899390243902439,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 94.10060975609755,
+      "old_non_null_count": 387,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "away_pregame_goalie_starter_quality_gap_last10",
+      "old_coverage_pct": 5.853658536585366,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 94.14634146341463,
+      "old_non_null_count": 384,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "delta_pregame_goalie_starter_certainty_home_minus_away",
+      "old_coverage_pct": 100.0,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 0.0,
+      "old_non_null_count": 6560,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away",
+      "old_coverage_pct": 0.3201219512195122,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 99.6798780487805,
+      "old_non_null_count": 21,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    },
+    {
+      "column": "delta_pregame_goalie_starter_quality_gap_last10_home_minus_away",
+      "old_coverage_pct": 0.3201219512195122,
+      "new_coverage_pct": 100.0,
+      "coverage_delta_pct_points": 99.6798780487805,
+      "old_non_null_count": 21,
+      "new_non_null_count": 7966,
+      "total_rows": 7966
+    }
+  ],
+  "source_old": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\phase2_eval_final\\phase2_goalie_feature_coverage.csv",
+  "source_new": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\goalie_fidelity_v2\\backtest_features_last5_roster_goalie_fidelity_v2.csv"
+}

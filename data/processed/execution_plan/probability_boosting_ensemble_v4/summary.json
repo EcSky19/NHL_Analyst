@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "candidate_metrics_csv": "data\\processed\\execution_plan\\probability_boosting_ensemble_v4\\candidate_metrics.csv",
+    "overall_metrics_csv": "data\\processed\\execution_plan\\probability_boosting_ensemble_v4\\overall_metrics.csv",
+    "predictions_csv": "data\\processed\\execution_plan\\probability_boosting_ensemble_v4\\predictions.csv",
+    "summary_json": "data\\processed\\execution_plan\\probability_boosting_ensemble_v4\\summary.json"
+  },
+  "current_best_accuracy": 0.6189024390243902,
+  "holdout_season": "20212022",
+  "overall_metrics": {
+    "accuracy": 0.620427,
+    "accuracy_delta_vs_current_best": 0.001524,
+    "brier_score": 0.235073,
+    "current_best_accuracy": 0.6189024390243902,
+    "games": 1312,
+    "log_loss": 0.663181
+  },
+  "recipe": {
+    "deep_feature_model": "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+    "deep_feature_source": "deep_feature_expansion_v4",
+    "deep_feature_weight": 0.2,
+    "notes": [
+      "Deterministic fixed-weight blend.",
+      "Error-slice and regime-aware candidates were evaluated as diagnostics but not included in the final blend because they did not improve validation accuracy."
+    ],
+    "phase1_model": "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+    "phase1_source": "phase1_eval_final",
+    "phase1_weight": 0.8
+  },
+  "validation_reference": {
+    "deep_feature_holdout_accuracy": 0.617378,
+    "error_slice_holdout_accuracy": 0.618902,
+    "phase1_best_walk_forward_accuracy": 0.616616,
+    "season_regime_late_accuracy": 0.622225
+  }
+}

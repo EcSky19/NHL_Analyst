@@ -1,0 +1,7 @@
+{
+  "mean_accuracy_delta": 0.0051829268292683086,
+  "mean_log_loss_delta": -0.0003803892681692123,
+  "best_season_accuracy_delta": 0.010670731707317027,
+  "worst_season_accuracy_delta": 0.0,
+  "seasons_evaluated": 5
+}

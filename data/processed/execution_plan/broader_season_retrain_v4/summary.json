@@ -1,0 +1,14 @@
+{
+  "best_accuracy": 0.616616,
+  "best_brier_score": 0.23553,
+  "best_games": 1312,
+  "best_log_loss": 0.664252,
+  "best_model_id": "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+  "delta_vs_current_best_pp": -0.2284,
+  "delta_vs_phase1_benchmark_pp": 0.0016,
+  "full_window_best_accuracy": 0.577262,
+  "full_window_best_model_id": "elo_form_tuned",
+  "full_window_delta_vs_last5_pp": -0.1549,
+  "helped_note": "Matched the phase1 season-slice benchmark but did not improve the broader full-window accuracy.",
+  "helped_overall": false
+}

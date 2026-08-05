@@ -1,0 +1,7 @@
+recency_candidate_id,model_id,season,season_label,games,accuracy,log_loss,brier_score,recency_selector_mode,recency_mode,recency_season_half_life,recency_game_half_life,recency_min_weight,recency_normalize_mean_one,recency_base_mode,recency_base_season_half_life,recency_base_game_half_life,recency_base_min_weight,recency_base_normalize_mean_one,nonlinear_model_backend,nonlinear_model_style
+sweep_001,logistic_engineered,20232024,2023-2024,1312,0.608994,0.656232,0.232265,season_regime_drift,none,1.0,1.0,1.0,True,none,1.0,1.0,1.0,True,skipped,logistic_only
+sweep_001,logistic_engineered,20242025,2024-2025,1312,0.598323,0.64679,0.228159,season_regime_drift,none,1.0,1.0,1.0,True,none,1.0,1.0,1.0,True,skipped,logistic_only
+sweep_001,logistic_engineered,20252026,2025-2026,1312,0.563262,0.674847,0.241494,season_regime_drift,none,1.0,1.0,1.0,True,none,1.0,1.0,1.0,True,skipped,logistic_only
+sweep_002,logistic_engineered,20232024,2023-2024,1312,0.599848,0.665782,0.236381,season_regime_drift,hybrid_exponential,0.6,216.0,0.022000000000000002,True,hybrid_exponential,0.5,180.0,0.02,True,skipped,logistic_only
+sweep_002,logistic_engineered,20242025,2024-2025,1312,0.612805,0.647058,0.228491,season_regime_drift,hybrid_exponential,0.475,171.0,0.018000000000000002,True,hybrid_exponential,0.5,180.0,0.02,True,skipped,logistic_only
+sweep_002,logistic_engineered,20252026,2025-2026,1312,0.552591,0.726244,0.260664,season_regime_drift,hybrid_exponential,0.325,108.0,0.013999999999999999,True,hybrid_exponential,0.5,180.0,0.02,True,skipped,logistic_only

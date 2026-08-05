@@ -1,0 +1,16 @@
+{
+  "data_source": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\nhl_research.db",
+  "feature_table": "backtest_features_last5_roster",
+  "row_count": 7966,
+  "best_model_id": "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+  "best_accuracy": 0.616616,
+  "best_log_loss": 0.664252,
+  "best_brier_score": 0.23553,
+  "best_games": 1312,
+  "delta_vs_61_66_pp": 0.0,
+  "improved_over_61_66": false,
+  "blockers": [
+    "The retrain process did not complete its full artifact export during the session.",
+    "logistic importance and calibration diagnostics were not regenerated in this recovery export."
+  ]
+}

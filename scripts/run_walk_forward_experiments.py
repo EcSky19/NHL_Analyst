@@ -56,6 +56,8 @@ ROSTER_FEATURE_CANDIDATES = [
     "delta_pregame_goalie_shots_against_pg_trend_home_minus_away",
     "delta_pregame_goalie_recent_starts_last5_home_minus_away",
     "delta_pregame_goalie_days_since_last_start_home_minus_away",
+    "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away",
+    "delta_pregame_goalie_starter_quality_gap_last10_home_minus_away",
     "delta_pregame_top9_points_pg_home_minus_away",
     "delta_pregame_depth_points_share_last5_home_minus_away",
     "delta_pregame_special_teams_contributor_share_last5_home_minus_away",
@@ -65,6 +67,43 @@ ROSTER_FEATURE_CANDIDATES = [
     "delta_pregame_recent_form_volatility_last5_home_minus_away",
     "delta_pregame_lineup_continuity_pct_home_minus_away",
     "delta_pregame_roster_turnover_count_home_minus_away",
+    "home_power_play_pct",
+    "away_power_play_pct",
+    "home_penalty_kill_pct",
+    "away_penalty_kill_pct",
+    "delta_power_play_pct_home_minus_away",
+    "delta_penalty_kill_pct_home_minus_away",
+    "home_home_vs_away_win_pct_diff",
+    "away_home_vs_away_win_pct_diff",
+    "home_gd_volatility_last5",
+    "away_gd_volatility_last5",
+    "home_momentum_10game_trend",
+    "away_momentum_10game_trend",
+    "home_momentum_trend_direction",
+    "away_momentum_trend_direction",
+    "games_since_deadline",
+    "games_until_deadline",
+    "delta_pregame_top6_points_pg_home_minus_away",
+    "delta_pregame_top4_avg_toi_home_minus_away",
+    "delta_pregame_skater_points_pg_last3_home_minus_away",
+    "delta_pregame_skater_points_pg_last10_home_minus_away",
+    "delta_pregame_skater_two_way_idx_last3_home_minus_away",
+    "delta_pregame_skater_two_way_idx_last10_home_minus_away",
+    "delta_pregame_skater_points_pg_ewm_home_minus_away",
+    "delta_pregame_skater_two_way_idx_ewm_home_minus_away",
+    "delta_pregame_goalie_save_pct_last10_home_minus_away",
+    "delta_pregame_goalie_save_pct_ewm_home_minus_away",
+    "delta_pregame_goalie_save_pct_last3_home_minus_away",
+    "delta_pregame_goalie_shots_against_pg_last5_home_minus_away",
+    "delta_pregame_recent_form_volatility_last10_home_minus_away",
+    "delta_pregame_lineup_continuity_ewm_home_minus_away",
+    "delta_pregame_lineup_stability_last5_home_minus_away",
+    "delta_pregame_core_retention_pct_home_minus_away",
+    "delta_pregame_key_contributor_change_rate_last5_home_minus_away",
+    "delta_pregame_roster_games_covered_home_minus_away",
+    "delta_pregame_roster_data_coverage_pct_home_minus_away",
+    "delta_pregame_confirmed_starters_count_home_minus_away",
+    "delta_gd_volatility_last5_home_minus_away",
 ]
 
 WEIGHTED_MODEL_WEIGHTS = {
@@ -83,6 +122,57 @@ WEIGHTED_MODEL_WEIGHTS = {
     "delta_pregame_skater_points_pg_last5_home_minus_away": 0.75,
     "delta_pregame_skater_two_way_idx_last5_home_minus_away": 0.55,
     "delta_pregame_injury_count_home_minus_away": -0.50,
+    "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away": 0.28,
+    "delta_pregame_goalie_starter_quality_gap_last10_home_minus_away": 0.24,
+    "market_consensus_home_prob": 0.18,
+    "market_spread_magnitude": -0.10,
+    "market_public_vs_sharp_agreement": 0.08,
+    "roster_continuity_x_opponent_quality": 0.32,
+    "special_teams_x_rest_fatigue": 0.24,
+    "home_away_x_travel_schedule": 0.16,
+    "goalie_fidelity_x_back_to_back": 0.22,
+    "goalie_quality_gap_x_back_to_back": 0.14,
+    "market_signals_x_model_confidence": 0.18,
+    "delta_power_play_pct_home_minus_away": 0.42,
+    "delta_penalty_kill_pct_home_minus_away": 0.38,
+    "delta_pregame_top6_points_pg_home_minus_away": 0.30,
+    "delta_pregame_top4_avg_toi_home_minus_away": 0.22,
+    "delta_pregame_skater_points_pg_last3_home_minus_away": 0.28,
+    "delta_pregame_skater_points_pg_last10_home_minus_away": 0.16,
+    "delta_pregame_skater_two_way_idx_last3_home_minus_away": 0.21,
+    "delta_pregame_skater_two_way_idx_last10_home_minus_away": 0.14,
+    "delta_pregame_goalie_save_pct_last10_home_minus_away": 0.27,
+    "delta_pregame_goalie_save_pct_ewm_home_minus_away": 0.24,
+    "delta_pregame_goalie_save_pct_last3_home_minus_away": 0.19,
+    "delta_pregame_goalie_shots_against_pg_last5_home_minus_away": -0.17,
+    "delta_pregame_lineup_continuity_ewm_home_minus_away": 0.33,
+    "delta_pregame_lineup_stability_last5_home_minus_away": 0.31,
+    "delta_pregame_core_retention_pct_home_minus_away": 0.26,
+    "delta_pregame_key_contributor_change_rate_last5_home_minus_away": -0.23,
+    "delta_pregame_roster_games_covered_home_minus_away": -0.15,
+    "delta_pregame_roster_data_coverage_pct_home_minus_away": 0.18,
+    "delta_pregame_confirmed_starters_count_home_minus_away": 0.12,
+    "delta_gd_volatility_last5_home_minus_away": -0.11,
+    "special_teams_net_edge": 0.34,
+    "special_teams_balance_edge": 0.18,
+    "special_teams_form_x_recent_form": 0.20,
+    "special_teams_form_x_quality": 0.16,
+    "opponent_adjusted_rest_edge": 0.24,
+    "schedule_compression_relief": 0.21,
+    "lineup_continuity_x_recent_form": 0.19,
+    "lineup_stability_x_coverage": 0.17,
+    "goalie_certainty_x_latency": 0.20,
+    "goalie_certainty_x_quality_gap": 0.18,
+    "goalie_freshness_edge": 0.12,
+    "microtrend_skater_points_accel": 0.17,
+    "microtrend_two_way_accel": 0.13,
+    "microtrend_goalie_save_accel": 0.16,
+    "microtrend_form_accel": 0.19,
+    "microtrend_volatility_penalty": 0.11,
+    "home_away_split_edge": 0.15,
+    "home_away_split_form_edge": 0.14,
+    "home_away_split_momentum_direction": 0.10,
+    "deadline_pressure_edge": 0.08,
 }
 
 BLEND_VARIANTS = {
@@ -109,6 +199,44 @@ INTERACTION_FEATURE_NAMES = [
     "matchup_home_games_prior_log",
     "team_vs_opponent_win_rate_prior",
     "team_vs_opponent_games_prior_log",
+]
+
+MARKET_FEATURE_CANDIDATES = [
+    "market_consensus_home_prob",
+    "market_spread_magnitude",
+    "market_public_vs_sharp_agreement",
+]
+
+V3_INTERACTION_FEATURE_NAMES = [
+    "roster_continuity_x_opponent_quality",
+    "special_teams_x_rest_fatigue",
+    "home_away_x_travel_schedule",
+    "goalie_fidelity_x_back_to_back",
+    "goalie_quality_gap_x_back_to_back",
+    "market_signals_x_model_confidence",
+]
+
+V4_INTERACTION_FEATURE_NAMES = [
+    "special_teams_net_edge",
+    "special_teams_balance_edge",
+    "special_teams_form_x_recent_form",
+    "special_teams_form_x_quality",
+    "opponent_adjusted_rest_edge",
+    "schedule_compression_relief",
+    "lineup_continuity_x_recent_form",
+    "lineup_stability_x_coverage",
+    "goalie_certainty_x_latency",
+    "goalie_certainty_x_quality_gap",
+    "goalie_freshness_edge",
+    "microtrend_skater_points_accel",
+    "microtrend_two_way_accel",
+    "microtrend_goalie_save_accel",
+    "microtrend_form_accel",
+    "microtrend_volatility_penalty",
+    "home_away_split_edge",
+    "home_away_split_form_edge",
+    "home_away_split_momentum_direction",
+    "deadline_pressure_edge",
 ]
 
 TOP_BLEND_FAMILY_CANDIDATES = [
@@ -268,6 +396,117 @@ def attach_interaction_features(rows: Sequence["FeatureRow"]) -> None:
 
             cumulative_games += 1
             cumulative_home_wins += home_win
+
+
+def attach_v3_interaction_features(rows: Sequence["FeatureRow"]) -> None:
+    for row in rows:
+        f = row.features
+
+        roster_continuity = parse_float(f.get("delta_pregame_key_contributor_continuity_pct_home_minus_away", 0.0))
+        roster_quality = parse_float(f.get("delta_pregame_roster_quality_idx_home_minus_away", 0.0))
+        special_teams = parse_float(f.get("delta_pregame_special_teams_contributor_share_last5_home_minus_away", 0.0))
+        rest_fatigue = parse_float(f.get("rest_days_delta_home_minus_away", 0.0))
+        home_edge = parse_float(f.get("home_location_edge_points_pct", 0.0))
+        travel = parse_float(f.get("delta_travel_miles_home_minus_away", 0.0))
+        time_shift = parse_float(f.get("delta_timezone_shift_hours_home_minus_away", 0.0))
+        goalie_fidelity = parse_float(f.get("delta_pregame_goalie_starter_certainty_home_minus_away", 0.0))
+        goalie_quality_gap = parse_float(f.get("delta_pregame_goalie_starter_quality_gap_last10_home_minus_away", 0.0))
+        b2b_gap = parse_float(f.get("away_back_to_back", 0.0)) - parse_float(f.get("home_back_to_back", 0.0))
+        market_prob = parse_float(f.get("market_consensus_home_prob", 0.5))
+        model_confidence_proxy = (
+            abs(parse_float(f.get("delta_pregame_season_points_pct_home_minus_away", 0.0)))
+            + 0.60 * abs(roster_quality)
+            + 0.35 * abs(parse_float(f.get("delta_pregame_goalie_save_pct_home_minus_away", 0.0)))
+            + 0.15 * abs(rest_fatigue)
+        )
+
+        f["roster_continuity_x_opponent_quality"] = roster_continuity * roster_quality
+        f["special_teams_x_rest_fatigue"] = special_teams * rest_fatigue
+        f["home_away_x_travel_schedule"] = home_edge * (travel / 1000.0 + 0.5 * time_shift)
+        f["goalie_fidelity_x_back_to_back"] = goalie_fidelity * b2b_gap
+        f["goalie_quality_gap_x_back_to_back"] = goalie_quality_gap * b2b_gap
+        f["market_signals_x_model_confidence"] = (market_prob - 0.5) * model_confidence_proxy
+
+
+def attach_v4_interaction_features(rows: Sequence["FeatureRow"]) -> None:
+    for row in rows:
+        f = row.features
+
+        lineup_continuity = parse_float(f.get("delta_pregame_lineup_continuity_pct_home_minus_away", 0.0))
+        lineup_continuity_ewm = parse_float(f.get("delta_pregame_lineup_continuity_ewm_home_minus_away", 0.0))
+        lineup_stability = parse_float(f.get("delta_pregame_lineup_stability_last5_home_minus_away", 0.0))
+        key_continuity = parse_float(f.get("delta_pregame_key_contributor_continuity_pct_home_minus_away", 0.0))
+        roster_turnover = parse_float(f.get("delta_pregame_roster_turnover_count_home_minus_away", 0.0))
+        roster_coverage = parse_float(f.get("delta_pregame_roster_data_coverage_pct_home_minus_away", 0.0))
+        roster_games = parse_float(f.get("delta_pregame_roster_games_covered_home_minus_away", 0.0))
+        recent_form_5 = parse_float(f.get("delta_pregame_recent_form_adj_last5_home_minus_away", 0.0))
+        recent_form_10 = parse_float(f.get("delta_pregame_recent_form_adj_last10_home_minus_away", 0.0))
+        recent_vol_5 = parse_float(f.get("delta_pregame_recent_form_volatility_last5_home_minus_away", 0.0))
+        recent_vol_10 = parse_float(f.get("delta_pregame_recent_form_volatility_last10_home_minus_away", 0.0))
+        goalie_certainty = parse_float(f.get("delta_pregame_goalie_starter_certainty_home_minus_away", 0.0))
+        goalie_latency = parse_float(f.get("delta_pregame_goalie_days_since_last_start_home_minus_away", 0.0))
+        goalie_quality = parse_float(f.get("delta_pregame_goalie_starter_quality_gap_last10_home_minus_away", 0.0))
+        goalie_recent_starts = parse_float(f.get("delta_pregame_goalie_recent_starts_last5_home_minus_away", 0.0))
+        goalie_save_3 = parse_float(f.get("delta_pregame_goalie_save_pct_last3_home_minus_away", 0.0))
+        goalie_save_10 = parse_float(f.get("delta_pregame_goalie_save_pct_last10_home_minus_away", 0.0))
+        goalie_save_ewm = parse_float(f.get("delta_pregame_goalie_save_pct_ewm_home_minus_away", 0.0))
+        skater_pts_3 = parse_float(f.get("delta_pregame_skater_points_pg_last3_home_minus_away", 0.0))
+        skater_pts_10 = parse_float(f.get("delta_pregame_skater_points_pg_last10_home_minus_away", 0.0))
+        skater_two_way_3 = parse_float(f.get("delta_pregame_skater_two_way_idx_last3_home_minus_away", 0.0))
+        skater_two_way_10 = parse_float(f.get("delta_pregame_skater_two_way_idx_last10_home_minus_away", 0.0))
+        power_play = parse_float(f.get("delta_power_play_pct_home_minus_away", 0.0))
+        penalty_kill = parse_float(f.get("delta_penalty_kill_pct_home_minus_away", 0.0))
+        home_split = parse_float(f.get("home_home_vs_away_win_pct_diff", 0.0))
+        away_split = parse_float(f.get("away_home_vs_away_win_pct_diff", 0.0))
+        home_momentum = parse_float(f.get("home_momentum_10game_trend", 0.0))
+        away_momentum = parse_float(f.get("away_momentum_10game_trend", 0.0))
+        home_momentum_dir = parse_float(f.get("home_momentum_trend_direction", 0.0))
+        away_momentum_dir = parse_float(f.get("away_momentum_trend_direction", 0.0))
+        home_b2b = parse_float(f.get("home_back_to_back", 0.0))
+        away_b2b = parse_float(f.get("away_back_to_back", 0.0))
+        home_three_in_four = parse_float(f.get("home_three_in_four", 0.0))
+        away_three_in_four = parse_float(f.get("away_three_in_four", 0.0))
+        home_four_in_six = parse_float(f.get("home_four_in_six", 0.0))
+        away_four_in_six = parse_float(f.get("away_four_in_six", 0.0))
+        home_travel = parse_float(f.get("delta_travel_miles_home_minus_away", 0.0))
+        home_time = parse_float(f.get("delta_timezone_shift_hours_home_minus_away", 0.0))
+        games_until_deadline = parse_float(f.get("games_until_deadline", 0.0))
+        games_since_deadline = parse_float(f.get("games_since_deadline", 0.0))
+
+        f["special_teams_net_edge"] = power_play + penalty_kill
+        f["special_teams_balance_edge"] = power_play - penalty_kill
+        f["special_teams_form_x_recent_form"] = (power_play + penalty_kill) * recent_form_5
+        f["special_teams_form_x_quality"] = (power_play + penalty_kill) * parse_float(
+            f.get("delta_pregame_roster_quality_idx_home_minus_away", 0.0)
+        )
+
+        f["opponent_adjusted_rest_edge"] = (
+            parse_float(f.get("rest_days_delta_home_minus_away", 0.0))
+            - 0.50 * (home_three_in_four - away_three_in_four)
+            - 0.25 * (home_four_in_six - away_four_in_six)
+        )
+        f["schedule_compression_relief"] = (
+            -(home_b2b + 0.50 * home_three_in_four + 0.25 * home_four_in_six)
+            + (away_b2b + 0.50 * away_three_in_four + 0.25 * away_four_in_six)
+        )
+
+        f["lineup_continuity_x_recent_form"] = lineup_continuity * recent_form_5
+        f["lineup_stability_x_coverage"] = lineup_stability * (1.0 + roster_coverage)
+
+        f["goalie_certainty_x_latency"] = goalie_certainty * (1.0 - 0.10 * abs(goalie_latency))
+        f["goalie_certainty_x_quality_gap"] = goalie_certainty * goalie_quality
+        f["goalie_freshness_edge"] = goalie_certainty * (1.0 + 0.05 * goalie_recent_starts - 0.05 * abs(goalie_latency))
+
+        f["microtrend_skater_points_accel"] = skater_pts_3 - skater_pts_10
+        f["microtrend_two_way_accel"] = skater_two_way_3 - skater_two_way_10
+        f["microtrend_goalie_save_accel"] = goalie_save_3 - goalie_save_10
+        f["microtrend_form_accel"] = recent_form_5 - recent_form_10
+        f["microtrend_volatility_penalty"] = recent_form_5 / (1.0 + abs(recent_vol_5))
+
+        f["home_away_split_edge"] = home_split - away_split
+        f["home_away_split_form_edge"] = home_split * home_momentum - away_split * away_momentum
+        f["home_away_split_momentum_direction"] = home_momentum_dir - away_momentum_dir
+        f["deadline_pressure_edge"] = (1.0 / (1.0 + games_until_deadline)) - (1.0 / (1.0 + games_since_deadline))
 
 
 def percentile(sorted_vals: Sequence[float], pct: float) -> float:
@@ -1651,6 +1890,8 @@ def maybe_build_base_features(
 def load_feature_rows(
     con: sqlite3.Connection,
     table_name: str,
+    exclude_synthetic_data: bool = False,
+    exclude_market_features: bool = False,
 ) -> Tuple[List[FeatureRow], List[str]]:
     cur = con.execute(f'PRAGMA table_info("{table_name}")')
     columns = [str(row[1]) for row in cur.fetchall()]
@@ -1665,7 +1906,17 @@ def load_feature_rows(
         raise ValueError(f"No usable feature columns found in table '{table_name}'.")
 
     select_columns = ["season", "game_id", "game_date", "home_team_abbrev", "away_team_abbrev", "home_win"] + feature_columns
-    query = f'SELECT {", ".join([f"""\"{c}\"""" for c in select_columns])} FROM "{table_name}" ORDER BY game_date ASC, game_id ASC'
+    where_clauses = []
+    if exclude_synthetic_data:
+        if "is_synthetic" in columns:
+            where_clauses.append("COALESCE(is_synthetic, 0) = 0")
+        else:
+            where_clauses.append("CAST(season AS TEXT) NOT IN ('20152016', '20162017', '20172018')")
+    where_sql = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+    query = (
+        f'SELECT {", ".join([f"""\"{c}\"""" for c in select_columns])} '
+        f'FROM "{table_name}"{where_sql} ORDER BY game_date ASC, game_id ASC'
+    )
     rows: List[FeatureRow] = []
     for raw in con.execute(query).fetchall():
         row_dict = dict(zip(select_columns, raw))
@@ -1698,6 +1949,64 @@ def load_feature_rows(
                 features=features,
             )
         )
+
+    if not exclude_market_features and table_exists(con, "market_signals"):
+        market_cols = [
+            "game_id",
+            "market_consensus_home_prob",
+            "market_opening_home_implied_prob",
+            "market_spread_magnitude",
+            "market_public_vs_sharp_agreement",
+            "market_consensus_spread",
+            "market_opening_spread",
+        ]
+        market_map: Dict[int, Dict[str, float]] = {}
+        market_query = (
+            "SELECT game_id, "
+            "market_consensus_home_prob, market_opening_home_implied_prob, "
+            "ABS(market_consensus_spread) AS market_spread_magnitude, "
+            "market_public_vs_sharp_agreement, market_consensus_spread, market_opening_spread "
+            "FROM market_signals"
+        )
+        for raw in con.execute(market_query).fetchall():
+            raw_dict = dict(zip(market_cols, raw))
+            game_id = int(raw_dict["game_id"])
+            market_map[game_id] = {
+                "market_consensus_home_prob": parse_float(raw_dict.get("market_consensus_home_prob"), 0.5),
+                "market_opening_home_implied_prob": parse_float(raw_dict.get("market_opening_home_implied_prob"), 0.5),
+                "market_spread_magnitude": abs(parse_float(raw_dict.get("market_spread_magnitude"), 0.0)),
+                "market_public_vs_sharp_agreement": parse_float(raw_dict.get("market_public_vs_sharp_agreement"), 0.0),
+                "market_consensus_spread": parse_float(raw_dict.get("market_consensus_spread"), 0.0),
+                "market_opening_spread": parse_float(raw_dict.get("market_opening_spread"), 0.0),
+            }
+        for row in rows:
+            market_row = market_map.get(row.game_id)
+            if not market_row:
+                continue
+            row.features.update(market_row)
+
+    attach_interaction_features(rows)
+    if not exclude_market_features:
+        attach_v3_interaction_features(rows)
+    else:
+        for row in rows:
+            f = row.features
+            roster_continuity = parse_float(f.get("delta_pregame_key_contributor_continuity_pct_home_minus_away", 0.0))
+            roster_quality = parse_float(f.get("delta_pregame_roster_quality_idx_home_minus_away", 0.0))
+            special_teams = parse_float(f.get("delta_pregame_special_teams_contributor_share_last5_home_minus_away", 0.0))
+            rest_fatigue = parse_float(f.get("rest_days_delta_home_minus_away", 0.0))
+            home_edge = parse_float(f.get("home_location_edge_points_pct", 0.0))
+            travel = parse_float(f.get("delta_travel_miles_home_minus_away", 0.0))
+            time_shift = parse_float(f.get("delta_timezone_shift_hours_home_minus_away", 0.0))
+            goalie_fidelity = parse_float(f.get("delta_pregame_goalie_starter_certainty_home_minus_away", 0.0))
+            goalie_quality_gap = parse_float(f.get("delta_pregame_goalie_starter_quality_gap_last10_home_minus_away", 0.0))
+            b2b_gap = parse_float(f.get("away_back_to_back", 0.0)) - parse_float(f.get("home_back_to_back", 0.0))
+            f["roster_continuity_x_opponent_quality"] = roster_continuity * roster_quality
+            f["special_teams_x_rest_fatigue"] = special_teams * rest_fatigue
+            f["home_away_x_travel_schedule"] = home_edge * (travel / 1000.0 + 0.5 * time_shift)
+            f["goalie_fidelity_x_back_to_back"] = goalie_fidelity * b2b_gap
+            f["goalie_quality_gap_x_back_to_back"] = goalie_quality_gap * b2b_gap
+    attach_v4_interaction_features(rows)
 
     rows.sort(key=lambda r: (r.game_date, r.game_id))
     all_feature_names = sorted({k for r in rows for k in r.features.keys()})
@@ -1817,6 +2126,7 @@ def run_experiments(
     min_train_seasons: int,
     recency_candidate: RecencyCandidate,
     calibration_config: CalibrationConfig,
+    model_scope: str = "full",
 ) -> Tuple[List[Dict[str, object]], List[Dict[str, object]], List[Dict[str, object]], List[Dict[str, object]]]:
     seasons = sorted({r.season for r in feature_rows})
     if len(seasons) <= min_train_seasons:
@@ -1825,6 +2135,7 @@ def run_experiments(
     logistic_allowlist = set(
         BASE_FEATURE_CANDIDATES
         + ROSTER_FEATURE_CANDIDATES
+        + MARKET_FEATURE_CANDIDATES
         + [
             "delta_prev_season_points_pct",
             "delta_prev_season_goal_diff_pg",
@@ -1832,6 +2143,8 @@ def run_experiments(
             "delta_roster_games_covered",
         ]
         + INTERACTION_FEATURE_NAMES
+        + V3_INTERACTION_FEATURE_NAMES
+        + V4_INTERACTION_FEATURE_NAMES
     )
     logistic_features = sorted({name for name in feature_rows[0].features.keys() if name in logistic_allowlist})
     weighted_features = sorted([name for name in logistic_features if name in WEIGHTED_MODEL_WEIGHTS])
@@ -1855,18 +2168,21 @@ def run_experiments(
         )
         train_weights = compute_recency_weights(train_rows, train_seasons, fold_recency_config)
 
-        train_games = [
-            historical_map[(r.season, r.game_id)]
-            for r in train_rows
-            if (r.season, r.game_id) in historical_map
-        ]
-        test_games = [
-            historical_map[(r.season, r.game_id)]
-            for r in test_rows
-            if (r.season, r.game_id) in historical_map
-        ]
-        if len(train_games) != len(train_rows) or len(test_games) != len(test_rows):
-            raise ValueError("Missing historical_games_last5 rows required for Elo evaluation.")
+        train_games: List[HistoricalGame] = []
+        test_games: List[HistoricalGame] = []
+        if model_scope != "logistic_only":
+            train_games = [
+                historical_map[(r.season, r.game_id)]
+                for r in train_rows
+                if (r.season, r.game_id) in historical_map
+            ]
+            test_games = [
+                historical_map[(r.season, r.game_id)]
+                for r in test_rows
+                if (r.season, r.game_id) in historical_map
+            ]
+            if len(train_games) != len(train_rows) or len(test_games) != len(test_rows):
+                raise ValueError("Missing historical_games_last5 rows required for Elo evaluation.")
 
         # Model A: tuned Elo-form blend.
         elo_params = tune_elo_params(train_games)
@@ -1905,6 +2221,67 @@ def run_experiments(
         for row in test_rows:
             x = build_feature_vector(row, logistic_features, med, sc)
             logistic_probs[(row.season, row.game_id)] = predict_logistic_probability(x, w, b)
+
+        if model_scope == "logistic_only":
+            for row in test_rows:
+                key = (row.season, row.game_id)
+                p_home = logistic_probs[key]
+                pred_home = 1 if p_home >= 0.5 else 0
+                predicted_winner = row.home_team if pred_home == 1 else row.away_team
+                all_predictions.append(
+                    {
+                        "model_id": "logistic_engineered",
+                        "fold_train_end_season": train_seasons[-1],
+                        "fold_test_season": test_season,
+                        "season": row.season,
+                        "game_id": row.game_id,
+                        "game_date": row.game_date,
+                        "home_team_abbrev": row.home_team,
+                        "away_team_abbrev": row.away_team,
+                        "actual_home_win": row.home_win,
+                        "home_win_probability": round(p_home, 6),
+                        "away_win_probability": round(1.0 - p_home, 6),
+                        "predicted_winner_abbrev": predicted_winner,
+                        "is_correct_pick": 1 if pred_home == row.home_win else 0,
+                        "recency_candidate_id": recency_candidate.candidate_id,
+                        "recency_selector_mode": recency_candidate.selector_mode,
+                        "recency_selector_regime": fold_regime,
+                        "recency_mode": fold_recency_config.mode,
+                        "recency_season_half_life": fold_recency_config.season_half_life,
+                        "recency_game_half_life": fold_recency_config.game_half_life,
+                        "recency_min_weight": fold_recency_config.min_weight,
+                        "recency_normalize_mean_one": fold_recency_config.normalize_mean_one,
+                        "recency_base_mode": recency_candidate.base_config.mode,
+                        "recency_base_season_half_life": recency_candidate.base_config.season_half_life,
+                        "recency_base_game_half_life": recency_candidate.base_config.game_half_life,
+                        "recency_base_min_weight": recency_candidate.base_config.min_weight,
+                        "recency_base_normalize_mean_one": recency_candidate.base_config.normalize_mean_one,
+                        "nonlinear_model_backend": "skipped",
+                        "nonlinear_model_style": "logistic_only",
+                    }
+                )
+            fold_summaries.append(
+                {
+                    "fold_test_season": test_season,
+                    "fold_train_start_season": train_seasons[0],
+                    "fold_train_end_season": train_seasons[-1],
+                    "train_games": len(train_rows),
+                    "test_games": len(test_rows),
+                    "recency": {
+                        "candidate_id": recency_candidate.candidate_id,
+                        "selector_mode": recency_candidate.selector_mode,
+                        "selector_regime": fold_regime,
+                        "mode": fold_recency_config.mode,
+                        "season_half_life": fold_recency_config.season_half_life,
+                        "game_half_life": fold_recency_config.game_half_life,
+                        "min_weight": fold_recency_config.min_weight,
+                        "normalize_mean_one": fold_recency_config.normalize_mean_one,
+                    },
+                    "logistic_tuning": tuned_cfg,
+                    "execution_mode": "logistic_only",
+                }
+            )
+            continue
 
         # Model D: nonlinear tree family (prefers LightGBM/XGBoost when available; deterministic fallback otherwise).
         nonlinear_predictor, nonlinear_model_info = build_nonlinear_predictor(
@@ -2580,6 +2957,12 @@ def parse_args() -> argparse.Namespace:
         default=120,
         help="Deterministic cap on generated recency sweep candidates.",
     )
+    parser.add_argument(
+        "--model-scope",
+        default="full",
+        choices=["full", "logistic_only"],
+        help="Model families to evaluate. Use logistic_only for faster recency-grid retuning runs.",
+    )
     parser.add_argument("--output-predictions-csv", default=None, help="Defaults to data\\processed\\walk_forward_experiment_predictions.csv")
     parser.add_argument("--output-overall-csv", default=None, help="Defaults to data\\processed\\walk_forward_experiment_metrics_overall.csv")
     parser.add_argument("--output-by-season-csv", default=None, help="Defaults to data\\processed\\walk_forward_experiment_metrics_by_season.csv")
@@ -2600,6 +2983,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-summary-json", default=None, help="Defaults to data\\processed\\walk_forward_experiment_summary.json")
     parser.add_argument("--skip-sqlite-write", action="store_true")
+    parser.add_argument(
+        "--exclude-synthetic-data",
+        action="store_true",
+        help="Exclude rows marked synthetic (or the known fabricated 2015-2018 seasons when provenance is absent).",
+    )
+    parser.add_argument(
+        "--exclude-market-features",
+        action="store_true",
+        help="Do not load synthetic/circular market_signals features or derived market interactions.",
+    )
     return parser.parse_args()
 
 
@@ -2677,7 +3070,12 @@ def main() -> None:
         if dependency_status in ("feature_tables_missing", "preferred_table_missing"):
             raise SystemExit("No compatible feature table available for walk-forward experiments.")
 
-        feature_rows, feature_names = load_feature_rows(con, selected_table)
+        feature_rows, feature_names = load_feature_rows(
+            con,
+            selected_table,
+            exclude_synthetic_data=bool(args.exclude_synthetic_data),
+            exclude_market_features=bool(args.exclude_market_features),
+        )
         attach_interaction_features(feature_rows)
         feature_names = sorted({k for r in feature_rows for k in r.features.keys()})
         historical_games = load_historical_games(con)
@@ -2694,6 +3092,7 @@ def main() -> None:
             min_train_seasons=max(1, int(args.min_train_seasons)),
             recency_candidate=candidate,
             calibration_config=calibration_config,
+            model_scope=str(args.model_scope),
         )
         for fold in candidate_folds:
             fold["recency_candidate_id"] = candidate.candidate_id
@@ -2752,9 +3151,12 @@ def main() -> None:
             "dependency_status": dependency_status,
             "feature_count": len(feature_names),
             "row_count": len(feature_rows),
+            "exclude_synthetic_data": bool(args.exclude_synthetic_data),
+            "exclude_market_features": bool(args.exclude_market_features),
         },
         "interaction_features": INTERACTION_FEATURE_NAMES,
         "recency_sweep_enabled": bool(args.recency_sweep),
+        "model_scope": str(args.model_scope),
         "calibration_selector_config": {
             "selector_mode": calibration_config.selector_mode,
             "validation_seasons": calibration_config.validation_seasons,

@@ -1,0 +1,10 @@
+column,old_coverage_pct,new_coverage_pct,coverage_delta_pct_points,old_non_null_count,new_non_null_count,total_rows
+home_pregame_goalie_starter_certainty,100.0,100.0,0.0,6560,7966,7966
+away_pregame_goalie_starter_certainty,100.0,100.0,0.0,6560,7966,7966
+home_pregame_goalie_starter_quality_gap_last5,5.899390243902439,100.0,94.10060975609755,387,7966,7966
+away_pregame_goalie_starter_quality_gap_last5,5.853658536585366,100.0,94.14634146341463,384,7966,7966
+home_pregame_goalie_starter_quality_gap_last10,5.899390243902439,100.0,94.10060975609755,387,7966,7966
+away_pregame_goalie_starter_quality_gap_last10,5.853658536585366,100.0,94.14634146341463,384,7966,7966
+delta_pregame_goalie_starter_certainty_home_minus_away,100.0,100.0,0.0,6560,7966,7966
+delta_pregame_goalie_starter_quality_gap_last5_home_minus_away,0.3201219512195122,100.0,99.6798780487805,21,7966,7966
+delta_pregame_goalie_starter_quality_gap_last10_home_minus_away,0.3201219512195122,100.0,99.6798780487805,21,7966,7966

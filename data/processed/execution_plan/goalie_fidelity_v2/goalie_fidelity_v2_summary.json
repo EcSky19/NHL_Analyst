@@ -1,0 +1,18 @@
+{
+  "benchmark_accuracy": 0.616616,
+  "best_observed_accuracy_2025_2026": 0.5807926829268293,
+  "best_observed_model": "roster_aware_logreg_v3_interactions",
+  "coverage": {
+    "home_pregame_goalie_starter_certainty": 1.0,
+    "away_pregame_goalie_starter_certainty": 1.0,
+    "home_pregame_goalie_starter_quality_gap_last5": 1.0,
+    "away_pregame_goalie_starter_quality_gap_last5": 1.0,
+    "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away": 1.0
+  },
+  "coverage_improvement_pct_points": {
+    "home_pregame_goalie_starter_quality_gap_last5": 94.10060975609755,
+    "away_pregame_goalie_starter_quality_gap_last5": 94.14634146341463,
+    "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away": 99.6798780487805
+  },
+  "goalie_fidelity_helped": "coverage_yes_accuracy_no"
+}

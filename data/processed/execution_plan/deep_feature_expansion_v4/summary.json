@@ -1,0 +1,562 @@
+{
+  "benchmark_accuracy": 0.616616,
+  "best_accuracy": 0.617378,
+  "best_model_id": "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+  "best_row": {
+    "accuracy": 0.617378,
+    "brier_score": 0.233979,
+    "games": 1312,
+    "log_loss": 0.660604,
+    "model_id": "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+    "nonlinear_model_backend": "lightgbm",
+    "nonlinear_model_style": "gradient_boosted_trees",
+    "rank": 1,
+    "recency_base_game_half_life": 800.0,
+    "recency_base_min_weight": 0.2,
+    "recency_base_mode": "none",
+    "recency_base_normalize_mean_one": true,
+    "recency_base_season_half_life": 1.5,
+    "recency_candidate_id": "single",
+    "recency_game_half_life": 800.0,
+    "recency_min_weight": 0.2,
+    "recency_mode": "none",
+    "recency_normalize_mean_one": true,
+    "recency_season_half_life": 1.5,
+    "recency_selector_mode": "season_regime_drift"
+  },
+  "best_season": null,
+  "best_season_label": null,
+  "delta_vs_benchmark": 0.0007619999999999294,
+  "feature_count": 116,
+  "feature_table": "deep_feature_expansion_v4_features",
+  "folds": [
+    {
+      "blend_diagnostics": {
+        "blend_model_ids": [
+          "blend_logistic_weighted_60_40",
+          "blend_logistic_weighted_70_30",
+          "blend_nonlinear_logistic_50_50",
+          "blend_nonlinear_weighted_60_40",
+          "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+          "blend_top2_fixed_65_35__weighted_calibrated__elo_form_tuned",
+          "blend_top2_validated__weighted_calibrated__elo_form_tuned",
+          "blend_top3_fixed_50_30_20__weighted_calibrated__elo_form_tuned__logistic_engineered",
+          "blend_top3_validated__weighted_calibrated__elo_form_tuned__logistic_engineered"
+        ],
+        "selected_top_families": [
+          "weighted_calibrated",
+          "elo_form_tuned",
+          "logistic_engineered"
+        ],
+        "top_family_candidates": [
+          {
+            "accuracy": 0.548077,
+            "brier_score": 0.248725,
+            "games": 936,
+            "log_loss": 0.690668,
+            "model_id": "weighted_calibrated"
+          },
+          {
+            "accuracy": 0.529915,
+            "brier_score": 0.256407,
+            "games": 936,
+            "log_loss": 0.70715,
+            "model_id": "elo_form_tuned"
+          },
+          {
+            "accuracy": 0.503205,
+            "brier_score": 0.268744,
+            "games": 936,
+            "log_loss": 0.737867,
+            "model_id": "logistic_engineered"
+          },
+          {
+            "accuracy": 0.482906,
+            "brier_score": 0.308199,
+            "games": 936,
+            "log_loss": 0.850275,
+            "model_id": "nonlinear_tree"
+          }
+        ],
+        "validated_weight_selection": [
+          {
+            "best_metrics": {
+              "accuracy": 0.556624,
+              "brier_score": 0.249032,
+              "games": 936,
+              "log_loss": 0.691244
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.3,
+              "weighted_calibrated": 0.7
+            },
+            "blend_scope": "top2",
+            "families": [
+              "weighted_calibrated",
+              "elo_form_tuned"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.53953,
+                "brier_score": 0.250188,
+                "games": 936,
+                "log_loss": 0.693627,
+                "weights": {
+                  "elo_form_tuned": 0.5,
+                  "weighted_calibrated": 0.5
+                }
+              },
+              {
+                "accuracy": 0.543803,
+                "brier_score": 0.249828,
+                "games": 936,
+                "log_loss": 0.692879,
+                "weights": {
+                  "elo_form_tuned": 0.45,
+                  "weighted_calibrated": 0.55
+                }
+              },
+              {
+                "accuracy": 0.551282,
+                "brier_score": 0.249515,
+                "games": 936,
+                "log_loss": 0.692233,
+                "weights": {
+                  "elo_form_tuned": 0.4,
+                  "weighted_calibrated": 0.6
+                }
+              },
+              {
+                "accuracy": 0.547009,
+                "brier_score": 0.24925,
+                "games": 936,
+                "log_loss": 0.691688,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "weighted_calibrated": 0.65
+                }
+              },
+              {
+                "accuracy": 0.556624,
+                "brier_score": 0.249032,
+                "games": 936,
+                "log_loss": 0.691244,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "weighted_calibrated": 0.7
+                }
+              }
+            ]
+          },
+          {
+            "best_metrics": {
+              "accuracy": 0.520299,
+              "brier_score": 0.249741,
+              "games": 936,
+              "log_loss": 0.692636
+            },
+            "best_weights": {
+              "elo_form_tuned": 0.3,
+              "logistic_engineered": 0.2,
+              "weighted_calibrated": 0.5
+            },
+            "blend_scope": "top3",
+            "families": [
+              "weighted_calibrated",
+              "elo_form_tuned",
+              "logistic_engineered"
+            ],
+            "tested_candidates": [
+              {
+                "accuracy": 0.520299,
+                "brier_score": 0.249741,
+                "games": 936,
+                "log_loss": 0.692636,
+                "weights": {
+                  "elo_form_tuned": 0.3,
+                  "logistic_engineered": 0.2,
+                  "weighted_calibrated": 0.5
+                }
+              },
+              {
+                "accuracy": 0.521368,
+                "brier_score": 0.250024,
+                "games": 936,
+                "log_loss": 0.693216,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.2,
+                  "weighted_calibrated": 0.45
+                }
+              },
+              {
+                "accuracy": 0.513889,
+                "brier_score": 0.250505,
+                "games": 936,
+                "log_loss": 0.694195,
+                "weights": {
+                  "elo_form_tuned": 0.35,
+                  "logistic_engineered": 0.25,
+                  "weighted_calibrated": 0.4
+                }
+              },
+              {
+                "accuracy": 0.509615,
+                "brier_score": 0.251379,
+                "games": 936,
+                "log_loss": 0.695987,
+                "weights": {
+                  "elo_form_tuned": 0.33,
+                  "logistic_engineered": 0.33,
+                  "weighted_calibrated": 0.34
+                }
+              }
+            ]
+          }
+        ],
+        "validation_games": 936,
+        "validation_seasons": [
+          20162017,
+          20172018
+        ]
+      },
+      "blend_weights": {
+        "blend_logistic_weighted_60_40": {
+          "logistic_engineered": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_logistic_weighted_70_30": {
+          "logistic_engineered": 0.7,
+          "weighted_calibrated": 0.3
+        },
+        "blend_nonlinear_logistic_50_50": {
+          "logistic_engineered": 0.5,
+          "nonlinear_tree": 0.5
+        },
+        "blend_nonlinear_weighted_60_40": {
+          "nonlinear_tree": 0.6,
+          "weighted_calibrated": 0.4
+        },
+        "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned": {
+          "elo_form_tuned": 0.5,
+          "weighted_calibrated": 0.5
+        },
+        "blend_top2_fixed_65_35__weighted_calibrated__elo_form_tuned": {
+          "elo_form_tuned": 0.35,
+          "weighted_calibrated": 0.65
+        },
+        "blend_top2_validated__weighted_calibrated__elo_form_tuned": {
+          "elo_form_tuned": 0.3,
+          "weighted_calibrated": 0.7
+        },
+        "blend_top3_fixed_50_30_20__weighted_calibrated__elo_form_tuned__logistic_engineered": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.2,
+          "weighted_calibrated": 0.5
+        },
+        "blend_top3_validated__weighted_calibrated__elo_form_tuned__logistic_engineered": {
+          "elo_form_tuned": 0.3,
+          "logistic_engineered": 0.2,
+          "weighted_calibrated": 0.5
+        }
+      },
+      "elo_params": {
+        "form_goal_weight": 20.0,
+        "form_win_weight": 80.0,
+        "home_advantage": 35.0,
+        "k_factor": 14.0
+      },
+      "fold_test_season": 20212022,
+      "fold_train_end_season": 20172018,
+      "fold_train_start_season": 20152016,
+      "interaction_feature_importance": [
+        {
+          "abs_weight": 0.03160203,
+          "feature": "matchup_home_win_rate_prior",
+          "weight": 0.03160203
+        },
+        {
+          "abs_weight": 0.02439199,
+          "feature": "matchup_home_games_prior_log",
+          "weight": 0.02439199
+        },
+        {
+          "abs_weight": 0.02052419,
+          "feature": "team_vs_opponent_win_rate_prior",
+          "weight": 0.02052419
+        }
+      ],
+      "logistic_feature_importance_top": [
+        {
+          "abs_weight": 0.04597341,
+          "feature": "delta_pregame_goalie_shots_against_pg_trend_home_minus_away",
+          "weight": -0.04597341
+        },
+        {
+          "abs_weight": 0.035952,
+          "feature": "delta_pregame_depth_points_share_last5_home_minus_away",
+          "weight": -0.035952
+        },
+        {
+          "abs_weight": 0.03242703,
+          "feature": "away_gd_volatility_last5",
+          "weight": 0.03242703
+        },
+        {
+          "abs_weight": 0.03160203,
+          "feature": "matchup_home_win_rate_prior",
+          "weight": 0.03160203
+        },
+        {
+          "abs_weight": 0.0295235,
+          "feature": "delta_pregame_recent_form_volatility_last10_home_minus_away",
+          "weight": -0.0295235
+        },
+        {
+          "abs_weight": 0.02838935,
+          "feature": "delta_pregame_key_contributor_change_rate_last5_home_minus_away",
+          "weight": 0.02838935
+        },
+        {
+          "abs_weight": 0.02576728,
+          "feature": "delta_pregame_top4_avg_toi_home_minus_away",
+          "weight": -0.02576728
+        },
+        {
+          "abs_weight": 0.02439199,
+          "feature": "matchup_home_games_prior_log",
+          "weight": 0.02439199
+        },
+        {
+          "abs_weight": 0.02403718,
+          "feature": "delta_pregame_special_teams_contributor_share_last5_home_minus_away",
+          "weight": 0.02403718
+        },
+        {
+          "abs_weight": 0.02078331,
+          "feature": "home_pregame_roster_data_coverage_pct",
+          "weight": -0.02078331
+        },
+        {
+          "abs_weight": 0.02078331,
+          "feature": "home_pregame_roster_games_covered",
+          "weight": -0.02078331
+        },
+        {
+          "abs_weight": 0.02052419,
+          "feature": "team_vs_opponent_win_rate_prior",
+          "weight": 0.02052419
+        },
+        {
+          "abs_weight": 0.01961978,
+          "feature": "home_gd_volatility_last5",
+          "weight": 0.01961978
+        },
+        {
+          "abs_weight": 0.019471,
+          "feature": "delta_pregame_skater_two_way_idx_ewm_home_minus_away",
+          "weight": -0.019471
+        },
+        {
+          "abs_weight": 0.01907627,
+          "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+          "weight": 0.01907627
+        },
+        {
+          "abs_weight": 0.01808405,
+          "feature": "deadline_pressure_edge",
+          "weight": -0.01808405
+        },
+        {
+          "abs_weight": 0.01769475,
+          "feature": "delta_pregame_lineup_continuity_ewm_home_minus_away",
+          "weight": -0.01769475
+        },
+        {
+          "abs_weight": 0.0169813,
+          "feature": "away_pregame_roster_data_coverage_pct",
+          "weight": 0.0169813
+        },
+        {
+          "abs_weight": 0.0169813,
+          "feature": "away_pregame_roster_games_covered",
+          "weight": 0.0169813
+        },
+        {
+          "abs_weight": 0.01476149,
+          "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+          "weight": -0.01476149
+        }
+      ],
+      "logistic_params": {
+        "epochs": 250,
+        "l2": 0.3,
+        "learning_rate": 0.02
+      },
+      "nonlinear_model": {
+        "backend": "lightgbm",
+        "deterministic": true,
+        "model_id": "nonlinear_tree",
+        "style": "gradient_boosted_trees"
+      },
+      "recency_weighting": {
+        "base_game_half_life": 800.0,
+        "base_min_weight": 0.2,
+        "base_mode": "none",
+        "base_normalize_mean_one": true,
+        "base_season_half_life": 1.5,
+        "candidate_id": "single",
+        "game_half_life": 800.0,
+        "min_weight": 0.2,
+        "mode": "none",
+        "normalize_mean_one": true,
+        "season_half_life": 1.5,
+        "selector_mode": "season_regime_drift",
+        "selector_regime": "middle",
+        "train_weight_max": 1.0,
+        "train_weight_mean": 1.0,
+        "train_weight_min": 1.0
+      },
+      "test_games": 1312,
+      "train_games": 1406,
+      "weighted_calibration": {
+        "calibration_methods_by_variant": {
+          "weighted_calibrated": "platt",
+          "weighted_calibrated_isotonic": "isotonic",
+          "weighted_calibrated_platt": "platt"
+        },
+        "diagnostic_views": {
+          "overall": {
+            "isotonic": {
+              "accuracy": 0.549145,
+              "brier_score": 0.253126,
+              "games": 936,
+              "log_loss": 0.749541
+            },
+            "platt": {
+              "accuracy": 0.548077,
+              "brier_score": 0.248725,
+              "games": 936,
+              "log_loss": 0.690668
+            }
+          },
+          "regime_late_window": {
+            "isotonic": {
+              "accuracy": 0.542735,
+              "brier_score": 0.250841,
+              "games": 468,
+              "log_loss": 0.719888
+            },
+            "platt": {
+              "accuracy": 0.523504,
+              "brier_score": 0.248439,
+              "games": 468,
+              "log_loss": 0.690011
+            }
+          },
+          "regime_middle_window": {
+            "isotonic": {
+              "accuracy": 0.555556,
+              "brier_score": 0.25541,
+              "games": 468,
+              "log_loss": 0.779194
+            },
+            "platt": {
+              "accuracy": 0.57265,
+              "brier_score": 0.249011,
+              "games": 468,
+              "log_loss": 0.691325
+            }
+          },
+          "season_20162017": {
+            "isotonic": {
+              "accuracy": 0.555556,
+              "brier_score": 0.25541,
+              "games": 468,
+              "log_loss": 0.779194
+            },
+            "platt": {
+              "accuracy": 0.57265,
+              "brier_score": 0.249011,
+              "games": 468,
+              "log_loss": 0.691325
+            }
+          },
+          "season_20172018": {
+            "isotonic": {
+              "accuracy": 0.542735,
+              "brier_score": 0.250841,
+              "games": 468,
+              "log_loss": 0.719888
+            },
+            "platt": {
+              "accuracy": 0.523504,
+              "brier_score": 0.248439,
+              "games": 468,
+              "log_loss": 0.690011
+            }
+          },
+          "season_aware_weighted": {
+            "isotonic": {
+              "accuracy": 0.547009,
+              "brier_score": 0.252364,
+              "games": 468,
+              "log_loss": 0.739656
+            },
+            "platt": {
+              "accuracy": 0.539886,
+              "brier_score": 0.24863,
+              "games": 468,
+              "log_loss": 0.690449
+            }
+          }
+        },
+        "overall_validation_metrics": {
+          "isotonic": {
+            "accuracy": 0.549145,
+            "brier_score": 0.253126,
+            "games": 936,
+            "log_loss": 0.749541
+          },
+          "platt": {
+            "accuracy": 0.548077,
+            "brier_score": 0.248725,
+            "games": 936,
+            "log_loss": 0.690668
+          }
+        },
+        "selected_fit_parameters": {
+          "a": 0.6363752967437556,
+          "b": 0.17938524839867065
+        },
+        "selected_method": "platt",
+        "selection_fit_games": 470,
+        "selection_metrics": {
+          "isotonic": {
+            "accuracy": 0.547009,
+            "brier_score": 0.252364,
+            "games": 468,
+            "log_loss": 0.739656
+          },
+          "platt": {
+            "accuracy": 0.539886,
+            "brier_score": 0.24863,
+            "games": 468,
+            "log_loss": 0.690449
+          }
+        },
+        "selection_objective": "joint",
+        "selection_objective_margin": 0.0005,
+        "selection_validation_games": 936,
+        "selector_mode": "season_aware",
+        "selector_notes": "recency_weighted_over_validation_seasons",
+        "selector_view": "season_aware_weighted",
+        "validation_seasons": [
+          20162017,
+          20172018
+        ]
+      }
+    }
+  ],
+  "games": 1312
+}

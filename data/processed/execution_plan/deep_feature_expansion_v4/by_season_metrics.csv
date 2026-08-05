@@ -1,0 +1,16 @@
+recency_candidate_id,model_id,season,season_label,games,accuracy,log_loss,brier_score,recency_selector_mode,recency_mode,recency_season_half_life,recency_game_half_life,recency_min_weight,recency_normalize_mean_one,recency_base_mode,recency_base_season_half_life,recency_base_game_half_life,recency_base_min_weight,recency_base_normalize_mean_one,nonlinear_model_backend,nonlinear_model_style
+single,blend_logistic_weighted_60_40,20212022,2021-2022,1312,0.542683,0.698109,0.252209,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_logistic_weighted_70_30,20212022,2021-2022,1312,0.525915,0.70476,0.255348,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_nonlinear_logistic_50_50,20212022,2021-2022,1312,0.523628,0.735708,0.268409,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_nonlinear_weighted_60_40,20212022,2021-2022,1312,0.544207,0.712792,0.258237,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned,20212022,2021-2022,1312,0.617378,0.660604,0.233979,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_top2_fixed_65_35__weighted_calibrated__elo_form_tuned,20212022,2021-2022,1312,0.606707,0.664439,0.235856,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_top2_validated__weighted_calibrated__elo_form_tuned,20212022,2021-2022,1312,0.605183,0.666007,0.236622,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_top3_fixed_50_30_20__weighted_calibrated__elo_form_tuned__logistic_engineered,20212022,2021-2022,1312,0.605183,0.66882,0.238011,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,blend_top3_validated__weighted_calibrated__elo_form_tuned__logistic_engineered,20212022,2021-2022,1312,0.605183,0.66882,0.238011,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,elo_form_tuned,20212022,2021-2022,1312,0.616616,0.657629,0.232286,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,logistic_engineered,20212022,2021-2022,1312,0.508384,0.731673,0.267427,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,nonlinear_tree,20212022,2021-2022,1312,0.515244,0.809681,0.291773,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,weighted_calibrated,20212022,2021-2022,1312,0.576982,0.67853,0.242691,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,weighted_calibrated_isotonic,20212022,2021-2022,1312,0.536585,0.682558,0.244782,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees
+single,weighted_calibrated_platt,20212022,2021-2022,1312,0.576982,0.67853,0.242691,season_regime_drift,none,1.5,800.0,0.2,True,none,1.5,800.0,0.2,True,lightgbm,gradient_boosted_trees

@@ -1,0 +1,2 @@
+games,accuracy,log_loss,brier_score,current_best_accuracy,accuracy_delta_vs_current_best
+1312,0.620427,0.663181,0.235073,0.6189024390243902,0.001524

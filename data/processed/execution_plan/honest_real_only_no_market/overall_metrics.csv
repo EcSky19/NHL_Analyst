@@ -1,0 +1,2 @@
+model_id,games,accuracy,log_loss,brier_score,train_policy,feature_table,excluded_market_features,synthetic_rows_excluded
+honest_blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned,5248,0.568216,0.676887,0.242006,expanding walk-forward over real seasons only; first real season is training-only,backtest_features_last5_roster,True,True

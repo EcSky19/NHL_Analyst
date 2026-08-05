@@ -1,0 +1,106 @@
+{
+  "benchmark": {
+    "base_model": "blend_top2_fixed_50_50__weighted_calibrated__elo_form_tuned",
+    "alt_model": "blend_top2_fixed_65_35__weighted_calibrated__elo_form_tuned",
+    "games": 1312,
+    "base_accuracy": 0.6166158536585366,
+    "adjusted_accuracy": 0.6189024390243902,
+    "accuracy_delta": 0.0022865853658536883,
+    "correct_gain": 3,
+    "adjustment_rule": "if base model predicts away and base confidence < 0.55, replace its probability with the 65/35 blend probability",
+    "benchmark_worst_slice": {
+      "slice": "home_b2b",
+      "games": 85,
+      "accuracy": 0.49411764705882355,
+      "error_rate": 0.5058823529411764,
+      "avg_conf": 0.6159318588235293,
+      "mean_home_prob": 0.6159318588235293,
+      "actual_home_rate": 0.49411764705882355,
+      "calibration_gap": 0.12181421176470575
+    },
+    "benchmark_adjusted_worst_slice": {
+      "slice": "home_b2b",
+      "games": 85,
+      "accuracy": 0.49411764705882355,
+      "error_rate": 0.5058823529411764,
+      "avg_conf": 0.6159318588235293,
+      "mean_home_prob": 0.6159318588235293,
+      "actual_home_rate": 0.49411764705882355,
+      "calibration_gap": 0.12181421176470575
+    }
+  },
+  "broader": {
+    "worst_season": {
+      "season": 20252026.0,
+      "games": 1312.0,
+      "accuracy": 0.5617378048780488,
+      "error_rate": 0.4382621951219512,
+      "avg_conf": 0.6062713018292682,
+      "mean_home_prob": 0.5355574908536586,
+      "actual_home_rate": 0.5221036585365854,
+      "calibration_gap": 0.0134538323170732
+    },
+    "worst_slice": {
+      "slice": "away_low_conf_0.50_0.55",
+      "games": 662,
+      "accuracy": 0.5090634441087614,
+      "error_rate": 0.49093655589123864,
+      "avg_conf": 0.5245695740181269,
+      "mean_home_prob": 0.4754304259818731,
+      "actual_home_rate": 0.4909365558912387,
+      "calibration_gap": 0.015506129909365618
+    },
+    "top_risk_slices": [
+      {
+        "slice": "away_low_conf_0.50_0.55",
+        "games": 662,
+        "accuracy": 0.5090634441087614,
+        "error_rate": 0.49093655589123864,
+        "avg_conf": 0.5245695740181269,
+        "mean_home_prob": 0.4754304259818731,
+        "actual_home_rate": 0.4909365558912387,
+        "calibration_gap": 0.015506129909365618
+      },
+      {
+        "slice": "low_conf_0.50_0.55",
+        "games": 1408,
+        "accuracy": 0.5220170454545454,
+        "error_rate": 0.4779829545454546,
+        "avg_conf": 0.5253058735795455,
+        "mean_home_prob": 0.5022020980113636,
+        "actual_home_rate": 0.5134943181818182,
+        "calibration_gap": 0.011292220170454614
+      },
+      {
+        "slice": "low_conf_0.50_0.60",
+        "games": 2620,
+        "accuracy": 0.5251908396946565,
+        "error_rate": 0.4748091603053435,
+        "avg_conf": 0.5478027461832061,
+        "mean_home_prob": 0.5084014538167939,
+        "actual_home_rate": 0.5141221374045801,
+        "calibration_gap": 0.005720683587786213
+      },
+      {
+        "slice": "mid_conf_0.55_0.60",
+        "games": 1212,
+        "accuracy": 0.5288778877887789,
+        "error_rate": 0.47112211221122113,
+        "avg_conf": 0.5739377268976897,
+        "mean_home_prob": 0.5156033457095709,
+        "actual_home_rate": 0.5148514851485149,
+        "calibration_gap": 0.000751860561056028
+      },
+      {
+        "slice": "away_b2b",
+        "games": 316,
+        "accuracy": 0.5379746835443038,
+        "error_rate": 0.4620253164556962,
+        "avg_conf": 0.6036736772151898,
+        "mean_home_prob": 0.3963263227848101,
+        "actual_home_rate": 0.4620253164556962,
+        "calibration_gap": 0.06569899367088611
+      }
+    ]
+  }
+}

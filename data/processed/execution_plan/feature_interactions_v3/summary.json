@@ -1,0 +1,1402 @@
+{
+  "artifacts": {
+    "by_season_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\feature_interactions_v3\\by_season_metrics.csv",
+    "calibration_diagnostics_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\feature_interactions_v3\\calibration_diagnostics.csv",
+    "logistic_importance_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\feature_interactions_v3\\logistic_importance.csv",
+    "overall_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\feature_interactions_v3\\overall_metrics.csv",
+    "predictions_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\feature_interactions_v3\\predictions.csv",
+    "recency_comparison_csv": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\feature_interactions_v3\\recency_comparison.csv",
+    "summary_json": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\execution_plan\\feature_interactions_v3\\summary.json"
+  },
+  "blend_impact_overall": [],
+  "blend_model_ids": [],
+  "blend_variants_static": {
+    "blend_logistic_weighted_60_40": {
+      "logistic_engineered": 0.6,
+      "weighted_calibrated": 0.4
+    },
+    "blend_logistic_weighted_70_30": {
+      "logistic_engineered": 0.7,
+      "weighted_calibrated": 0.3
+    },
+    "blend_nonlinear_logistic_50_50": {
+      "logistic_engineered": 0.5,
+      "nonlinear_tree": 0.5
+    },
+    "blend_nonlinear_weighted_60_40": {
+      "nonlinear_tree": 0.6,
+      "weighted_calibrated": 0.4
+    }
+  },
+  "calibration_diagnostics": [],
+  "calibration_selector_config": {
+    "objective_margin": 0.0005,
+    "season_half_life": 1.0,
+    "selection_objective": "joint",
+    "selector_mode": "season_aware",
+    "validation_seasons": 2
+  },
+  "calibrator_impact_overall": [],
+  "data_source": {
+    "dependency_status": "roster_features_available",
+    "feature_count": 65,
+    "feature_table": "backtest_features_last5_roster",
+    "historical_table": "historical_games_last5",
+    "row_count": 7966,
+    "sqlite_db": "C:\\Users\\t-ecoskay\\Sports_analytics\\data\\processed\\nhl_research.db"
+  },
+  "deterministic": true,
+  "folds": [
+    {
+      "execution_mode": "logistic_only",
+      "fold_test_season": 20172018,
+      "fold_train_end_season": 20162017,
+      "fold_train_start_season": 20152016,
+      "logistic_tuning": {
+        "epochs": 450.0,
+        "l2": 0.3,
+        "lr": 0.05,
+        "val_accuracy": 0.5170940170940171,
+        "val_log_loss": 0.7017612264197872
+      },
+      "recency": {
+        "candidate_id": "single",
+        "game_half_life": 960.0,
+        "min_weight": 0.22000000000000003,
+        "mode": "hybrid_exponential",
+        "normalize_mean_one": true,
+        "season_half_life": 1.7999999999999998,
+        "selector_mode": "season_regime_drift",
+        "selector_regime": "early"
+      },
+      "recency_candidate_id": "single",
+      "recency_selector_mode": "season_regime_drift",
+      "test_games": 468,
+      "train_games": 938
+    },
+    {
+      "execution_mode": "logistic_only",
+      "fold_test_season": 20212022,
+      "fold_train_end_season": 20172018,
+      "fold_train_start_season": 20152016,
+      "logistic_tuning": {
+        "epochs": 250.0,
+        "l2": 0.3,
+        "lr": 0.02,
+        "val_accuracy": 0.5235042735042735,
+        "val_log_loss": 0.700457582374808
+      },
+      "recency": {
+        "candidate_id": "single",
+        "game_half_life": 760.0,
+        "min_weight": 0.18000000000000002,
+        "mode": "hybrid_exponential",
+        "normalize_mean_one": true,
+        "season_half_life": 1.4249999999999998,
+        "selector_mode": "season_regime_drift",
+        "selector_regime": "middle"
+      },
+      "recency_candidate_id": "single",
+      "recency_selector_mode": "season_regime_drift",
+      "test_games": 1312,
+      "train_games": 1406
+    },
+    {
+      "execution_mode": "logistic_only",
+      "fold_test_season": 20222023,
+      "fold_train_end_season": 20212022,
+      "fold_train_start_season": 20152016,
+      "logistic_tuning": {
+        "epochs": 450.0,
+        "l2": 0.3,
+        "lr": 0.05,
+        "val_accuracy": 0.5137195121951219,
+        "val_log_loss": 0.7051332059770326
+      },
+      "recency": {
+        "candidate_id": "single",
+        "game_half_life": 480.0,
+        "min_weight": 0.13999999999999999,
+        "mode": "hybrid_exponential",
+        "normalize_mean_one": true,
+        "season_half_life": 0.9750000000000001,
+        "selector_mode": "season_regime_drift",
+        "selector_regime": "late"
+      },
+      "recency_candidate_id": "single",
+      "recency_selector_mode": "season_regime_drift",
+      "test_games": 1312,
+      "train_games": 2718
+    },
+    {
+      "execution_mode": "logistic_only",
+      "fold_test_season": 20232024,
+      "fold_train_end_season": 20222023,
+      "fold_train_start_season": 20152016,
+      "logistic_tuning": {
+        "epochs": 350.0,
+        "l2": 0.15,
+        "lr": 0.02,
+        "val_accuracy": 0.5929878048780488,
+        "val_log_loss": 0.6668653675591252
+      },
+      "recency": {
+        "candidate_id": "single",
+        "game_half_life": 480.0,
+        "min_weight": 0.13999999999999999,
+        "mode": "hybrid_exponential",
+        "normalize_mean_one": true,
+        "season_half_life": 0.9750000000000001,
+        "selector_mode": "season_regime_drift",
+        "selector_regime": "late"
+      },
+      "recency_candidate_id": "single",
+      "recency_selector_mode": "season_regime_drift",
+      "test_games": 1312,
+      "train_games": 4030
+    },
+    {
+      "execution_mode": "logistic_only",
+      "fold_test_season": 20242025,
+      "fold_train_end_season": 20232024,
+      "fold_train_start_season": 20152016,
+      "logistic_tuning": {
+        "epochs": 450.0,
+        "l2": 0.01,
+        "lr": 0.05,
+        "val_accuracy": 0.5990853658536586,
+        "val_log_loss": 0.6542445809792421
+      },
+      "recency": {
+        "candidate_id": "single",
+        "game_half_life": 480.0,
+        "min_weight": 0.13999999999999999,
+        "mode": "hybrid_exponential",
+        "normalize_mean_one": true,
+        "season_half_life": 0.9750000000000001,
+        "selector_mode": "season_regime_drift",
+        "selector_regime": "late"
+      },
+      "recency_candidate_id": "single",
+      "recency_selector_mode": "season_regime_drift",
+      "test_games": 1312,
+      "train_games": 5342
+    },
+    {
+      "execution_mode": "logistic_only",
+      "fold_test_season": 20252026,
+      "fold_train_end_season": 20242025,
+      "fold_train_start_season": 20152016,
+      "logistic_tuning": {
+        "epochs": 450.0,
+        "l2": 0.01,
+        "lr": 0.05,
+        "val_accuracy": 0.6013719512195121,
+        "val_log_loss": 0.6518156224291646
+      },
+      "recency": {
+        "candidate_id": "single",
+        "game_half_life": 480.0,
+        "min_weight": 0.13999999999999999,
+        "mode": "hybrid_exponential",
+        "normalize_mean_one": true,
+        "season_half_life": 0.9750000000000001,
+        "selector_mode": "season_regime_drift",
+        "selector_regime": "late"
+      },
+      "recency_candidate_id": "single",
+      "recency_selector_mode": "season_regime_drift",
+      "test_games": 1312,
+      "train_games": 6654
+    }
+  ],
+  "interaction_feature_importance_by_fold": [
+    {
+      "abs_weight": 0.0519629929,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0519629929
+    },
+    {
+      "abs_weight": 0.0136175648,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0136175648
+    },
+    {
+      "abs_weight": 0.0371271276,
+      "feature": "matchup_home_win_rate_prior",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0371271276
+    },
+    {
+      "abs_weight": 0.029321442,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.029321442
+    },
+    {
+      "abs_weight": 0.0186683452,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0186683452
+    },
+    {
+      "abs_weight": 0.0160828079,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0160828079
+    },
+    {
+      "abs_weight": 0.0216300596,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0216300596
+    },
+    {
+      "abs_weight": 0.0711988055,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0711988055
+    },
+    {
+      "abs_weight": 0.0206230252,
+      "feature": "matchup_home_win_rate_prior",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.0206230252
+    },
+    {
+      "abs_weight": 0.1187842042,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.1187842042
+    },
+    {
+      "abs_weight": 0.0317718728,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0317718728
+    },
+    {
+      "abs_weight": 0.1026878148,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.1026878148
+    },
+    {
+      "abs_weight": 0.0581623425,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0581623425
+    },
+    {
+      "abs_weight": 0.0238055232,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0238055232
+    }
+  ],
+  "interaction_features": [
+    "matchup_home_win_rate_prior",
+    "matchup_home_games_prior_log",
+    "team_vs_opponent_win_rate_prior",
+    "team_vs_opponent_games_prior_log"
+  ],
+  "leakage_controls": [
+    "season-expanding folds with train seasons strictly before each test season",
+    "robust scaling fit only on each fold's training rows",
+    "logistic tuning uses training-only split (latest train season as validation)",
+    "weighted calibration method selected from fold-local train/validation split and refit on fold training rows",
+    "Elo parameters tuned on training games only and evaluated on next season",
+    "blend family ranking and validated blend-weight selection performed only on fold-local calibration split",
+    "nonlinear model family fit using fold-local training rows only and scored only on fold-local validation/test rows"
+  ],
+  "logistic_feature_importance_by_fold": [
+    {
+      "abs_weight": 0.0768665205,
+      "feature": "delta_pregame_depth_points_share_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0768665205
+    },
+    {
+      "abs_weight": 0.0697103446,
+      "feature": "roster_continuity_x_opponent_quality",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0697103446
+    },
+    {
+      "abs_weight": 0.0519629929,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0519629929
+    },
+    {
+      "abs_weight": 0.0429505653,
+      "feature": "delta_pregame_goalie_shots_against_pg_trend_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0429505653
+    },
+    {
+      "abs_weight": 0.0363197398,
+      "feature": "delta_pregame_special_teams_contributor_share_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0363197398
+    },
+    {
+      "abs_weight": 0.031214971,
+      "feature": "delta_pregame_injury_count_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.031214971
+    },
+    {
+      "abs_weight": 0.0303134416,
+      "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0303134416
+    },
+    {
+      "abs_weight": 0.0261487297,
+      "feature": "delta_pregame_skater_two_way_idx_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0261487297
+    },
+    {
+      "abs_weight": 0.0260151552,
+      "feature": "delta_pregame_key_contributor_continuity_pct_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0260151552
+    },
+    {
+      "abs_weight": 0.0258718274,
+      "feature": "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0258718274
+    },
+    {
+      "abs_weight": 0.0253686336,
+      "feature": "delta_pregame_recent_form_volatility_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0253686336
+    },
+    {
+      "abs_weight": 0.0231493769,
+      "feature": "delta_pregame_top9_points_pg_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0231493769
+    },
+    {
+      "abs_weight": 0.0221331372,
+      "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0221331372
+    },
+    {
+      "abs_weight": 0.0212509555,
+      "feature": "delta_pregame_lineup_change_rate_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0212509555
+    },
+    {
+      "abs_weight": 0.0211234473,
+      "feature": "delta_pregame_goalie_recent_starts_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0211234473
+    },
+    {
+      "abs_weight": 0.0209479743,
+      "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0209479743
+    },
+    {
+      "abs_weight": 0.0177591255,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0177591255
+    },
+    {
+      "abs_weight": 0.0177591255,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0177591255
+    },
+    {
+      "abs_weight": 0.0136175648,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": 0.0136175648
+    },
+    {
+      "abs_weight": 0.0124381217,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20172018,
+      "recency_candidate_id": "single",
+      "weight": -0.0124381217
+    },
+    {
+      "abs_weight": 0.0499608619,
+      "feature": "delta_pregame_goalie_shots_against_pg_trend_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0499608619
+    },
+    {
+      "abs_weight": 0.0371271276,
+      "feature": "matchup_home_win_rate_prior",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0371271276
+    },
+    {
+      "abs_weight": 0.034942931,
+      "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.034942931
+    },
+    {
+      "abs_weight": 0.029446144,
+      "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.029446144
+    },
+    {
+      "abs_weight": 0.029321442,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.029321442
+    },
+    {
+      "abs_weight": 0.0261132955,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0261132955
+    },
+    {
+      "abs_weight": 0.0261132955,
+      "feature": "home_pregame_roster_games_covered",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0261132955
+    },
+    {
+      "abs_weight": 0.0258701207,
+      "feature": "delta_pregame_injury_count_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0258701207
+    },
+    {
+      "abs_weight": 0.0256318352,
+      "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0256318352
+    },
+    {
+      "abs_weight": 0.0219961022,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0219961022
+    },
+    {
+      "abs_weight": 0.0219961022,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0219961022
+    },
+    {
+      "abs_weight": 0.0186683452,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0186683452
+    },
+    {
+      "abs_weight": 0.0173807747,
+      "feature": "roster_continuity_x_opponent_quality",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0173807747
+    },
+    {
+      "abs_weight": 0.0167328551,
+      "feature": "delta_pregame_recent_form_volatility_last5_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0167328551
+    },
+    {
+      "abs_weight": 0.0160828079,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0160828079
+    },
+    {
+      "abs_weight": 0.0160780027,
+      "feature": "delta_pregame_goalie_starter_quality_gap_last10_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": 0.0160780027
+    },
+    {
+      "abs_weight": 0.0148968122,
+      "feature": "delta_pregame_depth_points_share_last5_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0148968122
+    },
+    {
+      "abs_weight": 0.0144929787,
+      "feature": "delta_pregame_top9_points_pg_home_minus_away",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0144929787
+    },
+    {
+      "abs_weight": 0.0126674029,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0126674029
+    },
+    {
+      "abs_weight": 0.0126674029,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20212022,
+      "recency_candidate_id": "single",
+      "weight": -0.0126674029
+    },
+    {
+      "abs_weight": 0.1474305262,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.1474305262
+    },
+    {
+      "abs_weight": 0.0788495361,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0788495361
+    },
+    {
+      "abs_weight": 0.0549248354,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0549248354
+    },
+    {
+      "abs_weight": 0.0532471272,
+      "feature": "market_signals_x_model_confidence",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0532471272
+    },
+    {
+      "abs_weight": 0.0487651612,
+      "feature": "delta_pregame_key_contributor_continuity_pct_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0487651612
+    },
+    {
+      "abs_weight": 0.0364920717,
+      "feature": "roster_continuity_x_opponent_quality",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.0364920717
+    },
+    {
+      "abs_weight": 0.0321315562,
+      "feature": "delta_pregame_lineup_change_rate_last5_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.0321315562
+    },
+    {
+      "abs_weight": 0.0285532237,
+      "feature": "delta_pregame_injury_count_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.0285532237
+    },
+    {
+      "abs_weight": 0.0265389682,
+      "feature": "delta_pregame_skater_two_way_idx_last5_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0265389682
+    },
+    {
+      "abs_weight": 0.0262088614,
+      "feature": "delta_pregame_goalie_days_since_last_start_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.0262088614
+    },
+    {
+      "abs_weight": 0.0233410896,
+      "feature": "delta_pregame_lineup_continuity_pct_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0233410896
+    },
+    {
+      "abs_weight": 0.0216300596,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0216300596
+    },
+    {
+      "abs_weight": 0.0209630262,
+      "feature": "delta_pregame_recent_form_volatility_last5_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0209630262
+    },
+    {
+      "abs_weight": 0.018763825,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.018763825
+    },
+    {
+      "abs_weight": 0.0185941092,
+      "feature": "delta_pregame_depth_points_share_last5_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.0185941092
+    },
+    {
+      "abs_weight": 0.0178538228,
+      "feature": "delta_pregame_special_teams_contributor_share_last5_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0178538228
+    },
+    {
+      "abs_weight": 0.0158703694,
+      "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0158703694
+    },
+    {
+      "abs_weight": 0.0144046502,
+      "feature": "home_pregame_roster_games_covered",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": -0.0144046502
+    },
+    {
+      "abs_weight": 0.0124685682,
+      "feature": "delta_pregame_goalie_shots_against_pg_trend_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0124685682
+    },
+    {
+      "abs_weight": 0.0088897216,
+      "feature": "delta_pregame_top9_points_pg_home_minus_away",
+      "fold_test_season": 20222023,
+      "recency_candidate_id": "single",
+      "weight": 0.0088897216
+    },
+    {
+      "abs_weight": 0.1153800263,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.1153800263
+    },
+    {
+      "abs_weight": 0.0751490296,
+      "feature": "market_signals_x_model_confidence",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0751490296
+    },
+    {
+      "abs_weight": 0.0711988055,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0711988055
+    },
+    {
+      "abs_weight": 0.0687242584,
+      "feature": "delta_pregame_key_contributor_continuity_pct_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0687242584
+    },
+    {
+      "abs_weight": 0.0591156886,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0591156886
+    },
+    {
+      "abs_weight": 0.045569129,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.045569129
+    },
+    {
+      "abs_weight": 0.0308039351,
+      "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0308039351
+    },
+    {
+      "abs_weight": 0.0307587559,
+      "feature": "delta_pregame_lineup_continuity_pct_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0307587559
+    },
+    {
+      "abs_weight": 0.0266883168,
+      "feature": "delta_pregame_skater_two_way_idx_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0266883168
+    },
+    {
+      "abs_weight": 0.0256065335,
+      "feature": "delta_pregame_lineup_change_rate_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.0256065335
+    },
+    {
+      "abs_weight": 0.0248183518,
+      "feature": "roster_continuity_x_opponent_quality",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.0248183518
+    },
+    {
+      "abs_weight": 0.0241612998,
+      "feature": "delta_pregame_goalie_days_since_last_start_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.0241612998
+    },
+    {
+      "abs_weight": 0.0206230252,
+      "feature": "matchup_home_win_rate_prior",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.0206230252
+    },
+    {
+      "abs_weight": 0.0205784677,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0205784677
+    },
+    {
+      "abs_weight": 0.0184797096,
+      "feature": "delta_pregame_injury_count_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.0184797096
+    },
+    {
+      "abs_weight": 0.0171579904,
+      "feature": "delta_pregame_special_teams_contributor_share_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0171579904
+    },
+    {
+      "abs_weight": 0.0136563279,
+      "feature": "delta_pregame_recent_form_volatility_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0136563279
+    },
+    {
+      "abs_weight": 0.0130683375,
+      "feature": "delta_pregame_depth_points_share_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": -0.0130683375
+    },
+    {
+      "abs_weight": 0.0124086643,
+      "feature": "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0124086643
+    },
+    {
+      "abs_weight": 0.0122709805,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20232024,
+      "recency_candidate_id": "single",
+      "weight": 0.0122709805
+    },
+    {
+      "abs_weight": 0.2170048693,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": -0.2170048693
+    },
+    {
+      "abs_weight": 0.1548778541,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.1548778541
+    },
+    {
+      "abs_weight": 0.1187842042,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.1187842042
+    },
+    {
+      "abs_weight": 0.0993196316,
+      "feature": "delta_pregame_key_contributor_continuity_pct_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0993196316
+    },
+    {
+      "abs_weight": 0.0926841405,
+      "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0926841405
+    },
+    {
+      "abs_weight": 0.0878864284,
+      "feature": "market_signals_x_model_confidence",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0878864284
+    },
+    {
+      "abs_weight": 0.0715928894,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": -0.0715928894
+    },
+    {
+      "abs_weight": 0.0564263708,
+      "feature": "delta_pregame_recent_form_volatility_last5_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0564263708
+    },
+    {
+      "abs_weight": 0.0495341301,
+      "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": -0.0495341301
+    },
+    {
+      "abs_weight": 0.047470828,
+      "feature": "delta_pregame_lineup_change_rate_last5_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": -0.047470828
+    },
+    {
+      "abs_weight": 0.0462255586,
+      "feature": "delta_pregame_lineup_continuity_pct_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0462255586
+    },
+    {
+      "abs_weight": 0.0424024441,
+      "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": -0.0424024441
+    },
+    {
+      "abs_weight": 0.039672417,
+      "feature": "delta_pregame_depth_points_share_last5_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": -0.039672417
+    },
+    {
+      "abs_weight": 0.0356843669,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0356843669
+    },
+    {
+      "abs_weight": 0.0317718728,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0317718728
+    },
+    {
+      "abs_weight": 0.0294933544,
+      "feature": "delta_pregame_skater_two_way_idx_last5_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0294933544
+    },
+    {
+      "abs_weight": 0.0252877066,
+      "feature": "delta_pregame_top9_points_pg_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": -0.0252877066
+    },
+    {
+      "abs_weight": 0.0219276965,
+      "feature": "delta_pregame_special_teams_contributor_share_last5_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0219276965
+    },
+    {
+      "abs_weight": 0.0195068491,
+      "feature": "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0195068491
+    },
+    {
+      "abs_weight": 0.0193934936,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20242025,
+      "recency_candidate_id": "single",
+      "weight": 0.0193934936
+    },
+    {
+      "abs_weight": 0.2038841573,
+      "feature": "delta_roster_games_covered",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.2038841573
+    },
+    {
+      "abs_weight": 0.1435814224,
+      "feature": "delta_roster_coverage_pct",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.1435814224
+    },
+    {
+      "abs_weight": 0.1051899071,
+      "feature": "delta_pregame_key_contributor_continuity_pct_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.1051899071
+    },
+    {
+      "abs_weight": 0.1026878148,
+      "feature": "team_vs_opponent_win_rate_prior",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.1026878148
+    },
+    {
+      "abs_weight": 0.0943445941,
+      "feature": "away_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.0943445941
+    },
+    {
+      "abs_weight": 0.082539683,
+      "feature": "home_pregame_roster_data_coverage_pct",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.082539683
+    },
+    {
+      "abs_weight": 0.0796415398,
+      "feature": "market_signals_x_model_confidence",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0796415398
+    },
+    {
+      "abs_weight": 0.0716710982,
+      "feature": "delta_pregame_roster_quality_idx_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0716710982
+    },
+    {
+      "abs_weight": 0.0581623425,
+      "feature": "team_vs_opponent_games_prior_log",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0581623425
+    },
+    {
+      "abs_weight": 0.0536318515,
+      "feature": "delta_pregame_lineup_change_rate_last5_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.0536318515
+    },
+    {
+      "abs_weight": 0.0454901822,
+      "feature": "delta_pregame_goalie_shots_against_pg_trend_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.0454901822
+    },
+    {
+      "abs_weight": 0.0367279484,
+      "feature": "delta_pregame_goalie_save_pct_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.0367279484
+    },
+    {
+      "abs_weight": 0.0360499413,
+      "feature": "delta_pregame_recent_form_volatility_last5_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0360499413
+    },
+    {
+      "abs_weight": 0.033161241,
+      "feature": "delta_pregame_skater_two_way_idx_last5_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.033161241
+    },
+    {
+      "abs_weight": 0.0324528623,
+      "feature": "away_pregame_roster_games_covered",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0324528623
+    },
+    {
+      "abs_weight": 0.027742335,
+      "feature": "delta_pregame_depth_points_share_last5_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.027742335
+    },
+    {
+      "abs_weight": 0.0259497224,
+      "feature": "delta_pregame_lineup_continuity_pct_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0259497224
+    },
+    {
+      "abs_weight": 0.0243882126,
+      "feature": "home_pregame_roster_games_covered",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.0243882126
+    },
+    {
+      "abs_weight": 0.0238055232,
+      "feature": "matchup_home_games_prior_log",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": 0.0238055232
+    },
+    {
+      "abs_weight": 0.0211689435,
+      "feature": "delta_pregame_skater_points_pg_last5_home_minus_away",
+      "fold_test_season": 20252026,
+      "recency_candidate_id": "single",
+      "weight": -0.0211689435
+    }
+  ],
+  "metrics_by_season": [
+    {
+      "accuracy": 0.534188,
+      "brier_score": 0.253684,
+      "games": 468,
+      "log_loss": 0.701679,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 960.0,
+      "recency_min_weight": 0.22000000000000003,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 1.7999999999999998,
+      "recency_selector_mode": "season_regime_drift",
+      "season": 20172018,
+      "season_label": "2017-2018"
+    },
+    {
+      "accuracy": 0.504573,
+      "brier_score": 0.256308,
+      "games": 1312,
+      "log_loss": 0.706447,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 760.0,
+      "recency_min_weight": 0.18000000000000002,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 1.4249999999999998,
+      "recency_selector_mode": "season_regime_drift",
+      "season": 20212022,
+      "season_label": "2021-2022"
+    },
+    {
+      "accuracy": 0.586128,
+      "brier_score": 0.238369,
+      "games": 1312,
+      "log_loss": 0.669068,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 480.0,
+      "recency_min_weight": 0.13999999999999999,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 0.9750000000000001,
+      "recency_selector_mode": "season_regime_drift",
+      "season": 20222023,
+      "season_label": "2022-2023"
+    },
+    {
+      "accuracy": 0.603659,
+      "brier_score": 0.233785,
+      "games": 1312,
+      "log_loss": 0.659612,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 480.0,
+      "recency_min_weight": 0.13999999999999999,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 0.9750000000000001,
+      "recency_selector_mode": "season_regime_drift",
+      "season": 20232024,
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.608232,
+      "brier_score": 0.230214,
+      "games": 1312,
+      "log_loss": 0.650548,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 480.0,
+      "recency_min_weight": 0.13999999999999999,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 0.9750000000000001,
+      "recency_selector_mode": "season_regime_drift",
+      "season": 20242025,
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.560213,
+      "brier_score": 0.242903,
+      "games": 1312,
+      "log_loss": 0.678181,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 480.0,
+      "recency_min_weight": 0.13999999999999999,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 0.9750000000000001,
+      "recency_selector_mode": "season_regime_drift",
+      "season": 20252026,
+      "season_label": "2025-2026"
+    }
+  ],
+  "model_scope": "logistic_only",
+  "models": [
+    "logistic_engineered"
+  ],
+  "nonlinear_backend_ids": [
+    "skipped"
+  ],
+  "nonlinear_style_ids": [
+    "logistic_only"
+  ],
+  "overall_metrics": [
+    {
+      "accuracy": 0.570006,
+      "brier_score": 0.241206,
+      "games": 7028,
+      "log_loss": 0.674696,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 960.0,
+      "recency_min_weight": 0.22000000000000003,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 1.7999999999999998,
+      "recency_selector_mode": "season_regime_drift"
+    }
+  ],
+  "recency_candidate_count": 1,
+  "recency_candidates": [
+    {
+      "base_game_half_life": 800.0,
+      "base_min_weight": 0.2,
+      "base_mode": "hybrid_exponential",
+      "base_normalize_mean_one": true,
+      "base_season_half_life": 1.5,
+      "candidate_id": "single",
+      "selector_mode": "season_regime_drift"
+    }
+  ],
+  "recency_comparison": [
+    {
+      "accuracy": 0.570006,
+      "brier_score": 0.241206,
+      "games": 7028,
+      "log_loss": 0.674696,
+      "model_id": "logistic_engineered",
+      "nonlinear_model_backend": "skipped",
+      "nonlinear_model_style": "logistic_only",
+      "rank": 1,
+      "recency_base_game_half_life": 800.0,
+      "recency_base_min_weight": 0.2,
+      "recency_base_mode": "hybrid_exponential",
+      "recency_base_normalize_mean_one": true,
+      "recency_base_season_half_life": 1.5,
+      "recency_candidate_id": "single",
+      "recency_game_half_life": 960.0,
+      "recency_min_weight": 0.22000000000000003,
+      "recency_mode": "hybrid_exponential",
+      "recency_normalize_mean_one": true,
+      "recency_season_half_life": 1.7999999999999998,
+      "recency_selector_mode": "season_regime_drift"
+    }
+  ],
+  "recency_comparison_best": {
+    "accuracy": 0.570006,
+    "brier_score": 0.241206,
+    "games": 7028,
+    "log_loss": 0.674696,
+    "model_id": "logistic_engineered",
+    "nonlinear_model_backend": "skipped",
+    "nonlinear_model_style": "logistic_only",
+    "rank": 1,
+    "recency_base_game_half_life": 800.0,
+    "recency_base_min_weight": 0.2,
+    "recency_base_mode": "hybrid_exponential",
+    "recency_base_normalize_mean_one": true,
+    "recency_base_season_half_life": 1.5,
+    "recency_candidate_id": "single",
+    "recency_game_half_life": 960.0,
+    "recency_min_weight": 0.22000000000000003,
+    "recency_mode": "hybrid_exponential",
+    "recency_normalize_mean_one": true,
+    "recency_season_half_life": 1.7999999999999998,
+    "recency_selector_mode": "season_regime_drift"
+  },
+  "recency_sweep_enabled": false
+}

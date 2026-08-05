@@ -1,0 +1,108 @@
+{
+  "artifacts": {
+    "overall_metrics_csv": "data\\processed\\execution_plan\\season_regime_ensemble_v2\\overall_metrics.csv",
+    "predictions_csv": "data\\processed\\execution_plan\\season_regime_ensemble_v2\\predictions.csv",
+    "regime_metrics_csv": "data\\processed\\execution_plan\\season_regime_ensemble_v2\\regime_metrics.csv",
+    "regime_weights_csv": "data\\processed\\execution_plan\\season_regime_ensemble_v2\\regime_weights.csv",
+    "season_metrics_csv": "data\\processed\\execution_plan\\season_regime_ensemble_v2\\season_metrics.csv",
+    "summary_json": "data\\processed\\execution_plan\\season_regime_ensemble_v2\\summary.json"
+  },
+  "benchmark_phase1_winner_accuracy": 0.616616,
+  "best_regime_metric": {
+    "accuracy": 0.622225,
+    "brier_score": 0.231992,
+    "games": 35140,
+    "log_loss": 0.656251,
+    "regime": "late"
+  },
+  "candidate_models": [
+    "elo_form_tuned",
+    "logistic_engineered",
+    "weighted_calibrated_isotonic",
+    "blend_logistic_weighted_70_30"
+  ],
+  "fold_safe_training": "prior seasons + earlier games in the same season",
+  "overall_metrics": {
+    "accuracy": 0.588645,
+    "accuracy_delta_vs_phase1_winner": -0.027971,
+    "brier_score": 0.238698,
+    "games": 105420,
+    "log_loss": 0.670073,
+    "phase1_winner_accuracy": 0.616616
+  },
+  "regime_definition": "within-season terciles",
+  "regime_metrics": [
+    {
+      "accuracy": 0.561042,
+      "brier_score": 0.244316,
+      "games": 35140,
+      "log_loss": 0.68154,
+      "regime": "early"
+    },
+    {
+      "accuracy": 0.582669,
+      "brier_score": 0.239786,
+      "games": 35140,
+      "log_loss": 0.672428,
+      "regime": "mid"
+    },
+    {
+      "accuracy": 0.622225,
+      "brier_score": 0.231992,
+      "games": 35140,
+      "log_loss": 0.656251,
+      "regime": "late"
+    }
+  ],
+  "season_metrics": [
+    {
+      "accuracy": 0.534188,
+      "brier_score": 0.249275,
+      "games": 7020,
+      "log_loss": 0.691812,
+      "season": "20172018",
+      "season_label": "2017-2018"
+    },
+    {
+      "accuracy": 0.598323,
+      "brier_score": 0.240644,
+      "games": 19680,
+      "log_loss": 0.674373,
+      "season": "20212022",
+      "season_label": "2021-2022"
+    },
+    {
+      "accuracy": 0.591463,
+      "brier_score": 0.237055,
+      "games": 19680,
+      "log_loss": 0.66709,
+      "season": "20222023",
+      "season_label": "2022-2023"
+    },
+    {
+      "accuracy": 0.596037,
+      "brier_score": 0.235177,
+      "games": 19680,
+      "log_loss": 0.662667,
+      "season": "20232024",
+      "season_label": "2023-2024"
+    },
+    {
+      "accuracy": 0.599848,
+      "brier_score": 0.234043,
+      "games": 19680,
+      "log_loss": 0.660173,
+      "season": "20242025",
+      "season_label": "2024-2025"
+    },
+    {
+      "accuracy": 0.576982,
+      "brier_score": 0.242798,
+      "games": 19680,
+      "log_loss": 0.678308,
+      "season": "20252026",
+      "season_label": "2025-2026"
+    }
+  ],
+  "source": "data\\processed\\execution_plan\\phase1_eval_final\\predictions.csv"
+}

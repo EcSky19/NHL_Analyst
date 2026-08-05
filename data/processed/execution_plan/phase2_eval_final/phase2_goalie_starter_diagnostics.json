@@ -1,0 +1,97 @@
+{
+  "coverage": [
+    {
+      "column": "home_pregame_goalie_starter_certainty",
+      "non_null_count": 6560,
+      "total_rows": 6560,
+      "coverage_pct": 100.0
+    },
+    {
+      "column": "away_pregame_goalie_starter_certainty",
+      "non_null_count": 6560,
+      "total_rows": 6560,
+      "coverage_pct": 100.0
+    },
+    {
+      "column": "home_pregame_goalie_starter_quality_gap_last5",
+      "non_null_count": 387,
+      "total_rows": 6560,
+      "coverage_pct": 5.899390243902439
+    },
+    {
+      "column": "away_pregame_goalie_starter_quality_gap_last5",
+      "non_null_count": 384,
+      "total_rows": 6560,
+      "coverage_pct": 5.853658536585366
+    },
+    {
+      "column": "home_pregame_goalie_starter_quality_gap_last10",
+      "non_null_count": 387,
+      "total_rows": 6560,
+      "coverage_pct": 5.899390243902439
+    },
+    {
+      "column": "away_pregame_goalie_starter_quality_gap_last10",
+      "non_null_count": 384,
+      "total_rows": 6560,
+      "coverage_pct": 5.853658536585366
+    },
+    {
+      "column": "delta_pregame_goalie_starter_certainty_home_minus_away",
+      "non_null_count": 6560,
+      "total_rows": 6560,
+      "coverage_pct": 100.0
+    },
+    {
+      "column": "delta_pregame_goalie_starter_quality_gap_last5_home_minus_away",
+      "non_null_count": 21,
+      "total_rows": 6560,
+      "coverage_pct": 0.3201219512195122
+    },
+    {
+      "column": "delta_pregame_goalie_starter_quality_gap_last10_home_minus_away",
+      "non_null_count": 21,
+      "total_rows": 6560,
+      "coverage_pct": 0.3201219512195122
+    }
+  ],
+  "starter_counts_by_season": [
+    {
+      "season": 20212022,
+      "avg_starters_per_team_game": 1.0,
+      "one_starter_rows": 2624,
+      "total_team_games": 2624
+    },
+    {
+      "season": 20222023,
+      "avg_starters_per_team_game": 1.0,
+      "one_starter_rows": 2624,
+      "total_team_games": 2624
+    },
+    {
+      "season": 20232024,
+      "avg_starters_per_team_game": 1.0,
+      "one_starter_rows": 2624,
+      "total_team_games": 2624
+    },
+    {
+      "season": 20242025,
+      "avg_starters_per_team_game": 1.0,
+      "one_starter_rows": 2624,
+      "total_team_games": 2624
+    },
+    {
+      "season": 20252026,
+      "avg_starters_per_team_game": 1.0,
+      "one_starter_rows": 2624,
+      "total_team_games": 2624
+    }
+  ],
+  "overall_starter_profile": {
+    "avg_starters_per_team_game": 1.0,
+    "one_starter_rows": 13120,
+    "zero_starter_rows": 0,
+    "multi_starter_rows": 0,
+    "total_team_games": 13120
+  }
+}

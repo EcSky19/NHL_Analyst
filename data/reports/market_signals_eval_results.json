@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-08-04T14:59:29.559342",
+  "baseline_accuracy": 0.5976,
+  "target_accuracy": 0.605,
+  "leakage_validation": {
+    "total_games": 6560,
+    "games_with_market_data": 6560,
+    "market_data_complete_pct": 100.0,
+    "leakage_detected": false,
+    "leakage_games": []
+  },
+  "correlations": {
+    "correlations": {
+      "market_opening_spread_vs_delta_pregame_last10_points_pct_home_minus_away": -0.8138864745745215,
+      "market_opening_spread_vs_delta_pregame_season_points_pct_home_minus_away": -0.8452767423822712,
+      "market_opening_spread_vs_delta_pregame_last10_goal_diff_pg_home_minus_away": -0.7787218459356025,
+      "market_opening_spread_vs_home_location_edge_points_pct": -0.7494903764157602,
+      "market_spread_movement_vs_delta_pregame_last10_points_pct_home_minus_away": -0.13300764983244362,
+      "market_spread_movement_vs_delta_pregame_season_points_pct_home_minus_away": -0.16473869057437168,
+      "market_spread_movement_vs_delta_pregame_last10_goal_diff_pg_home_minus_away": -0.12860970831126864,
+      "market_spread_movement_vs_home_location_edge_points_pct": -0.12914330745013516,
+      "market_opening_home_implied_prob_vs_delta_pregame_last10_points_pct_home_minus_away": 0.815075807343679,
+      "market_opening_home_implied_prob_vs_delta_pregame_season_points_pct_home_minus_away": 0.8446968788774986,
+      "market_opening_home_implied_prob_vs_delta_pregame_last10_goal_diff_pg_home_minus_away": 0.7799508644233785,
+      "market_opening_home_implied_prob_vs_home_location_edge_points_pct": 0.7486314769781663,
+      "market_consensus_home_prob_vs_delta_pregame_last10_points_pct_home_minus_away": 0.7617540638509637,
+      "market_consensus_home_prob_vs_delta_pregame_season_points_pct_home_minus_away": 0.7993411408697235,
+      "market_consensus_home_prob_vs_delta_pregame_last10_goal_diff_pg_home_minus_away": 0.7289306272545693,
+      "market_consensus_home_prob_vs_home_location_edge_points_pct": 0.7020541003735916
+    },
+    "high_correlations": [
+      {
+        "market_feature": "market_opening_spread",
+        "reference_feature": "delta_pregame_last10_points_pct_home_minus_away",
+        "correlation": -0.8138864745745215
+      },
+      {
+        "market_feature": "market_opening_spread",
+        "reference_feature": "delta_pregame_season_points_pct_home_minus_away",
+        "correlation": -0.8452767423822712
+      },
+      {
+        "market_feature": "market_opening_spread",
+        "reference_feature": "delta_pregame_last10_goal_diff_pg_home_minus_away",
+        "correlation": -0.7787218459356025
+      },
+      {
+        "market_feature": "market_opening_spread",
+        "reference_feature": "home_location_edge_points_pct",
+        "correlation": -0.7494903764157602
+      },
+      {
+        "market_feature": "market_opening_home_implied_prob",
+        "reference_feature": "delta_pregame_last10_points_pct_home_minus_away",
+        "correlation": 0.815075807343679
+      },
+      {
+        "market_feature": "market_opening_home_implied_prob",
+        "reference_feature": "delta_pregame_season_points_pct_home_minus_away",
+        "correlation": 0.8446968788774986
+      },
+      {
+        "market_feature": "market_opening_home_implied_prob",
+        "reference_feature": "delta_pregame_last10_goal_diff_pg_home_minus_away",
+        "correlation": 0.7799508644233785
+      },
+      {
+        "market_feature": "market_opening_home_implied_prob",
+        "reference_feature": "home_location_edge_points_pct",
+        "correlation": 0.7486314769781663
+      },
+      {
+        "market_feature": "market_consensus_home_prob",
+        "reference_feature": "delta_pregame_last10_points_pct_home_minus_away",
+        "correlation": 0.7617540638509637
+      },
+      {
+        "market_feature": "market_consensus_home_prob",
+        "reference_feature": "delta_pregame_season_points_pct_home_minus_away",
+        "correlation": 0.7993411408697235
+      },
+      {
+        "market_feature": "market_consensus_home_prob",
+        "reference_feature": "delta_pregame_last10_goal_diff_pg_home_minus_away",
+        "correlation": 0.7289306272545693
+      },
+      {
+        "market_feature": "market_consensus_home_prob",
+        "reference_feature": "home_location_edge_points_pct",
+        "correlation": 0.7020541003735916
+      }
+    ],
+    "analysis": "Warning: 12 high correlations detected"
+  },
+  "baseline": {
+    "accuracy": 0.5213414634146342,
+    "log_loss": 0.6991631958852386,
+    "feature_count": 40
+  },
+  "with_markets": {
+    "accuracy": 0.5259146341463414,
+    "log_loss": 0.6981081046572251,
+    "feature_count": 47
+  },
+  "improvement": {
+    "accuracy_delta": 0.004573170731707266,
+    "accuracy_delta_pct": 0.8771929824561304,
+    "meets_target": true
+  }
+}
