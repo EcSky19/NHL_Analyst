@@ -17,3 +17,6 @@ data/nfl/*.sqlite
 data/nfl/*.sqlite3
 data/nfl/games.csv
 data/nfl/raw/
+
+# UI runtime cache
+data/ui_cache/

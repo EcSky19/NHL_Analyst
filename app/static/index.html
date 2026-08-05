@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sports Analytics Dashboard</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to dashboard</a>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">Sports analytics</p>
+      <h1>Standings, stats, and modest predictions</h1>
+      <p class="lede">Current league data with clear cached/offseason labels and measured model accuracy beside every probability.</p>
+    </div>
+    <div class="header-actions" aria-label="Dashboard controls">
+      <button id="theme-toggle" class="ghost-btn" type="button" aria-pressed="false">Dark mode</button>
+      <button id="refresh-btn" class="primary-btn" type="button">Refresh now</button>
+      <button id="pause-btn" class="ghost-btn" type="button" aria-pressed="false">Pause updates</button>
+    </div>
+  </header>
+
+  <main id="content" class="shell">
+    <section class="status-stack" aria-live="polite" aria-atomic="true">
+      <div id="mock-banner" class="banner danger hidden" role="status">
+        Mock data mode is ON. These rows are realistic fixtures only, not live data.
+      </div>
+      <div id="season-banner" class="banner warning hidden" role="status"></div>
+      <div id="stale-banner" class="banner info hidden" role="status"></div>
+      <div id="notice" class="banner neutral hidden" role="status"></div>
+    </section>
+
+    <section class="toolbar" aria-label="Filters and navigation">
+      <div class="segmented" role="tablist" aria-label="League">
+        <button class="segment active" role="tab" aria-selected="true" data-league="nhl" type="button">NHL</button>
+        <button class="segment" role="tab" aria-selected="false" data-league="nfl" type="button">NFL</button>
+      </div>
+      <label class="search-label" for="team-search">
+        <span>Search teams</span>
+        <input id="team-search" type="search" placeholder="Type a team or abbreviation" autocomplete="off">
+      </label>
+      <div class="meta-line">
+        <span id="last-updated">Not updated yet</span>
+        <span id="poll-state">Auto-refresh active</span>
+      </div>
+    </section>
+
+    <nav class="view-tabs" aria-label="Dashboard views">
+      <button class="view-tab active" data-view="standings" type="button">Standings</button>
+      <button class="view-tab" data-view="teams" type="button">Team stats</button>
+      <button class="view-tab" data-view="players" type="button">Player leaders</button>
+      <button class="view-tab" data-view="predictions" type="button">Predictions</button>
+    </nav>
+
+    <section class="panel" id="view-panel" aria-live="polite">
+      <div id="view-content"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

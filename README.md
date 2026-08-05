@@ -124,3 +124,61 @@ Older reports are retained for history. Reports with invalidated accuracy claims
 
 - `data\reports\data_integrity_audit.md`
 - `data\reports\confidence_tiers_clean_verification.md`
+
+## Web UI
+
+The repository includes a FastAPI + vanilla-JS web UI for browsing NHL and NFL standings, team summaries, player leaders, schedules, and honestly-labelled model predictions. It uses one shared response envelope and one shared standings table shape across both leagues so the frontend can render NHL and NFL data consistently.
+
+### Quickstart
+
+```powershell
+python run_ui.py
+```
+
+The launcher reads defaults from `app.config.settings`, prints the local URL, and accepts:
+
+```powershell
+python run_ui.py --host 127.0.0.1 --port 8031 --reload
+```
+
+If the selected port is already in use, choose another port with `--port`.
+
+### API endpoints
+
+All API routes return HTTP 200 with `{ ok, data, error, meta }`, including validation errors.
+
+| Path | Purpose |
+|---|---|
+| `/api/health` | App, router, database, and season-state health |
+| `/api/meta/seasons` | Available seasons per league |
+| `/api/nhl/standings` | NHL standings for the current or requested season |
+| `/api/nhl/teams` and `/api/nhl/teams/{abbrev}` | NHL team summaries and detail |
+| `/api/nhl/players` | NHL player leaders (`team`, `stat`, `limit`) |
+| `/api/nhl/schedule` | NHL schedule by optional `date=YYYY-MM-DD` |
+| `/api/nfl/standings` | NFL standings for the current or requested season |
+| `/api/nfl/teams` and `/api/nfl/teams/{abbrev}` | NFL team summaries and detail |
+| `/api/nfl/players` | NFL QB leaders (`team`, `stat`, `limit`) |
+| `/api/nfl/schedule` | NFL schedule by `season` and optional `week` |
+| `/api/predictions/nhl` | NHL prediction rows when real fixtures are available |
+| `/api/predictions/nfl` | NFL prediction rows when real fixtures are available |
+| `/api/predictions/matchup` | Hypothetical matchup prediction with `league`, `home`, and `away` |
+
+### Caching and refresh
+
+Backend fetches use the disk-backed cache in `data\ui_cache\`: standings refresh about every 5 minutes, schedules every 2 minutes, stats every 15 minutes, and predictions every 10 minutes. If an upstream refresh fails but a cached copy exists, the API serves the stale cached payload with `meta.stale: true` instead of blanking the UI. The frontend auto-refreshes data and surfaces stale/offseason notes from `meta`.
+
+### Offseason behavior
+
+As of August 2026, both leagues are between seasons. "Current standings" means the most recently completed season, and endpoints include `meta.season_state` so the UI can display an offseason banner rather than implying live in-season standings.
+
+### Tests
+
+```powershell
+python -m pytest tests\ui -q
+```
+
+Network-sensitive tests are marked `network` and skip gracefully when live upstream data is unavailable. The suite also guards the frozen envelope, shared standings keys, cache stale fallback, static assets, edge-case errors, and prediction honesty bounds.
+
+### Prediction honesty
+
+Predictions are modest statistical estimates, not betting advice. NHL predictions must show the audited 56.82% model accuracy, while NFL predictions must stay within the audited 66.11% market-free and 67.40% full-model figures. Probabilities are bounded and labelled with disclaimers so retracted overconfidence claims do not creep back into the UI.
