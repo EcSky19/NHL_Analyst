@@ -44,6 +44,10 @@ Honest reading: the highest-confidence tier lands somewhere around **70-72%**, b
 
 Primary verification: `data\reports\confidence_tiers_clean_verification.md` and `data\reports\real_expanded_retrain_results.md`.
 
+## Negative results and improvement discipline
+
+Failed or rejected improvement attempts are documented intentionally, not hidden. See `docs\model_experiments.md` for the latest model-improvement findings, including negative NBA and NHL results and the newly closed NBA recent per-game coverage gap.
+
 ## Data integrity incident
 
 A 2026-08-05 audit found two major contamination sources:
@@ -189,7 +193,7 @@ NBA coverage is documented separately from the NHL/NFL honesty disclosures above
 
 NBA data:
 
-- Historical per-game data comes from hoopR (sportsdataverse), seasons 2001-02 through 2022-23: 28,222 games, 56,136 team box rows, 739,524 player box rows, and 30 teams.
+- Historical per-game data comes from hoopR (sportsdataverse), seasons 2001-02 through 2022-23: 28,222 games, 56,136 team box rows, 739,524 player box rows, and 30 teams. Recent per-game coverage is now supplemented by `data\nba\nba_recent_games.db`, with 1,230 games in each of 2023-24, 2024-25, and 2025-26.
 - Current standings for 2023-24, 2024-25, and 2025-26 are scraped from basketball-reference `/leagues/` (robots.txt-permitted; Crawl-delay 3 honored at 3.1s) and cross-validated against Wikipedia. Wins equal losses at 1,230 per season.
 - basketball-reference year convention uses the season end year, so `NBA_2026` is the 2025-26 season.
 
@@ -202,6 +206,8 @@ NBA model accuracy must be stated with its baselines:
 | Pure Elo baseline | 62.95% |
 
 The headline NBA accuracy is the frozen-holdout **62.52%**, not the walk-forward development figure. The model is **-0.43 percentage points versus pure Elo**, so it does **not** beat a simple Elo baseline, and the gap sits well inside the confidence interval. No betting-market baseline exists for NBA.
+
+The NBA blend experiment reinforces that point: logistic stacking reached **62.78%** on the same 1,174-game frozen holdout, behind pure Elo's **62.95%** by 0.17 percentage points. Its useful result was probability quality, not accuracy: best log loss (**0.6440**) and best Brier (**0.2261**). No NBA blend serving artifact was promoted.
 
 ## MLB project
 

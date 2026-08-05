@@ -9,6 +9,7 @@
     mock: new URLSearchParams(location.search).get('mock') === '1',
     search: '',
     sort: { key: 'points', dir: 'desc' },
+    standingsFilters: { conference: '', division: '' },
     groupStandings: true,
     scheduleDate: '',
     scheduleWeek: '',
@@ -167,12 +168,13 @@
   }
 
   function samplePredictions(league) {
+    if (league === 'mlb') return [];
     const teams = sample[league].standings;
     const acc = league === 'nhl'
       ? [0.5682, 0.535, 'Model accuracy 56.82% vs 53.5% always-home baseline.']
       : league === 'nfl'
         ? [0.6611, 0.6851, 'NFL market-free accuracy 66.11%; full 67.40%; Vegas bar 68.51%, so it does not beat the market.']
-        : [null, null, `${league.toUpperCase()} prediction model accuracy is not available in this mock fixture; wait for measured backend results before trusting probabilities.`];
+        : [0.6252, 0.6295, 'NBA model accuracy is 62.52%; it does NOT beat the 62.95% pure-Elo baseline.'];
     return [
       prediction(league, teams[0].abbrev, teams[1].abbrev, .58, acc),
       prediction(league, teams[2].abbrev, teams[3].abbrev, .52, acc)
@@ -200,10 +202,12 @@
   function wireEvents() {
     document.querySelectorAll('[data-league]').forEach((button) => button.addEventListener('click', () => {
       state.league = button.dataset.league;
+      state.sort = { key: defaultSortKey(state.league), dir: 'desc' };
       state.playerGroup = 'hitting';
       state.playerStat = leagueConfig[state.league].defaultPlayerStat;
       state.playerTeam = '';
       state.selectedTeam = null;
+      state.standingsFilters = { conference: '', division: '' };
       state.teams = [];
       state.scheduleWeek = '';
       state.scheduleDate = '';
@@ -362,7 +366,11 @@
     const nonRegular = stateName && stateName !== 'regular';
     const liveMlb = state.league === 'mlb' && stateName === 'regular';
     $('#season-banner').className = `banner ${liveMlb ? 'info' : 'warning'}${nonRegular || liveMlb ? '' : ' hidden'}`;
-    $('#season-banner').textContent = liveMlb ? `MLB regular season is live. Standings are partial-season data; last fetched ${formatDateTime(meta.fetched_at)} and auto-refresh follows the 5-minute standings TTL.` : nonRegular ? seasonStateText(meta, stateName) : '';
+    if (liveMlb) {
+      $('#season-banner').innerHTML = `<span class="live-badge">Live MLB</span> MLB regular season is live. Standings are partial-season data; last fetched ${escapeHtml(formatDateTime(meta.fetched_at))} and auto-refresh follows the 5-minute standings TTL.`;
+    } else {
+      $('#season-banner').textContent = nonRegular ? seasonStateText(meta, stateName) : '';
+    }
   }
 
   function renderFromCache() {
@@ -371,7 +379,7 @@
   }
 
   function render(view, envelope) {
-    const rows = normalizeRows(envelope.data, view).filter(matchesSearch);
+    const rows = filterRows(normalizeRows(envelope.data, view));
     if (view === 'standings') renderStandings(rows, envelope.meta);
     if (view === 'teams') renderTeams(rows, envelope.meta);
     if (view === 'players') renderPlayers(rows, envelope.meta);
@@ -394,10 +402,16 @@
     const displayRows = state.league === 'mlb' ? withGamesBehind(rows) : rows;
     const sorted = sortRows(displayRows, state.sort.key, state.sort.dir);
     const grouped = state.groupStandings ? groupRows(sorted) : [['League-wide table', sorted]];
+    const baseRows = normalizeRows(meta && meta.__sourceData ? meta.__sourceData : state.cache[`standings:${state.league}:${state.playerStat}:${state.playerTeam}:${state.playerGroup}:${state.scheduleDate}:${state.scheduleWeek}`]?.data, 'standings');
+    const filterSource = baseRows.length ? baseRows : rows;
     content.innerHTML = `
       <div class="section-head">
         <div><h2>${state.league.toUpperCase()} standings</h2><p class="honesty">${escapeHtml(config.standingsNote)}</p></div>
-        <button id="group-toggle" class="ghost-btn" type="button" aria-pressed="${state.groupStandings}">${state.groupStandings ? 'Show league-wide table' : 'Group by conference/division'}</button>
+        <div class="control-row standings-controls">
+          <label class="small-label">Conference <select id="conference-filter"><option value="">All conferences</option>${optionsFor(filterSource, 'conference', state.standingsFilters.conference)}</select></label>
+          <label class="small-label">Division <select id="division-filter"><option value="">All divisions</option>${optionsFor(filterSource, 'division', state.standingsFilters.division)}</select></label>
+          <button id="group-toggle" class="ghost-btn" type="button" aria-pressed="${state.groupStandings}">${state.groupStandings ? 'Show league-wide table' : 'Group by conference/division'}</button>
+        </div>
       </div>
       ${nbaCoverageMarkup(meta)}
       <div class="table-wrap"><table>
@@ -417,6 +431,21 @@
       state.groupStandings = !state.groupStandings;
       renderStandings(rows, meta);
     });
+    $('#conference-filter').addEventListener('change', (e) => {
+      state.standingsFilters.conference = e.target.value;
+      renderFromCache();
+    });
+    $('#division-filter').addEventListener('change', (e) => {
+      state.standingsFilters.division = e.target.value;
+      renderFromCache();
+    });
+    content.querySelectorAll('[data-team-detail]').forEach((button) => button.addEventListener('click', () => selectTeam(button.dataset.teamDetail)));
+    if (state.selectedTeam) {
+      content.insertAdjacentHTML('beforeend', '<div id="team-detail"></div>');
+      selectTeam(state.selectedTeam, true);
+    } else {
+      content.insertAdjacentHTML('beforeend', '<div id="team-detail"></div>');
+    }
   }
 
   function renderTeams(rows, meta) {
@@ -445,23 +474,48 @@
   async function selectTeam(abbrev, renderOnly) {
     state.selectedTeam = abbrev;
     const container = $('#team-detail');
+    if (!container) return;
     const local = state.teams.find((team) => (team.abbrev || team.team_id || team.name) === abbrev) || {};
+    let scheduleRows = [];
+    container.innerHTML = loadingMarkup(2);
     if (!renderOnly && !state.mock) {
       try {
         const detail = await fetchEnvelope(`/api/${state.league}/teams/${encodeURIComponent(abbrev)}`, 'team detail');
-        Object.assign(local, normalizeObject(detail.data));
+        Object.assign(local, normalizeTeamDetail(detail.data));
+        scheduleRows = normalizeRows(detail.data, 'schedule');
         handleMeta(detail.meta);
       } catch (error) {
         setNotice(`Team detail endpoint was not available: ${error.message}`, 'neutral');
       }
     }
+    if (!scheduleRows.length) scheduleRows = await teamSchedule(abbrev, renderOnly);
     container.innerHTML = `
       <aside class="detail-panel" aria-label="Team detail">
         <div class="section-head"><h3>${escapeHtml(local.name || abbrev)} detail</h3><span class="pill">${escapeHtml(abbrev)}</span></div>
         <div class="detail-list">
           ${teamDetailStats(local).join('')}
         </div>
+        <div class="trend-block">
+          <h4>Recent form trend</h4>
+          ${trendChart(scheduleRows, abbrev)}
+        </div>
+        <h4>Schedule and results</h4>
+        ${scheduleRows.length ? scheduleTable(scheduleRows.slice(0, 12)) : emptyMarkup('No team schedule available', 'The schedule endpoint returned no games for this team in the current scope.')}
       </aside>`;
+  }
+
+  async function teamSchedule(abbrev, renderOnly) {
+    if (state.mock) return filterTeamGames(sample[state.league].schedule || [], abbrev);
+    if (renderOnly && state.cache[`teamSchedule:${state.league}:${abbrev}`]) return state.cache[`teamSchedule:${state.league}:${abbrev}`];
+    try {
+      const env = await fetchEnvelope(`/api/${state.league}/schedule`, 'team schedule');
+      const rows = filterTeamGames(normalizeRows(env.data, 'schedule'), abbrev);
+      state.cache[`teamSchedule:${state.league}:${abbrev}`] = rows;
+      return rows;
+    } catch (error) {
+      setNotice(`Team schedule could not be loaded: ${error.message}`, 'neutral');
+      return [];
+    }
   }
 
   function renderPlayers(rows, meta) {
@@ -517,7 +571,7 @@
   }
 
   function scheduleTable(rows) {
-    return `<div class="table-wrap"><table><caption class="sr-only">${state.league.toUpperCase()} schedule</caption><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Status</th><th>Score</th></tr></thead><tbody>${rows.map((gameRow) => `<tr><td>${value(gameRow.game_date || gameRow.date || gameRow.start_time)}</td><td>${value(gameRow.away || gameRow.away_team || gameRow.away_abbrev)}</td><td>${value(gameRow.home || gameRow.home_team || gameRow.home_abbrev)}</td><td>${value(gameRow.status || gameRow.game_state)}</td><td>${value(gameRow.score || scoreText(gameRow))}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="table-wrap"><table><caption class="sr-only">${state.league.toUpperCase()} schedule</caption><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Status</th><th>Score</th></tr></thead><tbody>${rows.map((gameRow) => `<tr><td>${value(gameRow.game_date || gameRow.date || gameRow.start_time)}</td><td>${value(teamName(gameRow, 'away'))}</td><td>${value(teamName(gameRow, 'home'))}</td><td>${statusMarkup(gameRow)}</td><td>${value(gameRow.score || scoreText(gameRow))}</td></tr>`).join('')}</tbody></table></div>`;
   }
 
   function scoreText(gameRow) {
@@ -556,6 +610,7 @@
     }
     target.innerHTML = loadingMarkup(2);
     try {
+      if (state.mock && state.league === 'mlb') throw new Error('MLB no model exists yet, so no fabricated matchup probability is shown.');
       const env = state.mock ? { ok: true, data: prediction(state.league, home, away, .55, mockAccuracy(state.league)), meta: { fetched_at: new Date().toISOString(), season_state: state.league === 'mlb' ? 'regular' : 'offseason', season: state.league === 'nba' ? '2025-26' : state.league === 'mlb' ? '2026' : '2025', stale: false, season_coverage: state.league === 'nba' ? { historical_game_logs: '2001-02 through 2022-23', current_standings: { seasons: [{ season: '2023-24' }, { season: '2024-25' }, { season: '2025-26' }] } } : null } } : await fetchEnvelope(endpoints.matchup(state.league, home, away), 'matchup prediction');
       handleMeta(env.meta);
       const cards = Array.isArray(env.data) ? env.data.map(normalizeObject) : [normalizeObject(env.data)];
@@ -595,9 +650,36 @@
     return obj && typeof obj === 'object' ? { ...obj } : {};
   }
 
+  function normalizeTeamDetail(data) {
+    const root = normalizeObject(data);
+    return {
+      ...normalizeObject(root.team),
+      ...normalizeObject(root.standings),
+      ...normalizeObject(root.record),
+      ...root
+    };
+  }
+
   function matchesSearch(item) {
     if (!state.search || state.view === 'players') return true;
     return [item.name, item.abbrev, item.team_id, item.home, item.away].filter(Boolean).join(' ').toLowerCase().includes(state.search);
+  }
+
+  function filterRows(rows) {
+    return rows.filter((item) => {
+      if (!matchesSearch(item)) return false;
+      if (state.view !== 'standings') return true;
+      if (state.standingsFilters.conference && String(item.conference || '') !== state.standingsFilters.conference) return false;
+      if (state.standingsFilters.division && String(item.division || '') !== state.standingsFilters.division) return false;
+      return true;
+    });
+  }
+
+  function optionsFor(rows, key, selected) {
+    return [...new Set(rows.map((row) => row[key]).filter(Boolean).map(String))]
+      .sort((a, b) => a.localeCompare(b))
+      .map((option) => `<option value="${escapeAttr(option)}" ${option === selected ? 'selected' : ''}>${escapeHtml(option)}</option>`)
+      .join('');
   }
 
   function sortRows(rows, key, dir) {
@@ -610,6 +692,10 @@
     });
   }
 
+  function defaultSortKey(league) {
+    return league === 'nhl' ? 'points' : 'win_pct';
+  }
+
   function groupRows(rows) {
     const groups = new Map();
     rows.forEach((row) => {
@@ -618,6 +704,57 @@
       groups.get(name).push(row);
     });
     return [...groups.entries()];
+  }
+
+  function filterTeamGames(rows, abbrev) {
+    const wanted = String(abbrev || '').toLowerCase();
+    return rows.filter((gameRow) => [teamName(gameRow, 'home'), teamName(gameRow, 'away'), gameRow.home_abbrev, gameRow.away_abbrev, gameRow.home_team_abbrev, gameRow.away_team_abbrev]
+      .filter(Boolean)
+      .map((valueIn) => String(valueIn).toLowerCase())
+      .includes(wanted));
+  }
+
+  function teamName(gameRow, side) {
+    return gameRow[side] || gameRow[`${side}_team`] || gameRow[`${side}_abbrev`] || gameRow[`${side}_name`] || gameRow[`${side}_team_abbrev`];
+  }
+
+  function statusMarkup(gameRow) {
+    const status = gameRow.status || gameRow.game_state || '';
+    const escaped = escapeHtml(status || '—');
+    return state.league === 'mlb' && isInProgress(status) ? `<span class="live-badge">In progress</span> ${escaped}` : escaped;
+  }
+
+  function isInProgress(status) {
+    return /progress|warmup|live|inning|delay/i.test(String(status || ''));
+  }
+
+  function trendChart(rows, abbrev) {
+    const games = rows.filter((gameRow) => /final|completed/i.test(String(gameRow.status || gameRow.game_state || ''))).slice(-12);
+    if (!games.length) return '<p class="honesty">No final games are available from the schedule endpoint for a trend line.</p>';
+    let wins = 0;
+    const points = games.map((gameRow, index) => {
+      if (teamWon(gameRow, abbrev)) wins += 1;
+      const x = games.length === 1 ? 150 : 12 + (index * 276 / (games.length - 1));
+      const y = 88 - (wins * 70 / Math.max(1, games.length));
+      return { x, y, wins };
+    });
+    const path = points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+    const dots = points.map((point) => `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3"><title>${point.wins} cumulative wins</title></circle>`).join('');
+    return `<svg class="trend-chart" viewBox="0 0 300 100" role="img" aria-label="Cumulative wins trend over ${games.length} recent final games"><path class="trend-grid" d="M12 88H288M12 18H288"></path><path class="trend-line" d="${path}"></path>${dots}</svg><p class="honesty">${wins} wins in ${games.length} recent final games shown by the schedule endpoint.</p>`;
+  }
+
+  function teamWon(gameRow, abbrev) {
+    const scores = gameScores(gameRow);
+    if (scores.home == null || scores.away == null) return false;
+    const side = String(teamName(gameRow, 'home')).toLowerCase() === String(abbrev).toLowerCase() ? 'home' : 'away';
+    return side === 'home' ? scores.home > scores.away : scores.away > scores.home;
+  }
+
+  function gameScores(gameRow) {
+    const direct = { home: asNumber(gameRow.home_score), away: asNumber(gameRow.away_score ?? gameRow.visitor_score) };
+    if (direct.home != null && direct.away != null) return direct;
+    const match = String(gameRow.score || '').match(/(\d+)\D+(\d+)/);
+    return match ? { away: Number(match[1]), home: Number(match[2]) } : { home: null, away: null };
   }
 
   function withGamesBehind(rows) {
@@ -638,7 +775,10 @@
   }
 
   function cell(team, key) {
-    if (key === 'name') return `<div class="team-cell">${logo(team)}<div><strong>${escapeHtml(team.name || team.abbrev || '')}</strong><div class="abbr">${escapeHtml(team.abbrev || '')}</div></div></div>`;
+    if (key === 'name') {
+      const abbrev = team.abbrev || team.team_id || team.name || '';
+      return `<button class="team-link" type="button" data-team-detail="${escapeAttr(abbrev)}"><span class="team-cell">${logo(team)}<span><strong>${escapeHtml(team.name || team.abbrev || '')}</strong><span class="abbr">${escapeHtml(team.abbrev || '')}</span></span></span></button>`;
+    }
     if (key === 'record') return record(team);
     if (key === 'win_pct' || key === 'points_pct') return pct(team[key]);
     if (key === 'differential') return `<span class="${classForDiff(team[key])}">${diff(team[key])}</span>`;
@@ -755,13 +895,14 @@
   function honestyText(league) {
     if (league === 'nhl') return 'NHL model accuracy is 56.82% versus a 53.5% always-home baseline. These are modest statistical estimates, not guaranteed edges.';
     if (league === 'nfl') return 'NFL market-free accuracy is 66.11% and full-model accuracy is 67.40% versus a 68.51% Vegas bar; neither beats the market. Not betting advice.';
-    if (league === 'mlb') return 'MLB predictions are shown only when the backend provides measured model accuracy and disclaimers. Not betting advice.';
-    return 'NBA predictions are shown only when the backend provides measured model accuracy and disclaimers. Not betting advice.';
+    if (league === 'mlb') return 'MLB no model exists yet; this UI must not fabricate a probability. Not betting advice.';
+    return 'NBA model accuracy is 62.52% and explicitly does NOT beat the 62.95% pure-Elo baseline. Not betting advice.';
   }
   function mockAccuracy(league) {
     if (league === 'nhl') return [0.5682, 0.535, 'Model accuracy 56.82% vs 53.5% home baseline.'];
     if (league === 'nfl') return [0.6611, 0.6851, 'NFL market-free accuracy 66.11%; full 67.40%; Vegas bar 68.51%, so it does not beat the market.'];
-    return [null, null, `${league.toUpperCase()} prediction model accuracy is not available in this mock fixture; wait for measured backend results before trusting probabilities.`];
+    if (league === 'nba') return [0.6252, 0.6295, 'NBA model accuracy is 62.52%; it does NOT beat the 62.95% pure-Elo baseline.'];
+    return [null, null, 'MLB no model exists yet; no probability should be trusted or fabricated.'];
   }
   function teamDetailStats(local) {
     const config = leagueConfig[state.league];

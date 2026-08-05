@@ -7,7 +7,7 @@ import json
 import math
 import sqlite3
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -462,6 +462,11 @@ class NBAScorer:
         con.row_factory = sqlite3.Row
         return con
 
+    def _connect_recent(self) -> sqlite3.Connection:
+        con = sqlite3.connect(settings.nba_recent_games_db, timeout=30)
+        con.row_factory = sqlite3.Row
+        return con
+
     def _feature_bases(self) -> set[str]:
         bases: set[str] = set()
         for feature in self.features:
@@ -557,7 +562,127 @@ class NBAScorer:
                 if turnovers:
                     for window in (3, 5, 10, 20):
                         profile[f"turnover_rate_last{window}"] = min(0.22, max(0.09, turnovers / 90.0))
+        self._merge_recent_game_profiles(profiles)
         return profiles
+
+    def _merge_recent_game_profiles(self, profiles: dict[str, dict[str, float]]) -> None:
+        """Overlay score-derived serving features from real games using training definitions.
+
+        The recent verified database has game results but not the box-score inputs required for
+        shooting/rebounding/turnover rates, so only exact game-log features are replaced here.
+        Existing aggregate fallbacks remain for unavailable advanced rolling metrics.
+        """
+        if not settings.nba_recent_games_db.exists():
+            return
+        games = self._load_scored_nba_games()
+        if not games:
+            return
+
+        reference = datetime.now(timezone.utc).date()
+        games = [game for game in games if game["game_date"] < reference]
+        if not games:
+            return
+        latest_season = max(int(game["season"]) for game in games)
+        ratings: dict[str, float] = {}
+        histories: dict[str, list[dict[str, float | date]]] = {}
+        season_records: dict[tuple[str, int], list[int]] = {}
+        k_factor = float(self.config.get("feature_builder_params", {}).get("elo_k_factor", 20.0))
+        home_adv = float(self.config.get("feature_builder_params", {}).get("elo_home_advantage_points", 65.0))
+
+        for game in sorted(games, key=lambda item: (item["game_date"], item["game_id"])):
+            home = str(game["home_team"])
+            away = str(game["away_team"])
+            rh = ratings.get(home, 1500.0)
+            ra = ratings.get(away, 1500.0)
+            p_home = 1.0 / (1.0 + 10.0 ** (-((rh + home_adv) - ra) / 400.0))
+            home_win = float(game["home_win"])
+            rows = (
+                (home, away, 1.0, float(game["home_score"]), float(game["away_score"]), rh, ra),
+                (away, home, 0.0, float(game["away_score"]), float(game["home_score"]), ra, rh),
+            )
+            for team, _opp, is_home, points, opp_points, elo_pre, opp_elo_pre in rows:
+                win = 1.0 if (is_home == 1.0 and home_win == 1.0) or (is_home == 0.0 and home_win == 0.0) else 0.0
+                histories.setdefault(team, []).append(
+                    {
+                        "game_date": game["game_date"],
+                        "is_home": is_home,
+                        "win": win,
+                        "margin": points - opp_points,
+                        "points": points,
+                        "opp_points": opp_points,
+                        "opp_elo_pre": opp_elo_pre,
+                    }
+                )
+                record = season_records.setdefault((team, int(game["season"])), [0, 0])
+                record[0] += int(win)
+                record[1] += 1
+            ratings[home] = rh + k_factor * (home_win - p_home)
+            ratings[away] = ra + k_factor * ((1.0 - home_win) - (1.0 - p_home))
+
+        for team, history in histories.items():
+            if len(history) < 3:
+                continue
+            profile = profiles.setdefault(team, {})
+            profile["elo_pre"] = ratings.get(team, profile.get("elo_pre", 1500.0))
+            record = season_records.get((team, latest_season))
+            if record and record[1] > 0:
+                profile["season_win_pct"] = record[0] / record[1]
+            last_game_date = history[-1]["game_date"]
+            if isinstance(last_game_date, date):
+                rest_days = max(0, min(10, (reference - last_game_date).days))
+                profile["rest_days"] = float(rest_days)
+                profile["is_back_to_back"] = 1.0 if rest_days <= 1 else 0.0
+            profile["_last_is_home"] = float(history[-1]["is_home"])
+            for metric in ("win", "margin", "points", "opp_points"):
+                values = [float(item[metric]) for item in history]
+                for window in (3, 5, 10, 20):
+                    profile[f"{metric}_last{window}"] = sum(values[-window:]) / len(values[-window:])
+            opp_elo_values = [float(item["opp_elo_pre"]) for item in history]
+            profile["opp_strength_last10"] = sum(opp_elo_values[-10:]) / len(opp_elo_values[-10:])
+
+    def _load_scored_nba_games(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+
+        def append_games(con: sqlite3.Connection) -> None:
+            for row in con.execute(
+                """
+                SELECT game_id, season, game_date, home_team, away_team, home_score, away_score, home_win
+                FROM nba_games
+                WHERE completed = 1
+                  AND home_win IS NOT NULL
+                  AND home_score IS NOT NULL
+                  AND away_score IS NOT NULL
+                  AND lower(season_type) = 'regular'
+                  AND COALESCE(neutral_site, 0) = 0
+                ORDER BY game_date, game_id
+                """
+            ):
+                home = self.aliases.get(str(row["home_team"]).upper())
+                away = self.aliases.get(str(row["away_team"]).upper())
+                if not home or not away or home == away:
+                    continue
+                rows.append(
+                    {
+                        "game_id": str(row["game_id"]),
+                        "season": int(row["season"]),
+                        "game_date": date.fromisoformat(str(row["game_date"])[:10]),
+                        "home_team": home,
+                        "away_team": away,
+                        "home_score": float(row["home_score"]),
+                        "away_score": float(row["away_score"]),
+                        "home_win": float(row["home_win"]),
+                    }
+                )
+
+        with self._connect() as con:
+            append_games(con)
+        with self._connect_recent() as con:
+            append_games(con)
+
+        deduped: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            deduped[row["game_id"]] = row
+        return list(deduped.values())
 
     def _profile_value(self, team: str, base: str) -> float | None:
         return self.profiles.get(team, {}).get(base)
@@ -577,21 +702,30 @@ class NBAScorer:
             "opp_elo_pre_home": away_elo,
             "opp_elo_pre_away": home_elo,
             "opp_elo_pre_diff": away_elo - home_elo,
-            "rest_days_home": 2.0,
-            "rest_days_away": 2.0,
-            "rest_days_diff": 0.0,
-            "rest_diff": 0.0,
-            "home_b2b": 0.0,
-            "away_b2b": 0.0,
-            "is_back_to_back_home": 0.0,
-            "is_back_to_back_away": 0.0,
-            "is_back_to_back_diff": 0.0,
-            "away_road_trip": 0.0,
-            "home_road_trip_flag": 0.0,
-            "road_trip_game_home": 0.0,
-            "road_trip_game_away": 0.0,
-            "road_trip_game_diff": 0.0,
         }
+        home_rest = hp.get("rest_days", 2.0)
+        away_rest = ap.get("rest_days", 2.0)
+        home_b2b = hp.get("is_back_to_back", 0.0)
+        away_b2b = ap.get("is_back_to_back", 0.0)
+        away_road_trip = 1.0 if ap.get("_last_is_home") == 0.0 else 0.0
+        row.update(
+            {
+                "rest_days_home": home_rest,
+                "rest_days_away": away_rest,
+                "rest_days_diff": home_rest - away_rest,
+                "rest_diff": home_rest - away_rest,
+                "home_b2b": home_b2b,
+                "away_b2b": away_b2b,
+                "is_back_to_back_home": home_b2b,
+                "is_back_to_back_away": away_b2b,
+                "is_back_to_back_diff": home_b2b - away_b2b,
+                "away_road_trip": away_road_trip,
+                "home_road_trip_flag": 0.0,
+                "road_trip_game_home": 0.0,
+                "road_trip_game_away": away_road_trip,
+                "road_trip_game_diff": -away_road_trip,
+            }
+        )
         for feature in self.features:
             if feature in row:
                 continue
@@ -634,8 +768,9 @@ class NBAScorer:
             baseline_accuracy=NBA_ELO_BASELINE_ACCURACY,
             features_used=[
                 "frozen_nba_model_final_joblib",
-                "current_team_standings_profile",
-                "recent_historical_pregame_profile",
+                "real_recent_game_log_profile",
+                "current_team_standings_profile_fallback",
+                "recent_historical_pregame_profile_fallback",
                 "empirical_platt_calibration_real_games",
                 "transparent_0.10_0.90_safety_bound",
             ],

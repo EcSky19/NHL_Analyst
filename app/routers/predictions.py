@@ -86,7 +86,7 @@ def matchup(league: str, home: str, away: str) -> dict:
         return fail("bad_request", "league must be nhl, nfl, or nba", source="predictions-matchup")
     try:
         rows, cache_meta = cached_fetch(
-            f"predictions:v5:matchup:{league_norm}:{home_norm}:{away_norm}",
+            f"predictions:v6:matchup:{league_norm}:{home_norm}:{away_norm}",
             settings.ttl_predictions,
             lambda: (
                 nhl_matchup(home_norm, away_norm)

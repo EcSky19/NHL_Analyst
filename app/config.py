@@ -26,6 +26,7 @@ class Settings:
     nhl_db: Path = REPO_ROOT / "data" / "processed" / "nhl_research.db"
     nfl_db: Path = REPO_ROOT / "data" / "nfl" / "nfl_research.db"
     nba_db: Path = REPO_ROOT / "data" / "nba" / "nba_research.db"
+    nba_recent_games_db: Path = REPO_ROOT / "data" / "nba" / "nba_recent_games.db"
     mlb_db: Path = REPO_ROOT / "data" / "mlb" / "mlb_research.db"
 
     nhl_api_base: str = "https://api-web.nhle.com/v1"
