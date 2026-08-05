@@ -18,5 +18,21 @@ data/nfl/*.sqlite3
 data/nfl/games.csv
 data/nfl/raw/
 
+# NBA local data artifacts (nba_research.db is ~1.6 GB, far above GitHub's limit)
+data/nba/*.db
+data/nba/*.db-shm
+data/nba/*.db-wal
+data/nba/*.sqlite
+data/nba/*.sqlite3
+data/nba/raw/
+
+# MLB local data artifacts
+data/mlb/*.db
+data/mlb/*.db-shm
+data/mlb/*.db-wal
+data/mlb/*.sqlite
+data/mlb/*.sqlite3
+data/mlb/raw/
+
 # UI runtime cache
 data/ui_cache/

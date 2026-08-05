@@ -11,6 +11,7 @@ from app.cache import cached_fetch
 from app.config import fail, ok, season_state_for, settings
 from app.services.prediction_service import (
     PredictionError,
+    nba_matchup,
     nfl_holdout_predictions,
     nfl_matchup,
     nhl_matchup,
@@ -81,13 +82,19 @@ def matchup(league: str, home: str, away: str) -> dict:
     league_norm = league.lower().strip()
     home_norm = home.upper().strip()
     away_norm = away.upper().strip()
-    if league_norm not in {"nhl", "nfl"}:
-        return fail("bad_request", "league must be nhl or nfl", source="predictions-matchup")
+    if league_norm not in {"nhl", "nfl", "nba"}:
+        return fail("bad_request", "league must be nhl, nfl, or nba", source="predictions-matchup")
     try:
         rows, cache_meta = cached_fetch(
-            f"predictions:v3:matchup:{league_norm}:{home_norm}:{away_norm}",
+            f"predictions:v5:matchup:{league_norm}:{home_norm}:{away_norm}",
             settings.ttl_predictions,
-            lambda: nhl_matchup(home_norm, away_norm) if league_norm == "nhl" else nfl_matchup(home_norm, away_norm),
+            lambda: (
+                nhl_matchup(home_norm, away_norm)
+                if league_norm == "nhl"
+                else nba_matchup(home_norm, away_norm)
+                if league_norm == "nba"
+                else nfl_matchup(home_norm, away_norm)
+            ),
         )
     except PredictionError as exc:
         return fail(exc.code, exc.message, source="predictions-matchup", league=league_norm)

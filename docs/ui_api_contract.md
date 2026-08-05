@@ -45,8 +45,8 @@ because an upstream API blipped. Only return `ok: false` when there is no data a
 
 ## Season state (offseason handling)
 
-Today is **August 2026 — both leagues are between seasons.** "Current standings" therefore means
-*the most recently completed season*. Every endpoint reports `meta.season_state`:
+Today is **August 2026**. NHL and NBA are between seasons, NFL is in preseason, and MLB is
+in the regular season. Every endpoint reports `meta.season_state`:
 
 - `"regular"` — regular season in progress
 - `"playoffs"` — postseason in progress
@@ -74,11 +74,23 @@ Base: `/api`. All list endpoints accept optional `?season=`.
 | GET | `/api/nfl/teams/{abbrev}` | One NFL team detail |
 | GET | `/api/nfl/players` | NFL player leaders (`?team=&stat=&limit=`) |
 | GET | `/api/nfl/schedule` | NFL games (`?season=&week=`) |
+| GET | `/api/nba/standings` | NBA standings |
+| GET | `/api/nba/teams` | NBA team list + summary stats |
+| GET | `/api/nba/teams/{abbrev}` | One NBA team detail |
+| GET | `/api/nba/players` | NBA player leaders (`?team=&stat=&limit=`) |
+| GET | `/api/nba/schedule` | NBA games (`?date=YYYY-MM-DD&season=`) |
+| GET | `/api/mlb/standings` | MLB standings |
+| GET | `/api/mlb/teams` | MLB team list + summary stats |
+| GET | `/api/mlb/teams/{abbrev}` | One MLB team detail |
+| GET | `/api/mlb/players` | MLB player leaders (`?team=&stat=&group=hitting\|pitching&limit=`) |
+| GET | `/api/mlb/schedule` | MLB games (`?date=YYYY-MM-DD&season=`) |
 | GET | `/api/predictions/nhl` | NHL matchup predictions |
 | GET | `/api/predictions/nfl` | NFL matchup predictions |
+| GET | `/api/predictions/nba` | NBA matchup predictions |
+| GET | `/api/predictions/mlb` | MLB matchup predictions |
 | GET | `/api/predictions/matchup` | Ad-hoc `?league=&home=&away=` |
 
-### Standings row (both leagues share these keys)
+### Standings row (shared base keys)
 
 ```json
 {
@@ -95,6 +107,72 @@ Base: `/api`. All list endpoints accept optional `?season=`.
 
 NFL uses the same keys: `otl` is null, `ties` is populated, `goals_for`/`goals_against` carry
 points for/against. Keeping one shape lets the frontend use a single table component.
+
+NBA uses the same keys too: `otl` and `ties` are null (NBA games cannot tie),
+`goals_for`/`goals_against` carry points for/against, `points` carries wins for ranking
+purposes, and `conference`/`division` carry Eastern/Western + the six divisions.
+
+MLB exposes the same base keys plus `games_behind`. `otl` and `ties` are null,
+`goals_for`/`goals_against` carry runs scored/allowed, and `points` carries wins.
+
+## NBA data sources (verified 2026-08-05)
+
+NBA access is more constrained than the other two leagues. These were tested directly:
+
+- `stats.nba.com` — **times out / blocked.** Do not rely on it.
+- `cdn.nba.com` live JSON — **403.** ESPN NBA — **403.** balldontlie — **401** (needs a key).
+- **hoopR-data (works, primary historical source):**
+  `https://raw.githubusercontent.com/sportsdataverse/hoopR-data/main/nba/schedules/csv/nba_schedule_{YEAR}.csv`
+  plus `nba/team_box/csv/team_box_{YEAR}.csv` and `nba/player_box/csv/player_box_{YEAR}.csv`.
+  Requires a browser `User-Agent`. Historical coverage is seasons 2001-02 through 2022-23:
+  28,222 games, 56,136 team box rows, 739,524 player box rows, and 30 teams. It does not include
+  the 2023-24, 2024-25, or 2025-26 seasons.
+- **basketball-reference (works, for current standings):**
+  `https://www.basketball-reference.com/leagues/NBA_2026_standings.html` (the 2025-26 season).
+  `/leagues/` is permitted by their robots.txt for `User-agent: *`, which specifies
+  `Crawl-delay: 3`. Fetch at most one page per request cycle, honor that delay at 3.1 seconds,
+  cache aggressively (>=300s), and never hammer it. Wikipedia's season page is a licensed
+  cross-check. Current standings for 2023-24, 2024-25, and 2025-26 have wins equal losses
+  at 1,230 per season.
+
+Basketball-reference uses the season end year in URLs, so `NBA_2026` is the 2025-26 season.
+
+**Because of the 2024-2025 coverage gap, any NBA claim must state which seasons it rests on.**
+Do not imply continuous coverage through the present.
+
+## MLB data sources (verified 2026-08-05)
+
+MLB is the easiest of the four leagues: the **official MLB StatsAPI is free, public, and needs
+no API key**. All of these returned HTTP 200:
+
+- Standings: `https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season={YEAR}`
+  (103 = American League, 104 = National League; 6 divisions, 30 teams)
+- Teams: `https://statsapi.mlb.com/api/v1/teams?sportId=1&season={YEAR}`
+- Schedule: `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=YYYY-MM-DD`
+  (also `&startDate=&endDate=`)
+- League leaders: `https://statsapi.mlb.com/api/v1/stats?stats=season&group=hitting|pitching&season={YEAR}&sportId=1`
+- Team stats: `https://statsapi.mlb.com/api/v1/teams/{teamId}/stats?stats=season&season={YEAR}&group=hitting`
+- ESPN MLB returns **403** — do not use it.
+
+Historical ingest contains 32,906 games. Regular-season completed counts for 2015-2026 are:
+2,429, 2,428, 2,430, 2,431, 2,429, 898, 2,429, 2,430, 2,430, 2,429, 2,430, 1,709. 2020 is
+COVID-shortened, and 2026 is in progress as of 2026-08-05. Doubleheaders are preserved by
+`gamePk` (verified: 2026-07-29 ATL at NYM, gamePks 823596 and 823598). Spot-check:
+2025 World Series Game 7, LAD 5 at TOR 4.
+
+**MLB is MID-SEASON right now.** Unlike the other three leagues, August falls inside the MLB
+regular season, so `season_state` is `regular` and standings are genuinely live and changing
+(verified: Rays 68-46 on 2026-08-05, with games scheduled that day). This is the one league where
+the UI's auto-refresh shows real movement, so treat freshness as a first-class concern: use the
+short standings TTL and make sure `fetched_at` is surfaced.
+
+MLB-specific shape notes: `otl` and `ties` are null (ties are essentially nonexistent in the
+modern game), `goals_for`/`goals_against` carry runs scored/allowed, `points` carries wins for
+ranking, `conference` carries the league (American/National), and `division` carries
+East/Central/West.
+
+There is no trained MLB prediction model. MLB matchup predictions intentionally return an
+honest unsupported error rather than inventing probabilities.
 
 ### Prediction row
 
@@ -128,7 +206,7 @@ in this repo. Never present a probability as a betting edge.
 | `app/static/*` | frontend agent | index.html, app.js, styles.css |
 | `tests/ui/*` | tests agent | pytest suite |
 
-`app/main.py` already imports all three routers and mounts `app/static`. Create your module at
+`app/main.py` already imports all sport routers and mounts `app/static`. Create your module at
 the exact path with a module-level `router = APIRouter()` or the app will fail to boot.
 
 ## Caching
@@ -143,5 +221,6 @@ schedule 120s, predictions 600s. Cache is on-disk under `data/ui_cache/` so a re
 - NHL team meta: `https://api.nhle.com/stats/rest/en/team` (HTTP 200 verified)
 - NFL games: `https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv`
   — **requires** a browser `User-Agent` header or GitHub returns 403.
-- **ESPN NFL API returns 403 and must not be used.** This was verified twice.
+- **ESPN NFL API returns 403 and must not be used.** ESPN NBA and MLB also return 403 and are
+  deliberately not used.
 - Local databases: `data/processed/nhl_research.db`, `data/nfl/nfl_research.db` (read-only).

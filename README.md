@@ -182,3 +182,42 @@ Network-sensitive tests are marked `network` and skip gracefully when live upstr
 ### Prediction honesty
 
 Predictions are modest statistical estimates, not betting advice. NHL predictions must show the audited 56.82% model accuracy, while NFL predictions must stay within the audited 66.11% market-free and 67.40% full-model figures. Probabilities are bounded and labelled with disclaimers so retracted overconfidence claims do not creep back into the UI.
+
+## NBA project
+
+NBA coverage is documented separately from the NHL/NFL honesty disclosures above; those retractions remain in force and unchanged.
+
+NBA data:
+
+- Historical per-game data comes from hoopR (sportsdataverse), seasons 2001-02 through 2022-23: 28,222 games, 56,136 team box rows, 739,524 player box rows, and 30 teams.
+- Current standings for 2023-24, 2024-25, and 2025-26 are scraped from basketball-reference `/leagues/` (robots.txt-permitted; Crawl-delay 3 honored at 3.1s) and cross-validated against Wikipedia. Wins equal losses at 1,230 per season.
+- basketball-reference year convention uses the season end year, so `NBA_2026` is the 2025-26 season.
+
+NBA model accuracy must be stated with its baselines:
+
+| Evaluation | Result |
+|---|---:|
+| Frozen holdout | 62.52% on 1,174 games (2023 season), Wilson 95% CI 59.72%-65.25% |
+| Always-home baseline | 58.43% |
+| Pure Elo baseline | 62.95% |
+
+The headline NBA accuracy is the frozen-holdout **62.52%**, not the walk-forward development figure. The model is **-0.43 percentage points versus pure Elo**, so it does **not** beat a simple Elo baseline, and the gap sits well inside the confidence interval. No betting-market baseline exists for NBA.
+
+## MLB project
+
+MLB uses the official MLB StatsAPI (`statsapi.mlb.com/api/v1`), which is free and public and requires no API key.
+
+MLB data:
+
+- Historical ingest: 32,906 games.
+- Regular-season completed counts for 2015-2026: 2,429, 2,428, 2,430, 2,431, 2,429, 898, 2,429, 2,430, 2,430, 2,429, 2,430, 1,709.
+- 2020 is COVID-shortened (898 completed games); 2026 is in progress (1,709 completed as of 2026-08-05).
+- Doubleheaders are preserved and keyed by `gamePk` (verified: 2026-07-29 ATL at NYM, gamePks 823596 and 823598).
+- Spot-check: 2025 World Series Game 7, LAD 5 at TOR 4.
+- MLB is currently mid-season and is the only league serving genuinely live data (games were observed transitioning Warmup -> In Progress).
+
+There is **no trained MLB prediction model**. MLB matchup predictions intentionally return an honest unsupported error; do not assume a hidden model exists.
+
+## External API caveats
+
+ESPN endpoints return HTTP 403 for NFL, NBA, and MLB and are deliberately not used. NBA source checks also found `stats.nba.com` timing out, `cdn.nba.com` returning 403, and balldontlie returning 401.

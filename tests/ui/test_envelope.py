@@ -31,12 +31,22 @@ def assert_envelope(payload: dict) -> None:
         "/api/nfl/teams/KC",
         "/api/nfl/players",
         "/api/nfl/schedule?season=2025&week=1",
+        "/api/nba/standings",
+        "/api/nba/teams",
+        "/api/nba/teams/OKC",
+        "/api/nba/players",
+        "/api/nba/schedule?season=2022-23",
+        "/api/mlb/standings?season=2026",
+        "/api/mlb/teams?season=2026",
+        "/api/mlb/teams/LAD?season=2026",
+        "/api/mlb/players?season=2026",
+        "/api/mlb/schedule?date=2026-07-29",
         "/api/predictions/nhl",
         "/api/predictions/nfl",
         "/api/predictions/matchup?league=nhl&home=COL&away=SJS",
     ],
 )
-def test_success_endpoints_return_contract_envelope(path, client, mocked_nhl, mocked_nfl):
+def test_success_endpoints_return_contract_envelope(path, client, mocked_nhl, mocked_nfl, mocked_mlb):
     response = client.get(path)
     assert response.status_code == 200
     payload = response.json()
@@ -50,11 +60,15 @@ def test_success_endpoints_return_contract_envelope(path, client, mocked_nhl, mo
         "/api/nhl/standings?season=2026",
         "/api/nhl/schedule?date=not-a-date",
         "/api/nfl/schedule?season=2025&week=99",
+        "/api/nba/standings?season=1900-01",
+        "/api/nba/teams/XXX",
+        "/api/mlb/standings?season=9999",
+        "/api/mlb/teams/XXX?season=2026",
         "/api/predictions/matchup?league=mlb&home=COL&away=SJS",
         "/api/predictions/matchup?league=nhl&home=COL&away=COL",
     ],
 )
-def test_error_endpoints_still_return_http_200_envelope(path, client, mocked_nhl, mocked_nfl):
+def test_error_endpoints_still_return_http_200_envelope(path, client, mocked_nhl, mocked_nfl, mocked_mlb):
     response = client.get(path)
     assert response.status_code == 200
     payload = response.json()
@@ -66,3 +80,10 @@ def test_meta_seasons_contract_endpoint_exists(client):
     response = client.get("/api/meta/seasons")
     assert response.status_code == 200
     assert_envelope(response.json())
+
+
+def test_health_reports_all_four_leagues(client):
+    payload = client.get("/api/health").json()
+    assert payload["ok"] is True
+    assert set(payload["data"]["databases"]) == {"nhl", "nfl", "nba", "mlb"}
+    assert set(payload["data"]["season_state"]) == {"nhl", "nfl", "nba", "mlb"}

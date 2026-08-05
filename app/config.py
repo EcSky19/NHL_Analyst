@@ -25,12 +25,15 @@ class Settings:
     cache_dir: Path = REPO_ROOT / "data" / "ui_cache"
     nhl_db: Path = REPO_ROOT / "data" / "processed" / "nhl_research.db"
     nfl_db: Path = REPO_ROOT / "data" / "nfl" / "nfl_research.db"
+    nba_db: Path = REPO_ROOT / "data" / "nba" / "nba_research.db"
+    mlb_db: Path = REPO_ROOT / "data" / "mlb" / "mlb_research.db"
 
     nhl_api_base: str = "https://api-web.nhle.com/v1"
     nhl_stats_api_base: str = "https://api.nhle.com/stats/rest/en"
     nflverse_games_url: str = (
         "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
     )
+    mlb_api_base: str = "https://statsapi.mlb.com/api/v1"
 
     request_timeout: float = float(os.environ.get("UI_TIMEOUT", "20"))
 
@@ -105,6 +108,23 @@ def season_state_for(today: datetime | None = None, league: str = "nhl") -> str:
         if month == 9:
             return "preseason"
         if month in (5, 6):
+            return "playoffs"
+        return "regular"
+    if league == "nba":
+        if month in (7, 8) or (month == 9 and day < 20):
+            return "offseason"
+        if month == 9 or (month == 10 and day < 15):
+            return "preseason"
+        if month in (5, 6):
+            return "playoffs"
+        return "regular"
+    if league == "mlb":
+        # MLB runs late March through October, so summer is mid-season.
+        if month in (11, 12, 1, 2):
+            return "offseason"
+        if month == 3 and day < 20:
+            return "preseason"
+        if month == 10:
             return "playoffs"
         return "regular"
     if month in (3, 4, 5, 6, 7) or (month == 8 and day < 5):

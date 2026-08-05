@@ -1,4 +1,4 @@
-"""Transparent serving layer for NHL and NFL prediction rows."""
+"""Transparent serving layer for NHL, NFL, and NBA prediction rows."""
 
 from __future__ import annotations
 
@@ -12,6 +12,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import joblib
+import pandas as pd
+
 from app.config import settings
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -20,8 +23,13 @@ NHL_RECENT = ROOT / "data" / "processed" / "matchup_context_features.csv"
 NHL_CONFIG = ROOT / "data" / "processed" / "weighted_win_model_config.json"
 NFL_CONFIG = ROOT / "data" / "nfl" / "nfl_final_model_frozen_config.json"
 NFL_HOLDOUT = ROOT / "data" / "nfl" / "nfl_final_model_holdout_predictions.csv"
+NBA_ARTIFACT = ROOT / "data" / "nba" / "nba_model_final.joblib"
+NBA_CONFIG = ROOT / "data" / "nba" / "nba_model_config.json"
 NHL_PROB_BOUNDS = (0.20, 0.80)
 NFL_PROB_BOUNDS = (0.15, 0.85)
+NBA_PROB_BOUNDS = (0.10, 0.90)
+NBA_MODEL_ACCURACY = 0.6252
+NBA_ELO_BASELINE_ACCURACY = 0.6295
 
 
 def _sigmoid(x: float) -> float:
@@ -434,12 +442,224 @@ class NFLScorer:
         return rows
 
 
+class NBAScorer:
+    """Scores NBA hypothetical matchups with the frozen model artifact."""
+
+    def __init__(self) -> None:
+        if not NBA_ARTIFACT.exists() or not settings.nba_db.exists():
+            raise PredictionError("no_data", "NBA model artifact or database is unavailable")
+        self.config = json.loads(NBA_CONFIG.read_text(encoding="utf-8")) if NBA_CONFIG.exists() else {}
+        artifact = joblib.load(NBA_ARTIFACT)
+        self.base_model = artifact["base_model"]
+        self.platt = artifact["platt"]
+        self.features: list[str] = list(artifact.get("features") or self.config["feature_columns"])
+        self.feature_bases = self._feature_bases()
+        self.aliases = self._load_aliases()
+        self.profiles = self._load_profiles()
+
+    def _connect(self) -> sqlite3.Connection:
+        con = sqlite3.connect(f"file:{settings.nba_db}?mode=ro", uri=True)
+        con.row_factory = sqlite3.Row
+        return con
+
+    def _feature_bases(self) -> set[str]:
+        bases: set[str] = set()
+        for feature in self.features:
+            for suffix in ("_home", "_away", "_diff"):
+                if feature.endswith(suffix):
+                    bases.add(feature[: -len(suffix)])
+        return bases
+
+    def _load_aliases(self) -> dict[str, str]:
+        aliases: dict[str, str] = {}
+        with self._connect() as con:
+            rows = con.execute("SELECT abbreviation, alias_source_codes FROM nba_teams").fetchall()
+        for row in rows:
+            canonical = str(row["abbreviation"]).upper()
+            aliases[canonical] = canonical
+            raw = str(row["alias_source_codes"] or "").split(";", 1)[0]
+            for alias in raw.split(","):
+                code = alias.strip().upper()
+                if code:
+                    aliases[code] = canonical
+        aliases.update({"CHO": "CHA", "CHH": "CHA", "NJ": "BKN", "NJN": "BKN", "NOH": "NOP", "NOK": "NOP", "NO": "NOP", "NY": "NYK", "GS": "GSW", "SA": "SAS", "SEA": "OKC", "WSH": "WAS", "UTAH": "UTA"})
+        return aliases
+
+    def _load_profiles(self) -> dict[str, dict[str, float]]:
+        profiles: dict[str, dict[str, float]] = {}
+        with self._connect() as con:
+            rows = con.execute(
+                """
+                SELECT *
+                FROM nba_features_pregame
+                WHERE season BETWEEN 2021 AND 2023
+                ORDER BY game_date, game_id
+                """
+            ).fetchall()
+            for row in rows:
+                columns = set(row.keys())
+                for side in ("home", "away"):
+                    team = self.aliases.get(str(row[f"{side}_team"]).upper())
+                    if not team:
+                        continue
+                    profile = profiles.setdefault(team, {})
+                    suffix = f"_{side}"
+                    for base in self.feature_bases:
+                        column = f"{base}{suffix}"
+                        if column in columns:
+                            value = row[column]
+                            if value is not None:
+                                profile[base] = _flt(value)
+
+            current_rows = con.execute(
+                """
+                SELECT *
+                FROM nba_current_standings
+                WHERE season_end_year = (SELECT MAX(season_end_year) FROM nba_current_standings)
+                """
+            ).fetchall()
+            for row in current_rows:
+                team = self.aliases.get(str(row["team_abbrev"]).upper())
+                if not team:
+                    continue
+                profile = profiles.setdefault(team, {})
+                win_pct = min(0.95, max(0.05, _flt(row["win_pct"], 0.5)))
+                profile["season_win_pct"] = win_pct
+                points_for = _flt(row["points_for_per_game"])
+                points_against = _flt(row["points_against_per_game"])
+                if points_for and points_against:
+                    margin = points_for - points_against
+                    for window in (3, 5, 10, 20):
+                        profile[f"points_last{window}"] = points_for
+                        profile[f"opp_points_last{window}"] = points_against
+                        profile[f"margin_last{window}"] = margin
+                        profile[f"off_rating_last{window}"] = points_for
+                        profile[f"def_rating_last{window}"] = points_against
+                profile["elo_pre"] = 1500.0 + 400.0 * math.log10(win_pct / (1.0 - win_pct))
+
+            stat_rows = con.execute(
+                """
+                SELECT *
+                FROM nba_current_team_stats
+                WHERE season_end_year = (SELECT MAX(season_end_year) FROM nba_current_team_stats)
+                """
+            ).fetchall()
+            for row in stat_rows:
+                team = self.aliases.get(str(row["team_abbrev"]).upper())
+                if not team:
+                    continue
+                profile = profiles.setdefault(team, {})
+                fg_pct = _flt(row["fg_pct"])
+                turnovers = _flt(row["turnovers_per_game"])
+                if fg_pct:
+                    for window in (3, 5, 10, 20):
+                        profile[f"efg_pct_last{window}"] = min(0.62, fg_pct + 0.035)
+                if turnovers:
+                    for window in (3, 5, 10, 20):
+                        profile[f"turnover_rate_last{window}"] = min(0.22, max(0.09, turnovers / 90.0))
+        return profiles
+
+    def _profile_value(self, team: str, base: str) -> float | None:
+        return self.profiles.get(team, {}).get(base)
+
+    def _feature_row(self, home: str, away: str) -> dict[str, float | None]:
+        hp = self.profiles[home]
+        ap = self.profiles[away]
+        home_elo = hp.get("elo_pre", 1500.0)
+        away_elo = ap.get("elo_pre", 1500.0)
+        elo_diff = home_elo - away_elo
+        row: dict[str, float | None] = {
+            "elo_pre_home": home_elo,
+            "elo_pre_away": away_elo,
+            "elo_pre_diff": elo_diff,
+            "elo_diff": elo_diff,
+            "elo_prob_home": 1.0 / (1.0 + 10.0 ** (-((elo_diff + 65.0) / 400.0))),
+            "opp_elo_pre_home": away_elo,
+            "opp_elo_pre_away": home_elo,
+            "opp_elo_pre_diff": away_elo - home_elo,
+            "rest_days_home": 2.0,
+            "rest_days_away": 2.0,
+            "rest_days_diff": 0.0,
+            "rest_diff": 0.0,
+            "home_b2b": 0.0,
+            "away_b2b": 0.0,
+            "is_back_to_back_home": 0.0,
+            "is_back_to_back_away": 0.0,
+            "is_back_to_back_diff": 0.0,
+            "away_road_trip": 0.0,
+            "home_road_trip_flag": 0.0,
+            "road_trip_game_home": 0.0,
+            "road_trip_game_away": 0.0,
+            "road_trip_game_diff": 0.0,
+        }
+        for feature in self.features:
+            if feature in row:
+                continue
+            if feature.endswith("_home"):
+                row[feature] = self._profile_value(home, feature[:-5])
+            elif feature.endswith("_away"):
+                row[feature] = self._profile_value(away, feature[:-5])
+            elif feature.endswith("_diff"):
+                base = feature[:-5]
+                home_value = self._profile_value(home, base)
+                away_value = self._profile_value(away, base)
+                row[feature] = home_value - away_value if home_value is not None and away_value is not None else None
+            else:
+                row[feature] = None
+        return row
+
+    def row(self, home: str, away: str) -> PredictionRow:
+        h = self.aliases.get(home.upper(), home.upper())
+        a = self.aliases.get(away.upper(), away.upper())
+        if h == a:
+            raise PredictionError("bad_request", "home and away must be different teams")
+        missing = [team for team in (h, a) if team not in self.profiles]
+        if missing:
+            raise PredictionError("no_data", f"unknown NBA team abbreviation(s) or no profile data: {', '.join(missing)}")
+        frame = pd.DataFrame([self._feature_row(h, a)], columns=self.features)
+        raw_logit = self.base_model.decision_function(frame)
+        prob = float(self.platt.predict_proba(raw_logit.reshape(-1, 1))[0, 1])
+        home_prob, away_prob = _prob_pair(prob, NBA_PROB_BOUNDS)
+        return PredictionRow(
+            game_id=f"hypothetical:nba:{h}:{a}",
+            game_date=None,
+            league="nba",
+            home=h,
+            away=a,
+            home_win_prob=home_prob,
+            away_win_prob=away_prob,
+            confidence="not reported (NBA calibration buckets are mostly under 150 games)",
+            model="nba-frozen-histgradientboosting + empirical Platt calibration",
+            model_accuracy=NBA_MODEL_ACCURACY,
+            baseline_accuracy=NBA_ELO_BASELINE_ACCURACY,
+            features_used=[
+                "frozen_nba_model_final_joblib",
+                "current_team_standings_profile",
+                "recent_historical_pregame_profile",
+                "empirical_platt_calibration_real_games",
+                "transparent_0.10_0.90_safety_bound",
+            ],
+            disclaimer=(
+                "NBA frozen holdout accuracy is 62.52% on 1,174 2023 games "
+                "(Wilson 95% CI 59.72%-65.25%), with log loss 0.6487 and Brier 0.2285. "
+                "It is higher than always-home (58.43%) but roughly matches and does not beat a simple "
+                "pure Elo baseline (62.95%); the -0.43% gap is inside the Wilson interval. "
+                "Probabilities include a transparent 10%-90% safety bound; this is not a betting "
+                "edge or confidence-tier claim."
+            ),
+        )
+
+
 def nhl_matchup(home: str, away: str) -> list[dict[str, Any]]:
     return [_nhl_scorer().row(home, away).as_dict()]
 
 
 def nfl_matchup(home: str, away: str) -> list[dict[str, Any]]:
     return [row.as_dict() for row in _nfl_scorer().rows(home, away)]
+
+
+def nba_matchup(home: str, away: str) -> list[dict[str, Any]]:
+    return [_nba_scorer().row(home, away).as_dict()]
 
 
 def nfl_holdout_predictions(season: int | None, week: int | None) -> list[dict[str, Any]]:
@@ -489,3 +709,8 @@ def _nhl_scorer() -> NHLScorer:
 @lru_cache(maxsize=1)
 def _nfl_scorer() -> NFLScorer:
     return NFLScorer()
+
+
+@lru_cache(maxsize=1)
+def _nba_scorer() -> NBAScorer:
+    return NBAScorer()

@@ -42,6 +42,8 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 ROUTER_MODULES = [
     ("app.routers.nhl", "/api/nhl", ["nhl"]),
     ("app.routers.nfl", "/api/nfl", ["nfl"]),
+    ("app.routers.nba", "/api/nba", ["nba"]),
+    ("app.routers.mlb", "/api/mlb", ["mlb"]),
     ("app.routers.predictions", "/api/predictions", ["predictions"]),
 ]
 
@@ -67,10 +69,14 @@ def health() -> dict:
             "databases": {
                 "nhl": settings.nhl_db.exists(),
                 "nfl": settings.nfl_db.exists(),
+                "nba": settings.nba_db.exists(),
+                "mlb": settings.mlb_db.exists(),
             },
             "season_state": {
                 "nhl": season_state_for(league="nhl"),
                 "nfl": season_state_for(league="nfl"),
+                "nba": season_state_for(league="nba"),
+                "mlb": season_state_for(league="mlb"),
             },
         },
         source="app",

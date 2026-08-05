@@ -105,6 +105,72 @@ NFL_TEAMS = [
     "WAS",
 ]
 
+NBA_TEAMS = [
+    "ATL",
+    "BOS",
+    "BKN",
+    "CHA",
+    "CHI",
+    "CLE",
+    "DAL",
+    "DEN",
+    "DET",
+    "GSW",
+    "HOU",
+    "IND",
+    "LAC",
+    "LAL",
+    "MEM",
+    "MIA",
+    "MIL",
+    "MIN",
+    "NOP",
+    "NYK",
+    "OKC",
+    "ORL",
+    "PHI",
+    "PHX",
+    "POR",
+    "SAC",
+    "SAS",
+    "TOR",
+    "UTA",
+    "WAS",
+]
+
+MLB_TEAMS = [
+    "ARI",
+    "ATL",
+    "BAL",
+    "BOS",
+    "CHC",
+    "CIN",
+    "CLE",
+    "COL",
+    "CWS",
+    "DET",
+    "HOU",
+    "KC",
+    "LAA",
+    "LAD",
+    "MIA",
+    "MIL",
+    "MIN",
+    "NYM",
+    "NYY",
+    "OAK",
+    "PHI",
+    "PIT",
+    "SD",
+    "SEA",
+    "SF",
+    "STL",
+    "TB",
+    "TEX",
+    "TOR",
+    "WSH",
+]
+
 
 @pytest.fixture
 def client() -> TestClient:
@@ -153,6 +219,30 @@ def make_standing(abbrev: str, index: int, league: str) -> dict[str, Any]:
     }
 
 
+def make_mlb_standing(abbrev: str, index: int) -> dict[str, Any]:
+    wins = 60 if index <= 15 else 50
+    losses = 50 if index <= 15 else 60
+    games = wins + losses
+    return {
+        **make_standing(abbrev, index, "nfl"),
+        "team_id": str(100 + index),
+        "games_played": games,
+        "wins": wins,
+        "losses": losses,
+        "ties": None,
+        "points": wins,
+        "points_pct": round(wins / games, 3),
+        "win_pct": round(wins / games, 3),
+        "goals_for": 500 + index,
+        "goals_against": 450 + index,
+        "conference": "American" if index <= 15 else "National",
+        "division": ["East", "Central", "West"][(index - 1) % 3],
+        "home_record": "30-25",
+        "away_record": "30-25",
+        "games_behind": None if index in {1, 16} else "1.0",
+    }
+
+
 @pytest.fixture
 def nhl_rows() -> list[dict[str, Any]]:
     return [make_standing(team, index, "nhl") for index, team in enumerate(NHL_TEAMS, start=1)]
@@ -161,6 +251,11 @@ def nhl_rows() -> list[dict[str, Any]]:
 @pytest.fixture
 def nfl_rows() -> list[dict[str, Any]]:
     return [make_standing(team, index, "nfl") for index, team in enumerate(NFL_TEAMS, start=1)]
+
+
+@pytest.fixture
+def mlb_rows() -> list[dict[str, Any]]:
+    return [make_mlb_standing(team, index) for index, team in enumerate(MLB_TEAMS, start=1)]
 
 
 @pytest.fixture
@@ -203,3 +298,78 @@ def mocked_nfl(monkeypatch: pytest.MonkeyPatch, nfl_rows: list[dict[str, Any]]) 
     monkeypatch.setattr(nfl, "teams_payload", lambda season: (teams, meta))
     monkeypatch.setattr(nfl, "players_payload", lambda team, stat, limit, season: (players, meta))
     monkeypatch.setattr(nfl, "schedule_for", lambda games_arg, season, week=None: schedule if season == 2025 else [])
+
+
+@pytest.fixture
+def mocked_mlb(monkeypatch: pytest.MonkeyPatch, mlb_rows: list[dict[str, Any]]) -> None:
+    import app.routers.mlb as mlb
+
+    meta = {"cached": True, "stale": False, "age_seconds": 0.0, "fetched_at": "2026-08-05T00:00:00Z"}
+    teams_by_id = {
+        int(row["team_id"]): {
+            "id": int(row["team_id"]),
+            "abbreviation": row["abbrev"],
+            "name": row["name"],
+            "venue": {"name": f"{row['abbrev']} Ballpark"},
+            "locationName": "Test City",
+            "clubName": row["name"].split()[-1],
+            "firstYearOfPlay": "1901",
+            "active": True,
+        }
+        for row in mlb_rows
+    }
+    schedule = [
+        {
+            "game_id": "823596",
+            "game_date": "2026-07-29",
+            "season": "2026",
+            "home": "NYM",
+            "away": "ATL",
+            "status": "final",
+            "home_score": 3,
+            "away_score": 2,
+            "doubleheader": "Y",
+            "game_number": 1,
+        },
+        {
+            "game_id": "823598",
+            "game_date": "2026-07-29",
+            "season": "2026",
+            "home": "NYM",
+            "away": "ATL",
+            "status": "scheduled",
+            "home_score": None,
+            "away_score": None,
+            "doubleheader": "Y",
+            "game_number": 2,
+        },
+        {
+            "game_id": "823999",
+            "game_date": "2026-07-29",
+            "season": "2026",
+            "home": "LAD",
+            "away": "TOR",
+            "status": "in-progress",
+            "home_score": 5,
+            "away_score": 4,
+            "doubleheader": "N",
+            "game_number": 1,
+        },
+    ]
+    players = [
+        {"player_id": "1", "name": "Test Hitter", "team": "Los Angeles Dodgers", "team_id": "119", "position": "DH", "group": "hitting", "rank": 1, "games_played": 100, "stat": "ops", "value": "1.000", "stats": {"ops": "1.000"}},
+        {"player_id": "2", "name": "Test Pitcher", "team": "Seattle Mariners", "team_id": "136", "position": "P", "group": "pitching", "rank": 1, "games_played": 25, "stat": "era", "value": "2.50", "stats": {"era": "2.50"}},
+    ]
+
+    monkeypatch.setattr(mlb, "_fetch_standings", lambda season: (mlb_rows, meta, season))
+    monkeypatch.setattr(mlb, "_team_meta", lambda season: (teams_by_id, meta))
+    monkeypatch.setattr(mlb, "_fetch_schedule", lambda date, season: (schedule, meta, season))
+    monkeypatch.setattr(
+        mlb,
+        "_fetch_players",
+        lambda season, team, stat, group, limit: (
+            [] if team == "XXX" else [row for row in players if row["group"] == group][:limit],
+            meta,
+            season,
+        ),
+    )

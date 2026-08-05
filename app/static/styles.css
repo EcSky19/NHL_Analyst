@@ -323,6 +323,16 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary), transparent 92%)
   font-size: .9rem;
   line-height: 1.45;
 }
+.coverage-note {
+  margin: 0 0 1rem;
+  padding: .85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--info), var(--border) 65%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface), var(--info) 6%);
+  color: var(--muted);
+  line-height: 1.45;
+}
+.coverage-note strong { color: var(--info); }
 .matchup-form {
   display: grid;
   grid-template-columns: repeat(3, minmax(160px, 1fr)) auto;
