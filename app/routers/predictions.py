@@ -11,6 +11,7 @@ from app.cache import cached_fetch
 from app.config import fail, ok, season_state_for, settings
 from app.services.prediction_service import (
     PredictionError,
+    mlb_matchup,
     nba_matchup,
     nfl_holdout_predictions,
     nfl_matchup,
@@ -82,17 +83,19 @@ def matchup(league: str, home: str, away: str) -> dict:
     league_norm = league.lower().strip()
     home_norm = home.upper().strip()
     away_norm = away.upper().strip()
-    if league_norm not in {"nhl", "nfl", "nba"}:
-        return fail("bad_request", "league must be nhl, nfl, or nba", source="predictions-matchup")
+    if league_norm not in {"nhl", "nfl", "nba", "mlb"}:
+        return fail("bad_request", "league must be nhl, nfl, nba, or mlb", source="predictions-matchup")
     try:
         rows, cache_meta = cached_fetch(
-            f"predictions:v6:matchup:{league_norm}:{home_norm}:{away_norm}",
+            f"predictions:v7:matchup:{league_norm}:{home_norm}:{away_norm}",
             settings.ttl_predictions,
             lambda: (
                 nhl_matchup(home_norm, away_norm)
                 if league_norm == "nhl"
                 else nba_matchup(home_norm, away_norm)
                 if league_norm == "nba"
+                else mlb_matchup(home_norm, away_norm)
+                if league_norm == "mlb"
                 else nfl_matchup(home_norm, away_norm)
             ),
         )
@@ -105,7 +108,11 @@ def matchup(league: str, home: str, away: str) -> dict:
         source="predictions-matchup",
         **cache_meta,
         season_state=season_state_for(datetime.now(timezone.utc), league_norm),
-        note="Ad-hoc hypothetical matchup only; game_id is labelled hypothetical and is not a scheduled fixture.",
+        note=(
+            "MLB matchup may be a real scheduled fixture when game_id is not labelled hypothetical; otherwise it is an ad-hoc hypothetical matchup."
+            if league_norm == "mlb"
+            else "Ad-hoc hypothetical matchup only; game_id is labelled hypothetical and is not a scheduled fixture."
+        ),
         market_note=(
             "No live betting line exists for a hypothetical matchup, so the secondary "
             "'market-aware' model falls back to a historical market proxy and lands very close "

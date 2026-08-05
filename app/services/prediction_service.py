@@ -6,12 +6,14 @@ import csv
 import json
 import math
 import sqlite3
-from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import httpx
 import joblib
 import pandas as pd
 
@@ -25,11 +27,25 @@ NFL_CONFIG = ROOT / "data" / "nfl" / "nfl_final_model_frozen_config.json"
 NFL_HOLDOUT = ROOT / "data" / "nfl" / "nfl_final_model_holdout_predictions.csv"
 NBA_ARTIFACT = ROOT / "data" / "nba" / "nba_model_final.joblib"
 NBA_CONFIG = ROOT / "data" / "nba" / "nba_model_config.json"
+MLB_ARTIFACT = ROOT / "data" / "mlb" / "mlb_win_model.joblib"
+MLB_CONFIG = ROOT / "data" / "mlb" / "mlb_win_model_frozen_config.json"
 NHL_PROB_BOUNDS = (0.20, 0.80)
 NFL_PROB_BOUNDS = (0.15, 0.85)
 NBA_PROB_BOUNDS = (0.10, 0.90)
+MLB_PROB_BOUNDS = (0.25, 0.75)
 NBA_MODEL_ACCURACY = 0.6252
 NBA_ELO_BASELINE_ACCURACY = 0.6295
+MLB_MODEL_ACCURACY = 0.5572
+MLB_ELO_BASELINE_ACCURACY = 0.5613
+MLB_ALWAYS_HOME_BASELINE_ACCURACY = 0.5428
+MLB_DISCLAIMER = (
+    "MLB frozen holdout accuracy is 55.72% (Wilson 95% CI 53.74%-57.68%) on the full 2025 season "
+    "of 2,430 games. It is only about 1.4 percentage points above the always-pick-home baseline "
+    "of 54.28%. It does NOT beat the Elo baseline of 56.13%, and that gap is inside the confidence "
+    "interval. Baseball is inherently the least predictable of the major sports; these probabilities "
+    "are not a betting edge. Probabilities include a transparent 25%-75% safety bound that should not "
+    "be load-bearing for this calibrated MLB model."
+)
 
 
 def _sigmoid(x: float) -> float:
@@ -135,6 +151,19 @@ class PredictionError(ValueError):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+@dataclass
+class _MLBTeamState:
+    games: int = 0
+    wins: int = 0
+    runs_for: int = 0
+    runs_against: int = 0
+    last10: deque[int] = field(default_factory=lambda: deque(maxlen=10))
+    last_game_date: date | None = None
+
+    def __post_init__(self) -> None:
+        self.last10 = deque(maxlen=10)
 
 
 class NHLScorer:
@@ -785,6 +814,296 @@ class NBAScorer:
         )
 
 
+class MLBScorer:
+    """Scores MLB matchups with the frozen logistic model and Platt calibrator."""
+
+    def __init__(self) -> None:
+        if not MLB_ARTIFACT.exists() or not settings.mlb_db.exists():
+            raise PredictionError("no_data", "MLB model artifact or database is unavailable")
+        self.config = json.loads(MLB_CONFIG.read_text(encoding="utf-8")) if MLB_CONFIG.exists() else {}
+        artifact = joblib.load(MLB_ARTIFACT)
+        self.base_model = artifact["base_model"]
+        self.platt = artifact["platt_calibrator"]
+        self.features: list[str] = list(artifact.get("features") or self.config["features"])
+        elo_config = self.config.get("elo", {})
+        self.elo_k = float(elo_config.get("k", 20.0))
+        self.elo_home_advantage = float(elo_config.get("home_advantage", 35.0))
+        self.elo_offseason_regression = float(elo_config.get("offseason_regression", 0.67))
+        self.teams = self._load_teams()
+        self._profile_cache: dict[tuple[int, date], dict[int, dict[str, float]]] = {}
+        self._fixture_cache: tuple[date, list[dict[str, str | None]]] | None = None
+
+    def _connect(self) -> sqlite3.Connection:
+        con = sqlite3.connect(settings.mlb_db, timeout=30)
+        con.row_factory = sqlite3.Row
+        return con
+
+    def _load_teams(self) -> dict[str, dict[str, Any]]:
+        with self._connect() as con:
+            season_row = con.execute("SELECT MAX(season) FROM mlb_teams WHERE active = 1").fetchone()
+            season = int(season_row[0]) if season_row and season_row[0] is not None else 2026
+            rows = con.execute(
+                """
+                SELECT team_id, abbreviation, full_name, league, division
+                FROM mlb_teams
+                WHERE season = ? AND active = 1
+                ORDER BY abbreviation
+                """,
+                (season,),
+            ).fetchall()
+        return {str(row["abbreviation"]).upper(): dict(row) for row in rows}
+
+    def _current_mlb_season(self, reference: date) -> int:
+        return reference.year - 1 if reference.month in (1, 2) else reference.year
+
+    def _prior_summaries(self, games: list[sqlite3.Row]) -> dict[tuple[int, int], dict[str, float]]:
+        buckets: dict[tuple[int, int], dict[str, float]] = {}
+        for game in games:
+            season = int(game["season"])
+            home = int(game["home_team_id"])
+            away = int(game["away_team_id"])
+            home_win = int(game["home_win"])
+            home_score = int(game["home_score"])
+            away_score = int(game["away_score"])
+            for team, win, runs_for, runs_against in (
+                (home, home_win, home_score, away_score),
+                (away, 1 - home_win, away_score, home_score),
+            ):
+                bucket = buckets.setdefault((season, team), {"games": 0.0, "wins": 0.0, "runs_for": 0.0, "runs_against": 0.0})
+                bucket["games"] += 1.0
+                bucket["wins"] += float(win)
+                bucket["runs_for"] += float(runs_for)
+                bucket["runs_against"] += float(runs_against)
+        out: dict[tuple[int, int], dict[str, float]] = {}
+        for key, bucket in buckets.items():
+            games_played = bucket["games"]
+            out[key] = {
+                "win_pct": bucket["wins"] / games_played if games_played else 0.5,
+                "run_diff_pg": (bucket["runs_for"] - bucket["runs_against"]) / games_played if games_played else 0.0,
+            }
+        return out
+
+    def _load_completed_games(self, reference: date) -> list[sqlite3.Row]:
+        with self._connect() as con:
+            return con.execute(
+                """
+                SELECT game_pk, season, game_date, game_datetime_utc, home_team_id, away_team_id,
+                       home_team, away_team, home_score, away_score, home_win
+                FROM mlb_games
+                WHERE game_type_code = 'R'
+                  AND home_win IS NOT NULL
+                  AND home_score IS NOT NULL
+                  AND away_score IS NOT NULL
+                  AND COALESCE(is_tie, 0) = 0
+                  AND game_date < ?
+                ORDER BY season, game_datetime_utc, game_pk
+                """,
+                (reference.isoformat(),),
+            ).fetchall()
+
+    def _profiles_for(self, season: int, reference: date) -> dict[int, dict[str, float]]:
+        cache_key = (season, reference)
+        if cache_key in self._profile_cache:
+            return self._profile_cache[cache_key]
+        games = self._load_completed_games(reference)
+        previous = self._prior_summaries(games)
+        states: dict[int, _MLBTeamState] = defaultdict(_MLBTeamState)
+        elos: dict[int, float] = defaultdict(lambda: 1500.0)
+        current_season: int | None = None
+
+        for game in games:
+            game_season = int(game["season"])
+            if current_season != game_season:
+                if current_season is not None:
+                    for team_id in list(elos.keys()):
+                        elos[team_id] = 1500.0 + self.elo_offseason_regression * (elos[team_id] - 1500.0)
+                states = defaultdict(_MLBTeamState)
+                current_season = game_season
+
+            home = int(game["home_team_id"])
+            away = int(game["away_team_id"])
+            hs = states[home]
+            a_s = states[away]
+            game_date = date.fromisoformat(str(game["game_date"])[:10])
+            home_elo_pre = elos[home]
+            away_elo_pre = elos[away]
+            home_expected = 1.0 / (1.0 + 10.0 ** (-((home_elo_pre + self.elo_home_advantage) - away_elo_pre) / 400.0))
+            home_win = int(game["home_win"])
+
+            for state, win, runs_for, runs_against in (
+                (hs, home_win, int(game["home_score"]), int(game["away_score"])),
+                (a_s, 1 - home_win, int(game["away_score"]), int(game["home_score"])),
+            ):
+                state.games += 1
+                state.wins += win
+                state.runs_for += runs_for
+                state.runs_against += runs_against
+                state.last10.append(win)
+                state.last_game_date = game_date
+            elos[home] = home_elo_pre + self.elo_k * (home_win - home_expected)
+            elos[away] = away_elo_pre + self.elo_k * ((1 - home_win) - (1 - home_expected))
+
+        if current_season != season:
+            if current_season is not None:
+                for team_id in list(elos.keys()):
+                    elos[team_id] = 1500.0 + self.elo_offseason_regression * (elos[team_id] - 1500.0)
+            states = defaultdict(_MLBTeamState)
+
+        profiles: dict[int, dict[str, float]] = {}
+        for team in self.teams.values():
+            team_id = int(team["team_id"])
+            state = states[team_id]
+            prior = previous.get((season - 1, team_id), {"win_pct": 0.5, "run_diff_pg": 0.0})
+            profiles[team_id] = {
+                "games": float(state.games),
+                "win_pct": state.wins / state.games if state.games else 0.5,
+                "run_diff_pg": (state.runs_for - state.runs_against) / state.games if state.games else 0.0,
+                "runs_for_pg": state.runs_for / state.games if state.games else 4.5,
+                "runs_against_pg": state.runs_against / state.games if state.games else 4.5,
+                "last10_win_pct": sum(state.last10) / len(state.last10) if state.last10 else 0.5,
+                "rest_days": float(min(10, max(0, (reference - state.last_game_date).days))) if state.last_game_date else 7.0,
+                "prior_win_pct": float(prior["win_pct"]),
+                "prior_run_diff_pg": float(prior["run_diff_pg"]),
+                "elo": float(elos[team_id]),
+            }
+        self._profile_cache[cache_key] = profiles
+        return profiles
+
+    def _feature_row(self, home_id: int, away_id: int, season: int, reference: date) -> dict[str, float]:
+        profiles = self._profiles_for(season, reference)
+        hp = profiles[home_id]
+        ap = profiles[away_id]
+        row = {
+            "pregame_win_pct_diff": hp["win_pct"] - ap["win_pct"],
+            "pregame_run_diff_pg_diff": hp["run_diff_pg"] - ap["run_diff_pg"],
+            "pregame_runs_scored_pg_diff": hp["runs_for_pg"] - ap["runs_for_pg"],
+            "pregame_runs_allowed_pg_diff": hp["runs_against_pg"] - ap["runs_against_pg"],
+            "last10_win_pct_diff": hp["last10_win_pct"] - ap["last10_win_pct"],
+            "rest_days_diff_capped": hp["rest_days"] - ap["rest_days"],
+            "prior_season_win_pct_diff": hp["prior_win_pct"] - ap["prior_win_pct"],
+            "prior_season_run_diff_pg_diff": hp["prior_run_diff_pg"] - ap["prior_run_diff_pg"],
+            "elo_rating_diff_with_home_adv": (hp["elo"] + self.elo_home_advantage) - ap["elo"],
+            "home_games_played_pre": hp["games"],
+            "away_games_played_pre": ap["games"],
+        }
+        return {feature: row[feature] for feature in self.features}
+
+    def _db_upcoming_fixtures(self, today: date) -> list[dict[str, str | None]]:
+        with self._connect() as con:
+            rows = con.execute(
+                """
+                SELECT game_pk, game_date, home_team, away_team
+                FROM mlb_games
+                WHERE game_type_code = 'R'
+                  AND game_date >= ?
+                  AND status_code NOT IN ('F', 'FR', 'FM', 'FO')
+                  AND home_team IS NOT NULL
+                  AND away_team IS NOT NULL
+                ORDER BY game_datetime_utc, game_pk
+                LIMIT 200
+                """,
+                (today.isoformat(),),
+            ).fetchall()
+        return [{"game_id": str(row["game_pk"]), "game_date": str(row["game_date"])[:10], "home": str(row["home_team"]).upper(), "away": str(row["away_team"]).upper()} for row in rows]
+
+    def _api_upcoming_fixtures(self, today: date) -> list[dict[str, str | None]]:
+        fixtures: list[dict[str, str | None]] = []
+        end = today + timedelta(days=14)
+        url = f"{settings.mlb_api_base}/schedule?sportId=1&startDate={today.isoformat()}&endDate={end.isoformat()}&gameTypes=R"
+        try:
+            with httpx.Client(timeout=settings.request_timeout, follow_redirects=True) as client:
+                team_raw = client.get(f"{settings.mlb_api_base}/teams?sportId=1&season={self._current_mlb_season(today)}").json()
+                teams_by_id = {
+                    int(team["id"]): str(team.get("abbreviation") or team.get("fileCode") or "").upper()
+                    for team in team_raw.get("teams", [])
+                    if isinstance(team, dict) and team.get("id") is not None
+                }
+                raw = client.get(url).json()
+        except Exception:
+            return fixtures
+        for day in raw.get("dates", []) if isinstance(raw, dict) else []:
+            for game in day.get("games", []):
+                status = game.get("status") or {}
+                if str(status.get("abstractGameState") or "").lower() == "final":
+                    continue
+                teams = game.get("teams") or {}
+                home_team = ((teams.get("home") or {}).get("team") or {})
+                away_team = ((teams.get("away") or {}).get("team") or {})
+                home_id = int(home_team.get("id")) if home_team.get("id") is not None else -1
+                away_id = int(away_team.get("id")) if away_team.get("id") is not None else -1
+                home = home_team.get("abbreviation") or teams_by_id.get(home_id)
+                away = away_team.get("abbreviation") or teams_by_id.get(away_id)
+                if home and away:
+                    fixtures.append(
+                        {
+                            "game_id": str(game.get("gamePk")) if game.get("gamePk") is not None else None,
+                            "game_date": str(game.get("officialDate") or "")[:10] or None,
+                            "home": str(home).upper(),
+                            "away": str(away).upper(),
+                        }
+                    )
+        return fixtures
+
+    def _upcoming_fixtures(self) -> list[dict[str, str | None]]:
+        today = datetime.now(timezone.utc).date()
+        if self._fixture_cache and self._fixture_cache[0] == today:
+            return self._fixture_cache[1]
+        fixtures = self._db_upcoming_fixtures(today)
+        if not fixtures:
+            fixtures = self._api_upcoming_fixtures(today)
+        self._fixture_cache = (today, fixtures)
+        return fixtures
+
+    def _fixture_for(self, home: str, away: str) -> dict[str, str | None] | None:
+        for fixture in self._upcoming_fixtures():
+            if fixture.get("home") == home and fixture.get("away") == away:
+                return fixture
+        return None
+
+    def row(self, home: str, away: str) -> PredictionRow:
+        h, a = home.upper(), away.upper()
+        if h == a:
+            raise PredictionError("bad_request", "home and away must be different teams")
+        missing = [team for team in (h, a) if team not in self.teams]
+        if missing:
+            if any(team in {"ARI", "CAR", "LV"} for team in missing):
+                raise PredictionError("bad_request", f"team abbreviation(s) are not MLB teams: {', '.join(missing)}")
+            raise PredictionError("not_found", f"MLB team '{', '.join(missing)}' was not found.")
+        fixture = self._fixture_for(h, a)
+        reference = date.fromisoformat(str(fixture["game_date"])) if fixture and fixture.get("game_date") else datetime.now(timezone.utc).date()
+        season = self._current_mlb_season(reference)
+        home_id = int(self.teams[h]["team_id"])
+        away_id = int(self.teams[a]["team_id"])
+        frame = pd.DataFrame([self._feature_row(home_id, away_id, season, reference)], columns=self.features)
+        raw_prob = float(self.base_model.predict_proba(frame)[0, 1])
+        prob = float(self.platt.predict_proba([[_logit(raw_prob)]])[0, 1])
+        home_prob, away_prob = _prob_pair(prob, MLB_PROB_BOUNDS)
+        return PredictionRow(
+            game_id=str(fixture["game_id"]) if fixture and fixture.get("game_id") else f"hypothetical:mlb:{h}:{a}",
+            game_date=str(fixture["game_date"]) if fixture and fixture.get("game_date") else None,
+            league="mlb",
+            home=h,
+            away=a,
+            home_win_prob=home_prob,
+            away_win_prob=away_prob,
+            confidence="not reported (MLB calibration buckets are mostly under 150 games)",
+            model="mlb-frozen-logistic-regression + empirical Platt calibration",
+            model_accuracy=MLB_MODEL_ACCURACY,
+            baseline_accuracy=MLB_ELO_BASELINE_ACCURACY,
+            features_used=[
+                "frozen_mlb_win_model_joblib",
+                "completed_games_before_reference_date_only",
+                "season_to_date_team_profile",
+                "last10_completed_games_profile",
+                "prior_season_profile",
+                "elo_with_fixed_home_advantage",
+                "empirical_platt_calibration_real_games",
+                "transparent_0.25_0.75_safety_bound_not_load_bearing",
+            ],
+            disclaimer=MLB_DISCLAIMER,
+        )
+
+
 def nhl_matchup(home: str, away: str) -> list[dict[str, Any]]:
     return [_nhl_scorer().row(home, away).as_dict()]
 
@@ -795,6 +1114,10 @@ def nfl_matchup(home: str, away: str) -> list[dict[str, Any]]:
 
 def nba_matchup(home: str, away: str) -> list[dict[str, Any]]:
     return [_nba_scorer().row(home, away).as_dict()]
+
+
+def mlb_matchup(home: str, away: str) -> list[dict[str, Any]]:
+    return [_mlb_scorer().row(home, away).as_dict()]
 
 
 def nfl_holdout_predictions(season: int | None, week: int | None) -> list[dict[str, Any]]:
@@ -849,3 +1172,8 @@ def _nfl_scorer() -> NFLScorer:
 @lru_cache(maxsize=1)
 def _nba_scorer() -> NBAScorer:
     return NBAScorer()
+
+
+@lru_cache(maxsize=1)
+def _mlb_scorer() -> MLBScorer:
+    return MLBScorer()

@@ -1,0 +1,52 @@
+{
+  "model": "L2 logistic regression with separate Platt calibration",
+  "frozen_at_utc": "2026-08-05T23:48:22.916879+00:00",
+  "frozen_before_holdout_scoring": true,
+  "random_seed": 20260805,
+  "train_seasons": [
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "validation_season": 2023,
+  "calibration_season": 2024,
+  "holdout_season": 2025,
+  "excluded_seasons": [
+    2026
+  ],
+  "features": [
+    "pregame_win_pct_diff",
+    "pregame_run_diff_pg_diff",
+    "pregame_runs_scored_pg_diff",
+    "pregame_runs_allowed_pg_diff",
+    "last10_win_pct_diff",
+    "rest_days_diff_capped",
+    "prior_season_win_pct_diff",
+    "prior_season_run_diff_pg_diff",
+    "elo_rating_diff_with_home_adv",
+    "home_games_played_pre",
+    "away_games_played_pre"
+  ],
+  "elo": {
+    "k": 20.0,
+    "home_advantage": 35.0,
+    "offseason_regression": 0.67
+  },
+  "logistic_regression": {
+    "C": 0.5,
+    "penalty": "l2",
+    "solver": "lbfgs"
+  },
+  "validation_metrics_used_before_freeze": {
+    "n_games": 2430,
+    "accuracy": 0.5613168724279836,
+    "log_loss_uncalibrated": 0.6801221625413564,
+    "brier_uncalibrated": 0.24359758465027154
+  },
+  "note": "This configuration is written before any holdout probability, prediction, or metric is computed."
+}

@@ -222,7 +222,19 @@ MLB data:
 - Spot-check: 2025 World Series Game 7, LAD 5 at TOR 4.
 - MLB is currently mid-season and is the only league serving genuinely live data (games were observed transitioning Warmup -> In Progress).
 
-There is **no trained MLB prediction model**. MLB matchup predictions intentionally return an honest unsupported error; do not assume a hidden model exists.
+### MLB model (fourth honest negative)
+
+An MLB win model is now trained and served, replacing the earlier "no trained model" state. It **does not beat a plain Elo baseline** and is published on that basis:
+
+- Model accuracy: **55.72%** (Wilson 95% CI 53.74%-57.68%) on a frozen 2,430-game 2025 holdout.
+- Pure Elo baseline: **56.13%**. Always-pick-home: **54.28%**.
+- The 2026 season is deliberately excluded from evaluation because it is still in progress.
+
+As with NBA, the API reports a `baseline_accuracy` that is **higher** than `model_accuracy`. That is intentional and correct, not a display bug.
+
+Predicted probabilities span roughly 0.40-0.66 across ordered team pairs, with the best-vs-worst matchup (MIL 70-43 at home vs LAA 43-70) at **0.662**. This narrow range is the correct shape for baseball, where even a dominant team beats a poor one only modestly. Widening it would recreate the original calibration defect described in the retraction above. A sweep of 132 ordered matchups returned 132 distinct values with none pinned at the clamp bounds.
+
+Known limitation: the model uses **no pregame starting-pitcher information**, which is the single largest known gap in MLB win prediction.
 
 ## External API caveats
 
