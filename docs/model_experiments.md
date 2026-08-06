@@ -58,3 +58,52 @@ Integrity checks passed:
 - There are no duplicate game IDs, self-games, ties, or null scores.
 
 Future readers should note that in this database, `season` is the season end year as an integer. For example, `2024` means the 2023-24 NBA season.
+
+## MLB starting-pitcher features: fifth honest negative
+
+Source report: `data\reports\mlb_pitcher_model_results.md`. Script: `scripts\mlb\train_mlb_pitcher_model.py`.
+
+The served MLB model names its own largest gap: it uses no pregame starting-pitcher
+information. That gap was closed experimentally and measured on the same frozen
+2,430-game 2025 holdout.
+
+| model | accuracy | log loss | Brier |
+| --- | --- | --- | --- |
+| pitcher features | 0.5584 | **0.6795** | **0.2434** |
+| served MLB model | 0.5572 | 0.6804 | 0.2438 |
+| pure Elo | **0.5613** | 0.6875 | 0.2471 |
+| always pick home | 0.5428 | 0.6896 | 0.2482 |
+
+Starter assignments were available for 2,425 of 2,430 holdout games (99.79%), so the
+result is not an artifact of thin coverage.
+
+The pitcher model has the best log loss and Brier of any MLB model built here,
+including Elo. That is a real probability-quality result and mirrors the NBA blend
+finding. But it still does not beat Elo on accuracy, and it beats the served model by
+0.12 percentage points, which is **three games out of 2,430** and far inside the
+roughly two-point Wilson noise floor.
+
+### It was deliberately not promoted to serving
+
+Two reasons, recorded so the decision can be re-examined:
+
+1. The accuracy and probability-quality gains over the served model are both at noise
+   scale. Promoting on a three-game margin is exactly the kind of overfitting to a
+   single holdout that this project's retraction was about.
+2. There is an operational cost that the offline metric hides. Starting pitchers come
+   from the StatsAPI `probablePitcher` hydrate and are not known far in advance, so a
+   pitcher-dependent serving path would degrade or fail for future-dated matchups,
+   which is the main thing the UI is asked for.
+
+### Leakage was checked, not assumed
+
+Per-game pitcher logs contain each game's own earned runs and outs, so building these
+features naively would leak the result. Three independent checks:
+
+- Features are snapshotted from cumulative state **before** that game's line is added,
+  over logs sorted by UTC start time.
+- A spot check on the most recent holdout start (Logan Webb, COL at SF, 2025-09-28)
+  confirmed the pregame ERA used 179 prior games (3.3974) and excluded the game's own
+  line of 16 outs and 0 earned runs, which would have moved it to 3.3803.
+- The accuracy magnitude itself is the strongest evidence. A model that had leaked
+  in-game pitcher lines would score far above 70%, not 55.84%.

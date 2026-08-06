@@ -234,7 +234,7 @@ As with NBA, the API reports a `baseline_accuracy` that is **higher** than `mode
 
 Predicted probabilities span roughly 0.40-0.66 across ordered team pairs, with the best-vs-worst matchup (MIL 70-43 at home vs LAA 43-70) at **0.662**. This narrow range is the correct shape for baseball, where even a dominant team beats a poor one only modestly. Widening it would recreate the original calibration defect described in the retraction above. A sweep of 132 ordered matchups returned 132 distinct values with none pinned at the clamp bounds.
 
-Known limitation: the model uses **no pregame starting-pitcher information**, which is the single largest known gap in MLB win prediction.
+Known limitation, now measured rather than merely noted: the served model uses **no pregame starting-pitcher information**. A pitcher-feature variant was built and evaluated on the same holdout (starters available for 2,425 of 2,430 games). It reached **55.84%** — better probability quality than any other MLB model here (log loss 0.6795, Brier 0.2434, both beating Elo) but still **short of Elo's 56.13%** on accuracy, and ahead of the served model by only 3 games out of 2,430. It was **not promoted to serving**: the margin is noise-scale, and starting pitchers are not known far enough in advance to serve future matchups reliably. See `docs/model_experiments.md`.
 
 ## External API caveats
 

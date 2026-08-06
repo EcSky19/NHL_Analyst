@@ -1,0 +1,76 @@
+{
+  "model": "L2 logistic regression with separate Platt calibration and pregame starting-pitcher features",
+  "frozen_at_utc": "2026-08-05T23:58:58.081572+00:00",
+  "frozen_before_holdout_scoring": true,
+  "random_seed": 20260805,
+  "train_seasons": [
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "validation_season": 2023,
+  "calibration_season": 2024,
+  "holdout_season": 2025,
+  "excluded_seasons": [
+    2026
+  ],
+  "features": [
+    "pregame_win_pct_diff",
+    "pregame_run_diff_pg_diff",
+    "pregame_runs_scored_pg_diff",
+    "pregame_runs_allowed_pg_diff",
+    "last10_win_pct_diff",
+    "rest_days_diff_capped",
+    "prior_season_win_pct_diff",
+    "prior_season_run_diff_pg_diff",
+    "elo_rating_diff_with_home_adv",
+    "home_games_played_pre",
+    "away_games_played_pre",
+    "sp_starts_pre_diff",
+    "sp_ip_pre_diff",
+    "sp_era_pre_diff",
+    "sp_whip_pre_diff",
+    "sp_k9_pre_diff",
+    "sp_bb9_pre_diff",
+    "sp_hr9_pre_diff",
+    "sp_recent3_ip_pre_diff",
+    "sp_recent3_era_pre_diff",
+    "sp_recent3_whip_pre_diff",
+    "sp_recent3_k9_pre_diff",
+    "home_sp_known",
+    "away_sp_known",
+    "home_sp_no_prior",
+    "away_sp_no_prior",
+    "home_sp_starts_pre",
+    "away_sp_starts_pre"
+  ],
+  "logistic_regression": {
+    "C": 0.5,
+    "penalty": "l2",
+    "solver": "lbfgs"
+  },
+  "pitcher_feature_source": "StatsAPI schedule probablePitcher assignments plus StatsAPI people gameLog pitching stats shifted before each game.",
+  "rookie_or_no_prior_fallback": "Ratio stats are left missing and handled by a median imputer fit on the training fold; no-prior indicator features are included.",
+  "validation_metrics_used_before_freeze": {
+    "n_games": 2430,
+    "accuracy": 0.5592592592592592,
+    "log_loss_uncalibrated": 0.6798193628483516,
+    "brier_uncalibrated": 0.2434552871062391
+  },
+  "coverage_available_before_holdout_scoring": {
+    "season": 2025,
+    "n_games": 2430,
+    "both_starters": 2425,
+    "both_starters_rate": 0.9979423868312757,
+    "both_starters_with_prior_stats": 2388,
+    "both_starters_with_prior_stats_rate": 0.9827160493827161,
+    "home_starter_known": 2427,
+    "away_starter_known": 2428
+  },
+  "note": "This configuration was written before holdout probabilities, predictions, or metrics were computed."
+}
