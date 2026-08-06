@@ -195,8 +195,8 @@ Measured on a held-out season, alongside ESPN's own published win-probability cu
 | League | Ours (Brier) | Ours (log loss) | Analytic baseline (Brier) | ESPN (Brier) |
 | --- | ---: | ---: | ---: | ---: |
 | NBA | 0.167947 | 0.491963 | 0.166237 | **0.157319** |
-| NFL | 0.164048 | 0.480777 | 0.163775 | **0.145762** |
-| MLB | **0.154604** | **0.463933** | 0.155233 | 0.153735 (partial coverage) |
+| NFL | 0.164034 | 0.479629 | 0.163775 | **0.145762** |
+| MLB | **0.154305** | **0.462951** | 0.155233 | 0.153735 (partial coverage) |
 | NHL | 0.175316 | 0.515720 | *is* the baseline | none published |
 
 Read that honestly:
@@ -206,6 +206,8 @@ Read that honestly:
 - Our NBA and NFL models beat the two-parameter analytic baseline on log loss and calibration but **lose to it on Brier** — a genuinely mixed result, not a win.
 - **NHL ships the analytic baseline itself**, because seven learned models across two rounds all failed to beat it, and the best of them was additionally non-monotone in margin (it rated a 4-goal lead below a 3-goal lead). See `docs\live_wp\nhl.md`.
 - ESPN publishes **no** win-probability curve for NHL, so that league has no external benchmark at all.
+- Every shipped model is required to be **monotone in both margin and time**: more lead is never worse, and a lead never loses value as the clock runs out. The time half of that rule was added late and caught NFL and MLB already violating it; both were refit and came out slightly more accurate, not less.
+- We know part of *why* ESPN wins the NFL: their model sees possession, down, distance and field position, and ours sees only score and clock. Measured on data we harvested to test exactly this, adding that situational state improves our NFL Brier from 0.170280 to 0.166505 — real, but it closes only about a sixth of the gap to ESPN, so situational blindness is not the whole explanation. See `docs\live_wp\nfl_situation_data.md`.
 
 These are model estimates, not betting lines, and they are not accurate enough to bet on. If a league has no validated artifact the API returns `available: false` with a reason and the UI shows "unavailable" rather than inventing a number. Per-league validation details, including failed experiments, are in `docs\live_wp\{league}.md`.
 
