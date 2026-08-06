@@ -90,3 +90,20 @@ quarters treated as four 15-minute periods and overtime returning `0.0`.
   convention as the old harvest is used; a small number of row-to-row increases
   remain because ESPN includes clock corrections and quarter-boundary
   administrative rows.
+- Modeling probe: those 172 row-to-row `frac_remaining` increases were kept,
+  not clamped or dropped, because they are ESPN clock corrections on otherwise
+  valid plays and the model treats each row as an independent snapshot.
+
+## Live scoreboard availability check
+
+Checked 2026-08-06 against ESPN's scoreboard feed used by `app/routers/nfl.py`
+(`site.web.api.espn.com ... /football/nfl/scoreboard?dates=20260806`). The
+only slate event was pregame, and its `competition.situation` object was absent
+(`situation` keys: none). Therefore no in-progress scoreboard payload was
+available to confirm live `down`, `distance`, `yardLine`, `yardsToEndzone`, or
+`possession`; this serving path remains explicitly untested until an NFL game is
+live. A recorded summary payload for harvested game `401671789` did expose
+per-play `start.down`, `start.distance`, `start.yardLine`,
+`start.yardsToEndzone`, and `start.team.id`; the scoreboard router now passes
+analogous raw live situation fields through when ESPN provides them and
+otherwise leaves the model fields unobserved.

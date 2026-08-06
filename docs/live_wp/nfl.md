@@ -39,7 +39,8 @@ Selection prioritized validation calibration gap, then Brier/log loss, among mod
 
 | Predictor | Brier | Log loss |
 | --- | ---: | ---: |
-| **NFL live WP round 3** | **0.164034** | **0.479629** |
+| **NFL live WP round 4** | **0.163903** | **0.479367** |
+| NFL live WP round 3 | 0.164034 | 0.479629 |
 | NFL live WP round 2 | 0.164048 | 0.480777 |
 | NFL live WP round 1 | 0.166640 | 0.490719 |
 | ESPN published WP | 0.145762 | 0.437000 |
@@ -47,7 +48,48 @@ Selection prioritized validation calibration gap, then Brier/log loss, among mod
 | Leader baseline | 0.189586 | 0.570677 |
 | Constant 0.5 | 0.250000 | 0.693147 |
 
-Round 3 honestly improves over round 2 by a small amount and fixes the local time wobble, but it still does **not** close the full gap to ESPN.
+Round 4 honestly improves over round 3 by a small amount on the original
+snapshot evaluation and fixes the local time wobble, but it still does **not**
+close the full gap to ESPN.
+
+## Round 4 situational model
+
+`data\live_wp\nfl_situation.db` adds possession, down, distance and field
+position. Round 4 uses a cubic logistic base model over the existing margin/time
+features plus the NFL situational features, keeps the normal-baseline blend and
+time monotone envelope, and adds a local cumulative margin envelope. Training
+includes missing-situation copies so live payloads without a situation block
+degrade gracefully. `pregame_logit` and `pregame_logit_decay` are in the
+artifact feature list, but this harvest has no pregame prior column, so they are
+neutral zero values in this round.
+
+| Same `nfl_situation.db` 2024 rows | Brier | Log loss |
+| --- | ---: | ---: |
+| Old margin/time round-3 recipe | **0.161824** | **0.474385** |
+| **Round 4 full recipe + situation** | **0.160183** | **0.469577** |
+| ESPN published WP | 0.144450 | 0.433754 |
+
+Against ESPN on these rows, the old recipe gap is 0.040631 log-loss points and
+round 4's gap is 0.035823, closing about **11.8%** of the ESPN log-loss gap.
+On the original `nfl_snapshots.db` evaluation, where situational fields are
+unobserved, round 4 scores **0.163903 Brier / 0.479367 log loss**, a small
+published-table improvement over round 3.
+
+The 2023-only validation alpha sweep selected a 67.5% normal-baseline blend
+among monotonic candidates. Checked validation log loss: alpha 0.60 failed
+fixed-situation margin monotonicity; alpha 0.625 failed; alpha 0.65 failed;
+alpha 0.675 passed at 0.446891; alpha 0.70 passed at 0.447279.
+
+Live serving now threads ESPN scoreboard `situation` fields into `GameState`
+when present: possession is resolved by team id, and `yardLine` is converted to
+yards to the offense's opponent end zone (`100 - yardLine` for home possession,
+`yardLine` for away possession). If the block is absent, the router passes
+`None` for every situational field.
+
+Sanity check for omitted situation at margin +3 with 10% regulation remaining:
+unknown situation = 0.739258, home 1st-and-10 at midfield = 0.774449, and away
+1st-and-10 in the red zone = 0.669793. The model uses `situation_known`, but
+missing-vs-known cases do not lurch to extreme probabilities.
 
 ## Calibration
 

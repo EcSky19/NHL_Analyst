@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from app.config import fail, ok, season_state_for, settings, utc_now_iso
+from app.services.espn_client import ET_ZONE, fetch_scoreboard
 from app.services.espn_pbp import REGULATION, frac_remaining_clock, frac_remaining_innings, parse_clock_seconds
 from app.services.live_winprob import GameState, predict_home_win_prob
 from app.services.nfl_service import (
@@ -104,6 +105,7 @@ def live() -> dict[str, Any]:
     """Return currently in-progress NFL games from ESPN's current slate."""
     try:
         rows, slate, meta = espn_live_games(30)
+        rows = _attach_nfl_live_situations(rows)
         rows = [_with_live_win_probability(row, "nfl") for row in rows]
         if meta.get("stale"):
             return fail(
@@ -321,6 +323,7 @@ def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
     else:
         is_overtime = period > int(REGULATION[league]["periods"])
         frac_remaining = frac_remaining_clock(league, period, parse_clock_seconds(live.get("clock")))
+    situation = _nfl_situation_inputs(row) if league == "nfl" else {}
 
     prob, meta = predict_home_win_prob(
         GameState(
@@ -329,6 +332,7 @@ def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
             frac_remaining=frac_remaining,
             period=period,
             is_overtime=is_overtime,
+            **situation,
         )
     )
     if prob is None:
@@ -353,6 +357,76 @@ def _with_live_win_probability(row: dict[str, Any], league: str) -> dict[str, An
     if row.get("status") != "live":
         return row
     return {**row, "win_probability": _live_win_probability(row, league)}
+
+
+def _attach_nfl_live_situations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach raw ESPN situation fields that the shared schedule contract omits."""
+    if not rows:
+        return rows
+    today_et = datetime.now(timezone.utc).astimezone(ET_ZONE).date()
+    try:
+        events, _meta = fetch_scoreboard("nfl", dates=today_et.strftime("%Y%m%d"), ttl=30)
+    except Exception:  # noqa: BLE001
+        return rows
+    raw_by_id: dict[str, dict[str, Any]] = {}
+    for event in events:
+        comp = ((event.get("competitions") or [{}])[0]) if isinstance(event, dict) else {}
+        raw_by_id[str(event.get("id") or comp.get("id") or "")] = comp
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        comp = raw_by_id.get(str(row.get("game_id") or ""))
+        situation = (comp or {}).get("situation") or {}
+        if not situation:
+            out.append(row)
+            continue
+        competitors = (comp or {}).get("competitors") or []
+        home = next((c for c in competitors if c.get("homeAway") == "home"), {})
+        away = next((c for c in competitors if c.get("homeAway") == "away"), {})
+        live = dict(row.get("live") or {})
+        live["situation"] = {
+            "possession": situation.get("possession"),
+            "home_team_id": (home.get("team") or {}).get("id") or home.get("id"),
+            "away_team_id": (away.get("team") or {}).get("id") or away.get("id"),
+            "down": situation.get("down"),
+            "distance": situation.get("distance"),
+            "yardLine": situation.get("yardLine"),
+            "yardsToEndzone": situation.get("yardsToEndzone"),
+        }
+        out.append({**row, "live": live})
+    return out
+
+
+def _nfl_situation_inputs(row: dict[str, Any]) -> dict[str, Any]:
+    live = row.get("live") if isinstance(row.get("live"), dict) else {}
+    situation = live.get("situation") if isinstance(live.get("situation"), dict) else {}
+    possession = situation.get("possession") or situation.get("possession_team_id")
+    home_id = situation.get("home_team_id") or row.get("home_team_id")
+    offense_is_home = None
+    if possession is not None and home_id is not None:
+        offense_is_home = str(possession) == str(home_id)
+    elif live.get("possession") is not None and row.get("home") is not None:
+        offense_is_home = str(live.get("possession")) == str(row.get("home"))
+
+    down = _wp_int(situation.get("down"))
+    distance = _wp_int(situation.get("distance"))
+    yards_to_endzone = _wp_int(situation.get("yardsToEndzone") or situation.get("yards_to_endzone"))
+    if yards_to_endzone is None:
+        yards_to_endzone = _nfl_yards_to_endzone(situation.get("yardLine"), offense_is_home)
+
+    return {
+        "offense_is_home": offense_is_home,
+        "down": down,
+        "distance": distance,
+        "yards_to_endzone": yards_to_endzone,
+    }
+
+
+def _nfl_yards_to_endzone(yard_line: Any, offense_is_home: bool | None) -> int | None:
+    yard = _wp_int(yard_line)
+    if yard is None or offense_is_home is None:
+        return None
+    yard = min(max(yard, 0), 100)
+    return 100 - yard if offense_is_home else yard
 
 
 def _wp_int(value: Any) -> int | None:

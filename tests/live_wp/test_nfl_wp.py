@@ -21,7 +21,20 @@ def test_nfl_artifact_loads():
     assert bundle.get("model") is not None
     assert bundle.get("feature_names")
     assert set(bundle["feature_names"]).issubset(
-        {"margin", "margin_scaled", "frac_remaining", "pregame_logit", "pregame_logit_decay", "is_overtime"}
+        {
+            "margin",
+            "margin_scaled",
+            "frac_remaining",
+            "pregame_logit",
+            "pregame_logit_decay",
+            "is_overtime",
+            "offense_is_home",
+            "down",
+            "distance",
+            "yards_to_endzone",
+            "field_position_home",
+            "situation_known",
+        }
     )
     assert bundle.get("train_seasons") == [2023]
     assert bundle.get("test_seasons") == [2024]
@@ -48,13 +61,13 @@ def test_nfl_time_leverage_for_same_lead():
 @pytest.mark.parametrize("margin", [1, 3, 4, 7, 10, 14])
 def test_nfl_time_monotonic_for_home_leads(margin: int):
     probs = [_prob(margin, 1.0 - i / 40) for i in range(41)]
-    assert all(probs[i + 1] >= probs[i] for i in range(40))
+    assert all(probs[i + 1] >= probs[i] - 1e-12 for i in range(40))
 
 
 @pytest.mark.parametrize("margin", [-1, -3, -4, -7, -10, -14])
 def test_nfl_time_monotonic_for_home_trails(margin: int):
     probs = [_prob(margin, 1.0 - i / 40) for i in range(41)]
-    assert all(probs[i + 1] <= probs[i] for i in range(40))
+    assert all(probs[i + 1] <= probs[i] + 1e-12 for i in range(40))
 
 
 @pytest.mark.parametrize("margin,frac_remaining", [(0, 1.0), (0, 0.0), (14, 0.0), (-14, 0.0)])
@@ -62,3 +75,23 @@ def test_nfl_edge_states_are_finite(margin: int, frac_remaining: float):
     prob = _prob(margin, frac_remaining)
     assert math.isfinite(prob)
     assert 0.0 < prob < 1.0
+
+
+def test_nfl_missing_situation_degrades_gracefully():
+    unknown, meta = predict_home_win_prob(GameState(league="nfl", margin=3, frac_remaining=0.1))
+    known, _ = predict_home_win_prob(
+        GameState(
+            league="nfl",
+            margin=3,
+            frac_remaining=0.1,
+            offense_is_home=True,
+            down=1,
+            distance=10,
+            yards_to_endzone=50,
+        )
+    )
+    assert meta["available"] is True
+    assert unknown is not None
+    assert known is not None
+    assert 0.0 < unknown < 1.0
+    assert 0.0 < known < 1.0

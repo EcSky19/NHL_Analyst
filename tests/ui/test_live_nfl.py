@@ -202,3 +202,96 @@ def test_nfl_live_is_empty_when_espn_has_no_in_progress_games(client, monkeypatc
     assert payload["meta"]["league"] == "nfl"
     assert payload["meta"]["source"].startswith("espn-web-api:")
     assert payload["meta"]["empty_reason"] == "No NFL games are currently in progress on ESPN's current Eastern-date slate."
+
+
+def test_nfl_live_win_probability_threads_situation(monkeypatch) -> None:
+    import app.routers.nfl as nfl
+
+    seen = {}
+
+    def fake_predict(state):
+        seen["state"] = state
+        return 0.7, {"available": True}
+
+    monkeypatch.setattr(nfl, "predict_home_win_prob", fake_predict)
+    row = {
+        "status": "live",
+        "home": "KC",
+        "away": "BAL",
+        "home_score": 17,
+        "away_score": 14,
+        "live": {
+            "period": 4,
+            "clock": "2:00",
+            "situation": {
+                "possession": "12",
+                "home_team_id": "12",
+                "away_team_id": "33",
+                "down": 1,
+                "distance": 10,
+                "yardLine": 80,
+            },
+        },
+    }
+
+    wp = nfl._live_win_probability(row, "nfl")
+
+    assert wp["available"] is True
+    assert seen["state"].offense_is_home is True
+    assert seen["state"].down == 1
+    assert seen["state"].distance == 10
+    assert seen["state"].yards_to_endzone == 20
+
+
+def test_nfl_yard_line_conversion_for_away_possession(monkeypatch) -> None:
+    import app.routers.nfl as nfl
+
+    seen = {}
+    monkeypatch.setattr(nfl, "predict_home_win_prob", lambda state: seen.setdefault("state", state) and (0.3, {"available": True}))
+    row = {
+        "status": "live",
+        "home": "KC",
+        "away": "BAL",
+        "home_score": 17,
+        "away_score": 21,
+        "live": {
+            "period": 4,
+            "clock": "1:30",
+            "situation": {
+                "possession": "33",
+                "home_team_id": "12",
+                "away_team_id": "33",
+                "down": 2,
+                "distance": 6,
+                "yardLine": 20,
+            },
+        },
+    }
+
+    nfl._live_win_probability(row, "nfl")
+
+    assert seen["state"].offense_is_home is False
+    assert seen["state"].yards_to_endzone == 20
+
+
+def test_nfl_live_win_probability_omitted_situation_is_neutral(monkeypatch) -> None:
+    import app.routers.nfl as nfl
+
+    seen = {}
+    monkeypatch.setattr(nfl, "predict_home_win_prob", lambda state: seen.setdefault("state", state) and (0.55, {"available": True}))
+    row = {
+        "status": "live",
+        "home": "KC",
+        "away": "BAL",
+        "home_score": 10,
+        "away_score": 10,
+        "live": {"period": 2, "clock": "10:00"},
+    }
+
+    wp = nfl._live_win_probability(row, "nfl")
+
+    assert wp["available"] is True
+    assert seen["state"].offense_is_home is None
+    assert seen["state"].down is None
+    assert seen["state"].distance is None
+    assert seen["state"].yards_to_endzone is None

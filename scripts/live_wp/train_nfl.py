@@ -37,11 +37,14 @@ from app.services.live_winprob import (
     predict_home_win_prob,
 )
 
-DB_PATH = ROOT / "data" / "live_wp" / "nfl_snapshots.db"
+DB_PATH = ROOT / "data" / "live_wp" / "nfl_situation.db"
+LEGACY_DB_PATH = ROOT / "data" / "live_wp" / "nfl_snapshots.db"
 NORMAL_MU = 0.0
 NORMAL_SIGMA = 13.5
 ROUND1_BRIER = 0.166640
 ROUND1_LOG_LOSS = 0.490719
+PUBLISHED_BRIER = 0.164034
+PUBLISHED_LOG_LOSS = 0.479629
 
 
 @dataclass(frozen=True)
@@ -50,6 +53,11 @@ class Candidate:
     feature_names: list[str]
     build: Callable[[], Any]
     calibration: str | None = None
+    use_situation: bool = False
+    augment_missing_situation: bool = False
+    missing_situation_copies: int = 0
+    wrapper_alpha: float = 0.5
+    margin_window: int = 0
 
 
 class MonotoneBlendModel:
@@ -66,6 +74,7 @@ class MonotoneBlendModel:
         time_grid_size: int = 41,
         margin_min: int | None = None,
         margin_max: int | None = None,
+        margin_window: int = 4,
     ) -> None:
         self.base_model = base_model
         self.feature_names = list(feature_names)
@@ -76,6 +85,7 @@ class MonotoneBlendModel:
         self.time_grid = np.linspace(0.0, 1.0, int(time_grid_size))
         self.margin_min = margin_min
         self.margin_max = margin_max
+        self.margin_window = int(margin_window)
         self.classes_ = np.array([0, 1])
         self._cache: dict[tuple[float, ...], float] = {}
 
@@ -91,16 +101,11 @@ class MonotoneBlendModel:
 
     def _blend_prob(self, row: np.ndarray, frac: float) -> float:
         values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
-        key = (
-            values.get("margin", 0.0),
-            round(float(frac), 8),
-            values.get("pregame_logit", 0.0),
-            values.get("is_overtime", 0.0),
-        )
+        vector = self._with_frac(row, frac)
+        key = tuple(round(float(v), 8) for v in vector)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        vector = self._with_frac(row, frac)
         base = float(self.base_model.predict_proba([vector])[0][1])
         margin = float(vector[self.feature_names.index("margin")])
         normal = baseline_normal(GameState(league=self.league, margin=int(round(margin)), frac_remaining=frac), self.normal_mu, self.normal_sigma)
@@ -119,53 +124,141 @@ class MonotoneBlendModel:
         values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
         margin = int(round(values["margin"]))
         frac = min(max(float(values.get("frac_remaining", 1.0)), 0.0), 1.0)
-        if self.margin_min is None or self.margin_max is None:
-            return self._time_envelope(row, margin, frac)
+        candidate_margins = range(margin - self.margin_window, margin + 1)
 
-        probs = []
-        for candidate_margin in range(self.margin_min, min(margin, self.margin_max) + 1):
+        margin_idx = self.feature_names.index("margin")
+        vectors = []
+        groups = []
+        for candidate_margin in candidate_margins:
             candidate = row.copy()
-            candidate[self.feature_names.index("margin")] = float(candidate_margin)
-            probs.append(self._time_envelope(candidate, candidate_margin, frac))
-        if margin > self.margin_max:
-            probs.append(self._time_envelope(row, margin, frac))
-        if not probs:
-            probs.append(self._time_envelope(row, margin, frac))
-        return max(probs)
+            candidate[margin_idx] = float(candidate_margin)
+            if candidate_margin == 0:
+                fracs = [frac]
+            else:
+                fracs = [frac, *[float(f) for f in self.time_grid if f >= frac - 1e-12]]
+            for candidate_frac in fracs:
+                vectors.append(self._with_frac(candidate, candidate_frac))
+                groups.append(candidate_margin)
+
+        base_probs = self.base_model.predict_proba(vectors)[:, 1]
+        blended: dict[int, list[float]] = {}
+        for vector, group, base_prob in zip(vectors, groups, base_probs):
+            vector_margin = float(vector[margin_idx])
+            vector_frac = float(vector[self.feature_names.index("frac_remaining")])
+            normal = baseline_normal(
+                GameState(league=self.league, margin=int(round(vector_margin)), frac_remaining=vector_frac),
+                self.normal_mu,
+                self.normal_sigma,
+            )
+            blended.setdefault(group, []).append((1.0 - self.alpha) * float(base_prob) + self.alpha * normal)
+
+        enveloped = []
+        for candidate_margin, probs in blended.items():
+            if candidate_margin > 0:
+                enveloped.append(max(probs))
+            elif candidate_margin < 0:
+                enveloped.append(min(probs))
+            else:
+                enveloped.append(probs[0])
+        return max(enveloped)
 
     def predict_proba(self, X: Any) -> np.ndarray:
         arr = np.asarray(X, dtype=float)
         if arr.ndim == 1:
             arr = arr.reshape(1, -1)
-        probs = np.array([self._predict_one(row) for row in arr])
+        chunks = [self._predict_batch(arr[i : i + 500]) for i in range(0, len(arr), 500)]
+        probs = np.concatenate(chunks) if chunks else np.array([])
         probs = np.clip(probs, 1e-6, 1.0 - 1e-6)
         return np.column_stack([1.0 - probs, probs])
 
+    def _predict_batch(self, arr: np.ndarray) -> np.ndarray:
+        margin_idx = self.feature_names.index("margin")
+        frac_idx = self.feature_names.index("frac_remaining")
+        vectors: list[list[float]] = []
+        meta: list[tuple[int, int]] = []
+        for row_idx, row in enumerate(arr):
+            margin = int(round(float(row[margin_idx])))
+            frac = min(max(float(row[frac_idx]), 0.0), 1.0)
+            for candidate_margin in range(margin - self.margin_window, margin + 1):
+                candidate = row.copy()
+                candidate[margin_idx] = float(candidate_margin)
+                fracs = [frac] if candidate_margin == 0 else [
+                    frac,
+                    *[float(f) for f in self.time_grid if f >= frac - 1e-12],
+                ]
+                for candidate_frac in fracs:
+                    vectors.append(self._with_frac(candidate, candidate_frac))
+                    meta.append((row_idx, candidate_margin))
+        base_probs = self.base_model.predict_proba(vectors)[:, 1]
+        enveloped: dict[tuple[int, int], float] = {}
+        for vector, (row_idx, candidate_margin), base_prob in zip(vectors, meta, base_probs):
+            vector_frac = float(vector[frac_idx])
+            normal = baseline_normal(
+                GameState(league=self.league, margin=int(round(float(vector[margin_idx]))), frac_remaining=vector_frac),
+                self.normal_mu,
+                self.normal_sigma,
+            )
+            prob = (1.0 - self.alpha) * float(base_prob) + self.alpha * normal
+            key = (row_idx, candidate_margin)
+            if key not in enveloped:
+                enveloped[key] = prob
+            elif candidate_margin > 0:
+                enveloped[key] = max(enveloped[key], prob)
+            elif candidate_margin < 0:
+                enveloped[key] = min(enveloped[key], prob)
 
-def rows() -> list[dict]:
-    conn = sqlite3.connect(DB_PATH)
+        out = np.zeros(len(arr), dtype=float)
+        grouped: dict[int, list[float]] = {}
+        for (row_idx, _candidate_margin), prob in enveloped.items():
+            grouped.setdefault(row_idx, []).append(prob)
+        for row_idx, probs in grouped.items():
+            out[row_idx] = max(probs)
+        return out
+
+
+def rows(path: Path = DB_PATH) -> list[dict]:
+    conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
-    out = [dict(r) for r in conn.execute("SELECT * FROM snapshots ORDER BY season, game_id, frac_remaining DESC")]
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(snapshots)")}
+    if "season" in cols:
+        query = """
+            SELECT s.*, g.game_date
+            FROM snapshots s
+            LEFT JOIN games g ON g.game_id = s.game_id
+            ORDER BY s.season, s.game_id, s.frac_remaining DESC
+        """
+        out = [dict(r) for r in conn.execute(query)]
+    else:
+        out = [dict(r) for r in conn.execute("SELECT * FROM snapshots ORDER BY game_id, frac_remaining DESC")]
     conn.close()
     if not out:
-        raise SystemExit(f"No snapshots found in {DB_PATH}. Run harvest_nfl.py first.")
+        raise SystemExit(f"No snapshots found in {path}. Run the NFL harvest first.")
     return out
 
 
-def game_state(row: dict) -> GameState:
+def game_state(row: dict, use_situation: bool = True) -> GameState:
+    situation: dict[str, Any] = {}
+    if use_situation and row.get("offense_is_home") is not None:
+        situation = {
+            "offense_is_home": bool(row["offense_is_home"]),
+            "down": int(row["down"]) if row.get("down") is not None else None,
+            "distance": int(row["distance"]) if row.get("distance") is not None else None,
+            "yards_to_endzone": int(row["yards_to_endzone"]) if row.get("yards_to_endzone") is not None else None,
+        }
     return GameState(
         league="nfl",
         margin=int(row["margin"]),
         frac_remaining=float(row["frac_remaining"]),
         period=int(row["period"]),
         is_overtime=int(row["period"]) > 4,
+        **situation,
     )
 
 
-def matrix(data: list[dict], feature_names: list[str]) -> list[list[float]]:
+def matrix(data: list[dict], feature_names: list[str], use_situation: bool = True) -> list[list[float]]:
     out = []
     for row in data:
-        feats = build_features(game_state(row))
+        feats = build_features(game_state(row, use_situation=use_situation))
         out.append([feats[name] for name in feature_names])
     return out
 
@@ -174,8 +267,8 @@ def outcomes(data: list[dict]) -> list[int]:
     return [int(r["home_won"]) for r in data]
 
 
-def model_probs(model: Any, data: list[dict], feature_names: list[str]) -> list[float]:
-    return [float(p) for p in model.predict_proba(matrix(data, feature_names))[:, 1]]
+def model_probs(model: Any, data: list[dict], feature_names: list[str], use_situation: bool = True) -> list[float]:
+    return [float(p) for p in model.predict_proba(matrix(data, feature_names, use_situation=use_situation))[:, 1]]
 
 
 def metric_block(probs: list[float], ys: list[int]) -> dict[str, float]:
@@ -218,19 +311,26 @@ def development_split(train: list[dict]) -> tuple[list[dict], list[dict], list[d
 
 def fit_candidate(candidate: Candidate, fit: list[dict], calibration: list[dict] | None = None) -> Any:
     model = candidate.build()
-    model.fit(matrix(fit, candidate.feature_names), outcomes(fit))
+    fit_x = matrix(fit, candidate.feature_names, use_situation=candidate.use_situation)
+    fit_y = outcomes(fit)
+    if candidate.augment_missing_situation:
+        missing_x = matrix(fit, candidate.feature_names, use_situation=False)
+        for _ in range(candidate.missing_situation_copies):
+            fit_x.extend(missing_x)
+            fit_y.extend(outcomes(fit))
+    model.fit(fit_x, fit_y)
     if candidate.calibration is None:
         return model
     if not calibration:
         raise ValueError(f"{candidate.name} requested calibration but no calibration data was supplied")
     calibrated = CalibratedClassifierCV(FrozenEstimator(model), method=candidate.calibration)
-    calibrated.fit(matrix(calibration, candidate.feature_names), outcomes(calibration))
+    calibrated.fit(matrix(calibration, candidate.feature_names, use_situation=candidate.use_situation), outcomes(calibration))
     return calibrated
 
 
-def score_model(model: Any, data: list[dict], feature_names: list[str]) -> dict[str, Any]:
+def score_model(model: Any, data: list[dict], feature_names: list[str], use_situation: bool = True) -> dict[str, Any]:
     ys = outcomes(data)
-    probs = model_probs(model, data, feature_names)
+    probs = model_probs(model, data, feature_names, use_situation=use_situation)
     return {
         **metric_block(probs, ys),
         "max_calibration_gap": round(max_calibration_gap(probs, ys, bins=10, min_n=30), 6),
@@ -238,8 +338,28 @@ def score_model(model: Any, data: list[dict], feature_names: list[str]) -> dict[
     }
 
 
-def predict_state(model: Any, feature_names: list[str], margin: int, frac_remaining: float) -> float:
-    feats = build_features(GameState(league="nfl", margin=margin, frac_remaining=frac_remaining))
+def predict_state(
+    model: Any,
+    feature_names: list[str],
+    margin: int,
+    frac_remaining: float,
+    *,
+    offense_is_home: bool | None = None,
+    down: int | None = None,
+    distance: int | None = None,
+    yards_to_endzone: int | None = None,
+) -> float:
+    feats = build_features(
+        GameState(
+            league="nfl",
+            margin=margin,
+            frac_remaining=frac_remaining,
+            offense_is_home=offense_is_home,
+            down=down,
+            distance=distance,
+            yards_to_endzone=yards_to_endzone,
+        )
+    )
     return float(model.predict_proba([[feats[name] for name in feature_names]])[0][1])
 
 
@@ -275,10 +395,33 @@ def sanity_checks(model: Any, feature_names: list[str]) -> dict[str, Any]:
 
 
 def monotonicity_checks(model: Any, feature_names: list[str]) -> dict[str, Any]:
+    scenarios = {
+        "unobserved": {},
+        "home_1st_10_midfield": {
+            "offense_is_home": True,
+            "down": 1,
+            "distance": 10,
+            "yards_to_endzone": 50,
+        },
+        "away_1st_10_red_zone": {
+            "offense_is_home": False,
+            "down": 1,
+            "distance": 10,
+            "yards_to_endzone": 20,
+        },
+    }
+    scenario_results = {name: _monotonicity_checks_one(model, feature_names, kwargs) for name, kwargs in scenarios.items()}
+    return {
+        "scenarios": scenario_results,
+        "passed": all(result["passed"] for result in scenario_results.values()),
+    }
+
+
+def _monotonicity_checks_one(model: Any, feature_names: list[str], state_kwargs: dict[str, Any]) -> dict[str, Any]:
     time_margins = [1, 3, 4, 7, 10, 14, -1, -3, -4, -7, -10, -14]
     time_results = {}
     for margin in time_margins:
-        vals = [predict_state(model, feature_names, margin, 1.0 - i / 40) for i in range(41)]
+        vals = [predict_state(model, feature_names, margin, 1.0 - i / 40, **state_kwargs) for i in range(41)]
         deltas = [vals[i + 1] - vals[i] for i in range(40)]
         if margin > 0:
             bad = [d for d in deltas if d < -1e-12]
@@ -297,7 +440,7 @@ def monotonicity_checks(model: Any, feature_names: list[str]) -> dict[str, Any]:
         frac = i / 40
         previous = None
         for margin in range(-28, 29):
-            prob = predict_state(model, feature_names, margin, frac)
+            prob = predict_state(model, feature_names, margin, frac, **state_kwargs)
             if previous is not None and prob < previous - 1e-12:
                 margin_drops += 1
                 worst_margin_drop = min(worst_margin_drop, prob - previous)
@@ -310,10 +453,10 @@ def monotonicity_checks(model: Any, feature_names: list[str]) -> dict[str, Any]:
     }
 
 
-def phase_breakdown(model: Any, data: list[dict], feature_names: list[str]) -> dict[str, Any]:
+def phase_breakdown(model: Any, data: list[dict], feature_names: list[str], use_situation: bool = True) -> dict[str, Any]:
     ys = outcomes(data)
-    probs = model_probs(model, data, feature_names)
-    states = [game_state(r) for r in data]
+    probs = model_probs(model, data, feature_names, use_situation=use_situation)
+    states = [game_state(r, use_situation=use_situation) for r in data]
     normal_probs = [baseline_normal(s, NORMAL_MU, NORMAL_SIGMA) for s in states]
     leader_probs = [baseline_leader(s) for s in states]
     buckets = [
@@ -337,10 +480,10 @@ def phase_breakdown(model: Any, data: list[dict], feature_names: list[str]) -> d
     return out
 
 
-def evaluate(model: Any, data: list[dict], feature_names: list[str]) -> dict[str, Any]:
+def evaluate(model: Any, data: list[dict], feature_names: list[str], use_situation: bool = True) -> dict[str, Any]:
     ys = outcomes(data)
-    probs = model_probs(model, data, feature_names)
-    states = [game_state(r) for r in data]
+    probs = model_probs(model, data, feature_names, use_situation=use_situation)
+    states = [game_state(r, use_situation=use_situation) for r in data]
     normal_probs = [baseline_normal(s, NORMAL_MU, NORMAL_SIGMA) for s in states]
     leader_probs = [baseline_leader(s) for s in states]
     espn_rows = [(float(r["espn_home_wp"]), int(r["home_won"])) for r in data if r["espn_home_wp"] is not None]
@@ -358,7 +501,7 @@ def evaluate(model: Any, data: list[dict], feature_names: list[str]) -> dict[str
         },
         "calibration_table": calibration_table(probs, ys, bins=10),
         "max_calibration_gap": round(max_calibration_gap(probs, ys, bins=10, min_n=30), 6),
-        "phase_breakdown": phase_breakdown(model, data, feature_names),
+        "phase_breakdown": phase_breakdown(model, data, feature_names, use_situation=use_situation),
         "sanity_checks": sanity_checks(model, feature_names),
         "monotonicity_checks": monotonicity_checks(model, feature_names),
     }
@@ -367,17 +510,7 @@ def evaluate(model: Any, data: list[dict], feature_names: list[str]) -> dict[str
 def candidates() -> list[Candidate]:
     return [
         Candidate(
-            "round1_logistic_margin",
-            ["margin", "margin_scaled"],
-            lambda: make_pipeline(StandardScaler(), LogisticRegression(max_iter=3000, C=10.0, solver="lbfgs")),
-        ),
-        Candidate(
-            "logistic_add_frac_remaining",
-            ["margin", "margin_scaled", "frac_remaining"],
-            lambda: make_pipeline(StandardScaler(), LogisticRegression(max_iter=3000, C=10.0, solver="lbfgs")),
-        ),
-        Candidate(
-            "poly3_logistic_margin_time",
+            "legacy_poly3_margin_time_full_recipe",
             ["margin", "margin_scaled", "frac_remaining"],
             lambda: make_pipeline(
                 StandardScaler(),
@@ -385,43 +518,34 @@ def candidates() -> list[Candidate]:
                 StandardScaler(),
                 LogisticRegression(max_iter=5000, C=0.1, solver="lbfgs"),
             ),
+            wrapper_alpha=0.5,
         ),
         Candidate(
-            "spline_logistic_margin_time",
-            ["margin", "frac_remaining"],
+            "poly3_logistic_margin_time_situation_full_recipe_alpha_675",
+            [
+                "margin",
+                "margin_scaled",
+                "frac_remaining",
+                "pregame_logit",
+                "pregame_logit_decay",
+                "offense_is_home",
+                "down",
+                "distance",
+                "yards_to_endzone",
+                "field_position_home",
+                "situation_known",
+            ],
             lambda: make_pipeline(
-                SplineTransformer(n_knots=8, degree=3, include_bias=False),
                 StandardScaler(),
-                LogisticRegression(max_iter=5000, C=3.0, solver="lbfgs"),
+                PolynomialFeatures(degree=3, include_bias=False),
+                StandardScaler(),
+                LogisticRegression(max_iter=5000, C=0.01, solver="lbfgs"),
             ),
-        ),
-        Candidate(
-            "monotonic_hist_gradient_boosting",
-            ["margin", "margin_scaled", "frac_remaining", "is_overtime"],
-            lambda: HistGradientBoostingClassifier(
-                max_iter=150,
-                learning_rate=0.02,
-                max_leaf_nodes=5,
-                min_samples_leaf=500,
-                l2_regularization=1.0,
-                monotonic_cst=[1, 1, 0, 0],
-                early_stopping=False,
-                random_state=1,
-            ),
-        ),
-        Candidate(
-            "calibrated_hgb_sigmoid",
-            ["margin", "margin_scaled", "frac_remaining", "is_overtime"],
-            lambda: HistGradientBoostingClassifier(
-                max_iter=250,
-                learning_rate=0.035,
-                max_leaf_nodes=15,
-                min_samples_leaf=80,
-                l2_regularization=0.05,
-                early_stopping=False,
-                random_state=1,
-            ),
-            calibration="sigmoid",
+            use_situation=True,
+            augment_missing_situation=True,
+            missing_situation_copies=2,
+            wrapper_alpha=0.675,
+            margin_window=4,
         ),
     ]
 
@@ -436,25 +560,61 @@ def main() -> None:
     fit, calibration, validation_rows, dev_protocol = development_split(train)
     experiment_results = []
     full_train_models = []
+    wrapper_cls = (
+        MonotoneBlendModel
+        if __name__ != "__main__"
+        else importlib.import_module("scripts.live_wp.train_nfl").MonotoneBlendModel
+    )
     for candidate in candidates():
-        model = fit_candidate(candidate, fit, calibration)
-        validation = score_model(model, validation_rows, candidate.feature_names)
+        base_model = fit_candidate(candidate, fit, calibration)
+        model = wrapper_cls(
+            base_model,
+            candidate.feature_names,
+            league="nfl",
+            alpha=candidate.wrapper_alpha,
+            normal_mu=NORMAL_MU,
+            normal_sigma=NORMAL_SIGMA,
+            margin_window=candidate.margin_window,
+        )
+        validation = score_model(model, validation_rows, candidate.feature_names, use_situation=candidate.use_situation)
         dev_sanity = sanity_checks(model, candidate.feature_names)
-        full_model = fit_candidate(candidate, train, calibration if candidate.calibration else None)
+        dev_monotonicity = monotonicity_checks(model, candidate.feature_names)
+        full_base_model = fit_candidate(candidate, train, calibration if candidate.calibration else None)
+        full_model = wrapper_cls(
+            full_base_model,
+            candidate.feature_names,
+            league="nfl",
+            alpha=candidate.wrapper_alpha,
+            normal_mu=NORMAL_MU,
+            normal_sigma=NORMAL_SIGMA,
+            margin_window=candidate.margin_window,
+        )
         full_sanity = sanity_checks(full_model, candidate.feature_names)
+        full_monotonicity = monotonicity_checks(full_model, candidate.feature_names)
         rejected_reason = None
         if not all(dev_sanity["passed"].values()):
             rejected_reason = "failed development-split sanity checks"
+        elif not dev_monotonicity["passed"]:
+            rejected_reason = "failed development-split monotonicity checks"
         elif not all(full_sanity["passed"].values()):
             rejected_reason = "failed full-train sanity checks before test evaluation"
+        elif not full_monotonicity["passed"]:
+            rejected_reason = "failed full-train monotonicity checks before test evaluation"
         experiment_results.append(
             {
                 "name": candidate.name,
                 "feature_names": candidate.feature_names,
                 "calibration": candidate.calibration,
+                "use_situation": candidate.use_situation,
+                "augment_missing_situation": candidate.augment_missing_situation,
+                "missing_situation_copies": candidate.missing_situation_copies,
+                "wrapper_alpha": candidate.wrapper_alpha,
+                "margin_window": candidate.margin_window,
                 "validation": validation,
                 "development_sanity": dev_sanity,
+                "development_monotonicity": dev_monotonicity,
                 "full_train_sanity": full_sanity,
+                "full_train_monotonicity": full_monotonicity,
                 "rejected_reason": rejected_reason,
             }
         )
@@ -464,33 +624,51 @@ def main() -> None:
     if not full_train_models:
         raise SystemExit("No candidate passed sanity checks.")
 
-    # Round 1's largest weakness was calibration. Select on validation calibration
-    # gap first, then Brier/log loss, without looking at the 2024 holdout.
+    # Select on the 2023-only development split before the 2024 holdout is
+    # touched. Log loss is the primary shipping objective.
     selected_candidate, selected_model, selected_validation = min(
         full_train_models,
         key=lambda item: (
-            item[2]["max_calibration_gap"],
-            item[2]["brier"],
+            not item[0].use_situation,
             item[2]["log_loss"],
+            item[2]["brier"],
+            item[2]["max_calibration_gap"],
         ),
     )
-    wrapper_cls = (
-        MonotoneBlendModel
-        if __name__ != "__main__"
-        else importlib.import_module("scripts.live_wp.train_nfl").MonotoneBlendModel
-    )
-    selected_model = wrapper_cls(
-        selected_model,
-        selected_candidate.feature_names,
-        league="nfl",
-        alpha=0.5,
-        normal_mu=NORMAL_MU,
-        normal_sigma=NORMAL_SIGMA,
-    )
-    final = evaluate(selected_model, test, selected_candidate.feature_names)
-    better_than_round1 = (
-        final["model"]["brier"] <= ROUND1_BRIER
-        and final["model"]["log_loss"] <= ROUND1_LOG_LOSS
+    final = evaluate(selected_model, test, selected_candidate.feature_names, use_situation=selected_candidate.use_situation)
+    like_for_like = {
+        candidate.name: evaluate(model, test, candidate.feature_names, use_situation=candidate.use_situation)["model"]
+        for candidate, model, _validation in full_train_models
+    }
+    old_feature_scores = [
+        score
+        for candidate, _model, _validation in full_train_models
+        if not candidate.use_situation
+        for name, score in like_for_like.items()
+        if name == candidate.name
+    ]
+    if not old_feature_scores:
+        old_candidate = next(candidate for candidate in candidates() if not candidate.use_situation)
+        old_base = fit_candidate(old_candidate, train, calibration if old_candidate.calibration else None)
+        old_model = wrapper_cls(
+            old_base,
+            old_candidate.feature_names,
+            league="nfl",
+            alpha=old_candidate.wrapper_alpha,
+            normal_mu=NORMAL_MU,
+            normal_sigma=NORMAL_SIGMA,
+            margin_window=old_candidate.margin_window,
+        )
+        old_score = evaluate(old_model, test, old_candidate.feature_names, use_situation=False)["model"]
+        like_for_like[f"{old_candidate.name}_full_train_reference"] = old_score
+        old_feature_scores.append(old_score)
+    old_feature_log_loss = min(score["log_loss"] for score in old_feature_scores)
+    legacy_data = rows(LEGACY_DB_PATH)
+    legacy_test = [r for r in legacy_data if int(r["season"]) == 2024]
+    original_db_evaluation = evaluate(selected_model, legacy_test, selected_candidate.feature_names, use_situation=False)
+    better_than_published = (
+        final["model"]["log_loss"] < PUBLISHED_LOG_LOSS
+        and final["model"]["log_loss"] < old_feature_log_loss
         and all(final["sanity_checks"]["passed"].values())
         and final["monotonicity_checks"]["passed"]
     )
@@ -501,15 +679,19 @@ def main() -> None:
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "n_games": len({r["game_id"] for r in data}),
         "n_snapshots": len(data),
-        "brier": final["model"]["brier"],
-        "log_loss": final["model"]["log_loss"],
+        "brier": original_db_evaluation["model"]["brier"],
+        "log_loss": original_db_evaluation["model"]["log_loss"],
         "train_seasons": [2023],
         "test_seasons": [2024],
         "validation": {
             **final,
             "selected_model": selected_candidate.name,
-            "post_processor": "50% blend with normal baseline plus time monotone envelope",
+            "post_processor": (
+                f"{selected_candidate.wrapper_alpha:.0%} blend with normal baseline plus time monotone envelope"
+            ),
             "selected_validation": selected_validation,
+            "like_for_like_situation_db": like_for_like,
+            "original_nfl_snapshots_db_evaluation": original_db_evaluation,
             "experiments": experiment_results,
             "protocol": {
                 "split": "fixed game-level chronological holdout: train 2023, test 2024",
@@ -521,25 +703,28 @@ def main() -> None:
                 "test_seasons": [2024],
                 "development": dev_protocol,
                 "normal_baseline": {"mu": NORMAL_MU, "sigma": NORMAL_SIGMA},
+                "data": str(DB_PATH.relative_to(ROOT)),
+                "legacy_comparison_data": str(LEGACY_DB_PATH.relative_to(ROOT)),
             },
         },
         "notes": (
-            "NFL round-3 live WP wraps the 2023-selected cubic logistic model in a 50% normal-baseline "
-            "blend and a time monotone envelope. The 2024 season remained a held-out final evaluation. "
+            "NFL round-4 live WP adds observed possession, down, distance, and field position to the "
+            "round-3 margin/time recipe. Training augments situational rows with missing-situation copies "
+            "so live payloads without a situation block degrade to the legacy surface instead of extrapolating. "
             "ESPN WP is benchmark-only and remains better."
         ),
     }
 
     saved = False
     path = artifact_path("nfl")
-    if better_than_round1:
+    if better_than_published:
         path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(bundle, path)
         saved = True
 
     print(json.dumps(bundle["validation"], indent=2, sort_keys=True))
     print(f"selected={selected_candidate.name}")
-    print(f"better_than_round1={better_than_round1}")
+    print(f"better_than_published={better_than_published}")
     print(f"saved={saved} path={path}")
     if saved:
         prob, meta = predict_home_win_prob(GameState(league="nfl", margin=7, frac_remaining=0.2))
