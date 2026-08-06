@@ -19,6 +19,8 @@ CONTRACT_KEYS = {
     "venue",
 }
 
+STATUS_VALUES = {"scheduled", "live", "final", "postponed"}
+
 
 def _games() -> list[dict[str, Any]]:
     base = {
@@ -84,22 +86,55 @@ def _mock_fetch(monkeypatch) -> None:
     monkeypatch.setattr(nfl, "fetch_games", lambda ttl: (_games(), meta))
 
 
+def _espn_rows() -> list[dict[str, Any]]:
+    return [
+        {
+            "game_id": "401772510",
+            "league": "nfl",
+            "game_date": "2026-08-06",
+            "start_time_utc": "2026-08-07T00:00:00Z",
+            "home": "ARI",
+            "away": "CAR",
+            "home_name": "Arizona Cardinals",
+            "away_name": "Carolina Panthers",
+            "home_score": None,
+            "away_score": None,
+            "status": "scheduled",
+            "detailed_status": "8:00 PM EDT",
+            "venue": "Tom Benson Hall of Fame Stadium",
+            "neutral_site": True,
+        }
+    ]
+
+
+def _mock_espn(monkeypatch, rows: list[dict[str, Any]] | None = None) -> None:
+    import app.routers.nfl as nfl
+
+    meta = {"cached": False, "stale": False, "age_seconds": 0.0}
+    monkeypatch.setattr(nfl, "espn_schedule_window", lambda start, days, ttl: (rows if rows is not None else _espn_rows(), meta))
+    monkeypatch.setattr(nfl, "espn_live_games", lambda ttl=30: ([], rows if rows is not None else _espn_rows(), meta))
+
+
+def _assert_contract_rows(rows: list[dict[str, Any]]) -> None:
+    ids = [row["game_id"] for row in rows]
+    assert len(ids) == len(set(ids))
+    for row in rows:
+        assert CONTRACT_KEYS <= set(row)
+        assert row["status"] in STATUS_VALUES
+        if row["status"] in {"scheduled", "postponed"}:
+            assert row["home_score"] is None
+            assert row["away_score"] is None
+
+
 def test_nfl_schedule_week_window_contract_keys_and_honest_scores(client, monkeypatch) -> None:
-    _mock_fetch(monkeypatch)
-    payload = client.get("/api/nfl/schedule/week?start=2026-09-09&days=7").json()
+    _mock_espn(monkeypatch)
+    payload = client.get("/api/nfl/schedule/week?start=2026-08-06&days=7").json()
     assert payload["ok"] is True
-    assert payload["meta"]["count"] == 2
+    assert payload["meta"]["source"].startswith("espn-web-api:")
+    assert payload["meta"]["count"] == 1
     assert payload["meta"]["empty_reason"] is None
-    row = payload["data"][0]
-    assert CONTRACT_KEYS <= set(row)
-    assert row["home"] == row["home_team"]
-    assert row["away"] == row["away_team"]
-    assert row["league"] == "nfl"
-    assert row["status"] == "scheduled"
-    assert row["detailed_status"] is None
-    assert row["home_score"] is None
-    assert row["away_score"] is None
-    assert row["start_time_utc"].endswith("Z")
+    _assert_contract_rows(payload["data"])
+    assert all("2026-08-06" <= row["game_date"] <= "2026-08-12" for row in payload["data"])
 
 
 def test_nfl_schedule_week_param_uses_current_season(client, monkeypatch) -> None:
@@ -112,28 +147,37 @@ def test_nfl_schedule_week_param_uses_current_season(client, monkeypatch) -> Non
 
 
 def test_nfl_schedule_week_completed_range_keeps_final_scores(client, monkeypatch) -> None:
-    _mock_fetch(monkeypatch)
+    rows = [
+        {
+            **_espn_rows()[0],
+            "game_id": "401777777",
+            "game_date": "2025-09-07",
+            "start_time_utc": "2025-09-07T17:00:00Z",
+            "home_score": 20,
+            "away_score": 10,
+            "status": "final",
+            "detailed_status": "Final",
+            "neutral_site": False,
+        }
+    ]
+    _mock_espn(monkeypatch, rows)
     payload = client.get("/api/nfl/schedule/week?start=2025-09-07&days=1").json()
     assert payload["ok"] is True
     assert payload["meta"]["count"] == 1
     row = payload["data"][0]
     assert row["status"] == "final"
-    assert row["detailed_status"] is None
+    assert row["detailed_status"] == "Final"
     assert row["home_score"] == 20
     assert row["away_score"] == 10
 
 
-def test_nfl_schedule_empty_window_names_source_coverage_not_world_state(client, monkeypatch) -> None:
-    _mock_fetch(monkeypatch)
+def test_nfl_schedule_empty_window_names_espn_not_nflverse_coverage(client, monkeypatch) -> None:
+    _mock_espn(monkeypatch, [])
     payload = client.get("/api/nfl/schedule/week?start=2026-08-06&days=7").json()
     assert payload["ok"] is True
     assert payload["data"] == []
     assert payload["meta"]["count"] == 0
-    assert (
-        payload["meta"]["empty_reason"]
-        == "No NFL regular-season or postseason games fall in this window. "
-        "The nflverse source used here does not include preseason games, and the 2026 regular season opens 2026-09-09."
-    )
+    assert payload["meta"]["empty_reason"] == "ESPN reports no NFL games from 2026-08-06 through 2026-08-12."
 
 
 def test_nfl_schedule_week_bad_params_return_contract_failures(client, monkeypatch) -> None:
@@ -149,12 +193,12 @@ def test_nfl_schedule_week_bad_params_return_contract_failures(client, monkeypat
         assert payload["error"]["code"] == "bad_request"
 
 
-def test_nfl_live_is_empty_when_upstream_has_no_live_state(client, monkeypatch) -> None:
-    _mock_fetch(monkeypatch)
+def test_nfl_live_is_empty_when_espn_has_no_in_progress_games(client, monkeypatch) -> None:
+    _mock_espn(monkeypatch)
     payload = client.get("/api/nfl/live").json()
     assert payload["ok"] is True
     assert payload["data"] == []
     assert payload["meta"]["count"] == 0
     assert payload["meta"]["league"] == "nfl"
-    assert "does not expose true real-time NFL clock, quarter, or last-play state" in payload["meta"]["empty_reason"]
-    assert "does not include preseason games" in payload["meta"]["empty_reason"]
+    assert payload["meta"]["source"].startswith("espn-web-api:")
+    assert payload["meta"]["empty_reason"] == "No NFL games are currently in progress on ESPN's current Eastern-date slate."

@@ -12,8 +12,17 @@ from zoneinfo import ZoneInfo
 
 from app.cache import cached_fetch
 from app.config import settings
+from app.services.espn_client import (
+    dedupe_by_game_id,
+    espn_source,
+    fetch_scoreboard,
+    fetch_window,
+    normalize_events,
+)
 
 SOURCE = "local-nba-db"
+ESPN_SOURCE = espn_source("nba")
+ET_ZONE = ZoneInfo("America/New_York")
 
 
 class SeasonKey(NamedTuple):
@@ -230,22 +239,23 @@ def schedule_payload(game_date: str | None, season: SeasonKey | None) -> tuple[l
 
 
 def schedule_window_payload(start_date: str, end_date: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Return verified NBA game rows in an inclusive date window without season fallback."""
-    return cached_fetch(
-        f"nba:schedule-week:v3:{start_date}:{end_date}",
-        settings.ttl_schedule,
-        lambda: _schedule_rows_between(start_date, end_date),
-    )
+    """Return ESPN NBA game rows in an inclusive date window without stale local fallback."""
+    start = date.fromisoformat(start_date)
+    end = date.fromisoformat(end_date)
+    days = (end - start).days + 1
+    if days < 1:
+        raise ValueError("end_date must be on or after start_date")
+    return fetch_window("nba", start, days, ttl=settings.ttl_schedule)
 
 
 def live_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Return in-progress NBA games if a verified source supports them.
-
-    The available free, verified basketball-reference cache is historical/final-only;
-    it does not expose real-time in-game state, so returning an honest empty list is
-    safer than fabricating live data or trusting blocked/unauthenticated feeds.
-    """
-    return [], {"cached": False, "stale": False, "age_seconds": 0.0}
+    """Return currently in-progress NBA games from ESPN's explicit-date scoreboard."""
+    today_et = datetime.now(ET_ZONE).date().strftime("%Y%m%d")
+    events, cache_meta = fetch_scoreboard("nba", dates=today_et, ttl=30)
+    rows = [row for row in normalize_events(events, "nba") if row.get("status") == "live"]
+    rows = dedupe_by_game_id(rows)
+    rows.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
+    return rows, cache_meta
 
 
 def _connect() -> sqlite3.Connection:

@@ -9,16 +9,17 @@ from fastapi import APIRouter, Request
 
 from app.config import fail, ok, season_state_for, settings, utc_now_iso
 from app.services.nfl_service import (
+    ESPN_SOURCE,
     SOURCE,
     available_seasons,
     canonical_team,
+    espn_live_games,
+    espn_schedule_window,
     fetch_games,
     latest_completed_season,
-    live_games,
     players_payload,
     schedule_for,
     schedule_week as schedule_week_rows,
-    schedule_window,
     standings_for_season_cached,
     teams_payload,
 )
@@ -98,27 +99,35 @@ def players(team: str | None = None, stat: str = "passing_yards", limit: int = 2
 
 @router.get("/live")
 def live() -> dict[str, Any]:
-    """Return currently in-progress NFL games when nflverse can report them."""
+    """Return currently in-progress NFL games from ESPN's current slate."""
     try:
-        games, meta = fetch_games(settings.ttl_schedule)
-        rows = live_games(games)
+        rows, slate, meta = espn_live_games(30)
+        if meta.get("stale"):
+            return fail(
+                "upstream_unavailable",
+                f"ESPN NFL live scoreboard is unreachable: {meta.get('stale_reason') or 'serving stale cache'}",
+                source=ESPN_SOURCE,
+                league="nfl",
+                count=0,
+                season_state=season_state_for(league="nfl"),
+                polled_at=utc_now_iso(),
+                poll_interval_seconds=30,
+                empty_reason=None,
+                **meta,
+            )
         return ok(
             rows,
-            source=SOURCE,
+            source=ESPN_SOURCE,
             count=len(rows),
             season_state=season_state_for(league="nfl"),
             league="nfl",
             polled_at=utc_now_iso(),
             poll_interval_seconds=30,
-            empty_reason=(
-                None
-                if rows
-                else _nfl_live_empty_reason(games)
-            ),
+            empty_reason=None if rows else _nfl_live_empty_reason(slate),
             **meta,
         )
     except Exception as exc:  # noqa: BLE001
-        return fail("upstream_unavailable", str(exc), source=SOURCE, league="nfl")
+        return fail("upstream_unavailable", f"ESPN NFL live scoreboard is unreachable: {exc}", source=ESPN_SOURCE, league="nfl")
 
 
 @router.get("/schedule/week")
@@ -135,8 +144,8 @@ def schedule_week(request: Request, start: str | None = None, days: int = 7, wee
         return fail("bad_request", "start must be a YYYY-MM-DD date", source=SOURCE, league="nfl")
 
     try:
-        games, meta = fetch_games(settings.ttl_schedule)
         if week is not None:
+            games, meta = fetch_games(settings.ttl_schedule)
             seasons = available_seasons(games)
             season = max(seasons) if seasons else None
             rows = schedule_week_rows(games, season, week) if season is not None else []
@@ -153,21 +162,37 @@ def schedule_week(request: Request, start: str | None = None, days: int = 7, wee
             )
 
         end_date = start_date + timedelta(days=days - 1)
-        rows = schedule_window(games, start_date, days)
+        rows, meta = espn_schedule_window(start_date, days, settings.ttl_schedule)
+        if meta.get("stale"):
+            return fail(
+                "upstream_unavailable",
+                f"ESPN NFL schedule is unreachable: {meta.get('stale_reason') or 'serving stale cache'}",
+                source=ESPN_SOURCE,
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                days=days,
+                count=0,
+                season_state=season_state_for(league="nfl"),
+                league="nfl",
+                empty_reason=None,
+                **meta,
+            )
         return ok(
             rows,
-            source=SOURCE,
+            source=ESPN_SOURCE,
             start_date=start_date.isoformat(),
             end_date=end_date.isoformat(),
             days=days,
             count=len(rows),
             season_state=season_state_for(league="nfl"),
             league="nfl",
-            empty_reason=None if rows else _nfl_covered_empty_reason(games),
+            empty_reason=None if rows else _nfl_espn_empty_reason(start_date, days),
             **meta,
         )
     except Exception as exc:  # noqa: BLE001
-        return fail("upstream_unavailable", str(exc), source=SOURCE, league="nfl")
+        source = SOURCE if week is not None else ESPN_SOURCE
+        upstream = "nflverse" if week is not None else "ESPN NFL schedule"
+        return fail("upstream_unavailable", f"{upstream} is unreachable: {exc}", source=source, league="nfl")
 
 
 @router.get("/schedule")
@@ -245,11 +270,15 @@ def _nfl_covered_empty_reason(games: list[dict[str, Any]]) -> str:
     )
 
 
-def _nfl_live_empty_reason(games: list[dict[str, Any]]) -> str:
-    return (
-        "nflverse games.csv does not expose true real-time NFL clock, quarter, or last-play state. "
-        f"{_nfl_covered_empty_reason(games)}"
-    )
+def _nfl_live_empty_reason(slate: list[dict[str, Any]]) -> str:
+    if slate:
+        return "No NFL games are currently in progress on ESPN's current Eastern-date slate."
+    return "ESPN reports no NFL games on today's Eastern-date slate."
+
+
+def _nfl_espn_empty_reason(start_date: date, days: int) -> str:
+    end_date = start_date + timedelta(days=days - 1)
+    return f"ESPN reports no NFL games from {start_date.isoformat()} through {end_date.isoformat()}."
 
 
 def _season_opener(games: list[dict[str, Any]], season: int | None) -> str | None:

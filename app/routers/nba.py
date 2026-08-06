@@ -9,6 +9,7 @@ from fastapi import APIRouter
 
 from app.config import fail, ok, season_state_for, settings
 from app.services.nba_service import (
+    ESPN_SOURCE,
     SOURCE,
     canonical_team,
     coverage,
@@ -99,6 +100,19 @@ def schedule(date: str | None = None, season: str | None = None) -> dict[str, An
     except ValueError:
         return fail("bad_request", "date must be YYYY-MM-DD", source=SOURCE, season_coverage=_safe_coverage())
     try:
+        if season is None:
+            requested_date = game_date or datetime.now(timezone.utc).date().isoformat()
+            rows, cache_meta = schedule_window_payload(requested_date, requested_date)
+            return ok(
+                rows,
+                source=ESPN_SOURCE,
+                **cache_meta,
+                season_state=season_state_for(league="nba"),
+                count=len(rows),
+                date=requested_date,
+                league="nba",
+                empty_reason=_espn_empty_reason(rows, cache_meta, "schedule", requested_date, requested_date),
+            )
         selected = resolve_season(season) if season else (latest_schedule_season() if not date else None)
         rows, cache_meta = schedule_payload(game_date, selected)
         if not rows:
@@ -139,14 +153,10 @@ def schedule_week(start: str | None = None, days: str | None = None) -> dict[str
         rows.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
         empty_reason = None
         if not rows:
-            empty_reason = (
-                "NBA is in its offseason; no games are scheduled in this window."
-                if league_state == "offseason"
-                else "No NBA games are scheduled in this window."
-            )
+            empty_reason = _espn_empty_reason(rows, cache_meta, "schedule", start_date, end_date)
         return ok(
             rows,
-            source=SOURCE,
+            source=ESPN_SOURCE,
             **cache_meta,
             start_date=start_date,
             end_date=end_date,
@@ -164,28 +174,23 @@ def schedule_week(start: str | None = None, days: str | None = None) -> dict[str
 
 @router.get("/live")
 def live() -> dict[str, Any]:
-    """Return currently in-progress NBA games only, if a verified source exists."""
+    """Return currently in-progress NBA games only from ESPN."""
     league_state = season_state_for(league="nba")
     try:
         rows, cache_meta = live_payload()
-        empty_reason = None
-        if not rows:
-            empty_reason = (
-                "No free verified NBA source available to this app exposes true real-time in-game state; returning no live games rather than fabricating data."
-            )
         return ok(
             rows,
-            source=SOURCE,
+            source=ESPN_SOURCE,
             **cache_meta,
             count=len(rows),
             season_state=league_state,
             league="nba",
             polled_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             poll_interval_seconds=30,
-            empty_reason=empty_reason,
+            empty_reason=_espn_empty_reason(rows, cache_meta, "live"),
         )
     except Exception as exc:  # noqa: BLE001
-        return fail("upstream_unavailable", str(exc), source=SOURCE, season_state=league_state, league="nba")
+        return fail("upstream_unavailable", str(exc), source=ESPN_SOURCE, season_state=league_state, league="nba")
 
 
 def _success(data: Any, selected: Any, cache_meta: dict[str, Any]) -> dict[str, Any]:
@@ -247,3 +252,26 @@ def _historical_schedule_meta(rows: list[dict[str, Any]]) -> dict[str, Any]:
             else None
         ),
     }
+
+
+def _espn_empty_reason(
+    rows: list[dict[str, Any]],
+    cache_meta: dict[str, Any],
+    kind: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> str | None:
+    if rows:
+        return None
+    if cache_meta.get("stale"):
+        reason = cache_meta.get("stale_reason") or "ESPN refresh failed"
+        return f"ESPN NBA data is currently unreachable; serving cached empty {kind} result. {reason}"
+    league_state = season_state_for(league="nba")
+    if kind == "live":
+        if league_state == "offseason":
+            return "ESPN returned no live NBA games today; the NBA is in its offseason."
+        return "ESPN returned no currently in-progress NBA games."
+    window = start_date if start_date == end_date else f"{start_date} through {end_date}"
+    if league_state == "offseason":
+        return f"ESPN returned no NBA games for {window}; the NBA is in its offseason."
+    return f"ESPN returned no NBA games for {window}."

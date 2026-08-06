@@ -16,8 +16,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.cache import cached_fetch
 from app.config import BROWSER_USER_AGENT, settings
+from app.services.espn_client import ET_ZONE, espn_source, fetch_scoreboard, fetch_window, normalize_events
 
 SOURCE = "nflverse"
+ESPN_SOURCE = espn_source("nfl")
 
 TEAM_ALIASES = {
     "ARI": "ARI",
@@ -265,12 +267,25 @@ def schedule_week(games: list[dict[str, Any]], season: int, week: int) -> list[d
     return _sort_contract_rows(rows)
 
 
-def live_games(games: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Return live NFL games if the upstream feed exposes true in-progress state.
+def espn_schedule_window(start_date: date, days: int, ttl_seconds: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Return ESPN-backed NFL schedule rows for an Eastern-date window."""
+    return fetch_window("nfl", start_date, days, ttl=ttl_seconds)
 
-    nflverse games.csv is a schedule/results feed and does not include live clock,
-    quarter, last-play, or a reliable in-progress status. Returning an empty list is
-    more honest than fabricating live state from scheduled or final rows.
+
+def espn_live_games(ttl_seconds: int = 30) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    """Return (live rows, current ESPN slate rows, cache meta) for NFL."""
+    today_et = datetime.now(timezone.utc).astimezone(ET_ZONE).date()
+    events, meta = fetch_scoreboard("nfl", dates=today_et.strftime("%Y%m%d"), ttl=ttl_seconds)
+    slate = normalize_events(events, "nfl")
+    live_rows = [row for row in slate if row.get("status") == "live"]
+    live_rows = _sort_contract_rows(live_rows)
+    return live_rows, _sort_contract_rows(slate), meta
+
+
+def live_games(games: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Deprecated nflverse live hook.
+
+    Kept for callers/tests that still import it; live NFL state now comes from ESPN.
     """
     return []
 

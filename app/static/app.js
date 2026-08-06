@@ -137,7 +137,7 @@
   sample.nhl.live = [];
   sample.nfl.live = [];
   sample.nba.live = [];
-  sample.mlb.live = [{ ...game('2026-08-05', 'TOR', 'TB', 'live', ''), league: 'mlb', home_name: 'Tampa Bay Rays', away_name: 'Toronto Blue Jays', home_score: 1, away_score: 2, detailed_status: 'In Progress', venue: 'Tropicana Field', start_time_utc: '2026-08-05T23:10:00Z', live: { period: 7, period_label: 'T7', clock: null, last_play: 'Single to right field.', balls: 1, strikes: 2, outs: 1, runners: ['1B'] } }];
+  sample.mlb.live = [{ ...game('2026-08-05', 'DET', 'SEA', 'live', ''), league: 'mlb', game_id: '401816412', home_name: 'Seattle Mariners', away_name: 'Detroit Tigers', home_score: 4, away_score: 2, detailed_status: 'Top 9th', venue: 'T-Mobile Park', start_time_utc: '2026-08-06T01:40:00Z', live: { period: 9, period_label: '9', clock: '0:00', last_play: 'Torkelson struck out swinging.' } }];
   sample.nhl.weekSchedule = [];
   sample.nfl.weekSchedule = [];
   sample.nba.weekSchedule = [];
@@ -674,6 +674,7 @@
 
   function liveGameCard(gameRow) {
     const live = normalizeObject(gameRow.live);
+    const situation = liveSituation(live, gameRow);
     const away = teamLabel(gameRow, 'away');
     const home = teamLabel(gameRow, 'home');
     const score = scoreText(gameRow) || 'Score unavailable';
@@ -681,19 +682,31 @@
     const rawPeriod = live.period_label || (live.period == null ? '' : `Period ${live.period}`);
     const period = rawPeriod ? formatPeriodLabel(rawPeriod) : '';
     const periodTitle = period && period !== rawPeriod ? ` title="Raw period label ${escapeAttr(rawPeriod)}"` : '';
-    const extras = mlbLiveExtras(live);
+    const redZone = isRedZone(situation);
+    const extras = `${mlbLiveExtras(live)}${nflLiveExtras(situation)}`;
     return `
       <article class="live-game-card">
         <div class="section-head">
           <h4>${escapeHtml(away)} at ${escapeHtml(home)}</h4>
           <span class="live-badge">Live</span>
         </div>
-        <div class="scoreline"><span>${escapeHtml(away)}</span><strong>${value(gameRow.away_score)}</strong><span>${escapeHtml(home)}</span><strong>${value(gameRow.home_score)}</strong></div>
+        <div class="scoreline">
+          ${scoreTeamMarkup(away, hasPossession(gameRow, 'away', situation.possession), redZone)}<strong>${value(gameRow.away_score)}</strong>
+          ${scoreTeamMarkup(home, hasPossession(gameRow, 'home', situation.possession), redZone)}<strong>${value(gameRow.home_score)}</strong>
+        </div>
         <div class="live-context">${period ? `<span${periodTitle}>${escapeHtml(period)}</span>` : ''}${clock}${gameRow.detailed_status ? `<span>${escapeHtml(gameRow.detailed_status)}</span>` : ''}</div>
         ${extras}
         ${live.last_play ? `<p class="last-play"><strong>Last play:</strong> ${escapeHtml(live.last_play)}</p>` : ''}
         <p class="honesty">${escapeHtml(gameRow.venue || 'Venue TBD')} · ${escapeHtml(score)}</p>
       </article>`;
+  }
+
+  function scoreTeamMarkup(label, hasBall, redZone) {
+    const classes = ['score-team'];
+    if (hasBall) classes.push('has-possession');
+    if (hasBall && redZone) classes.push('red-zone');
+    const indicator = hasBall ? `<span class="possession-chip${redZone ? ' red-zone' : ''}" title="${redZone ? 'Possession in the red zone' : 'Possession'}">${redZone ? 'RZ' : 'Poss'}</span>` : '';
+    return `<span class="${classes.join(' ')}">${escapeHtml(label)}${indicator}</span>`;
   }
 
   function formatPeriodLabel(label) {
@@ -718,6 +731,24 @@
     const runners = live.runners == null || live.runners === '' ? '' : Array.isArray(live.runners) ? live.runners.join(', ') : typeof live.runners === 'object' ? Object.entries(live.runners).filter(([, val]) => Boolean(val)).map(([key]) => key).join(', ') : String(live.runners);
     if (!count.length && !runners) return '';
     return `<div class="live-extra-grid">${count.map(([label, val]) => statBox(label, escapeHtml(String(val)))).join('')}${runners ? statBox('Runners', escapeHtml(runners)) : ''}</div>`;
+  }
+
+  function nflLiveExtras(situation) {
+    const items = [];
+    if (situation.down_distance != null && situation.down_distance !== '') items.push(['Down & distance', situation.down_distance]);
+    if (situation.possession != null && situation.possession !== '') items.push(['Possession', situation.possession]);
+    if (isRedZone(situation)) items.push(['Red zone', 'Yes']);
+    return items.length ? `<div class="live-extra-grid nfl-situation">${items.map(([label, val]) => statBox(label, escapeHtml(String(val)))).join('')}</div>` : '';
+  }
+
+  function liveSituation(live, gameRow) {
+    const rowSituation = normalizeObject(gameRow.situation);
+    const nested = normalizeObject(live.situation);
+    return { ...live, ...rowSituation, ...nested };
+  }
+
+  function isRedZone(situation) {
+    return situation.red_zone === true || String(situation.red_zone || '').toLowerCase() === 'true';
   }
 
   function weekScheduleMarkup(rows) {
@@ -772,6 +803,19 @@
     const abbrev = teamName(gameRow, side);
     if (name && abbrev && name !== abbrev) return `${name} (${abbrev})`;
     return name || abbrev || title(side);
+  }
+
+  function hasPossession(gameRow, side, possession) {
+    if (possession == null || possession === '') return false;
+    const wanted = String(possession).trim().toLowerCase();
+    return [
+      teamName(gameRow, side),
+      gameRow[side],
+      gameRow[`${side}_abbrev`],
+      gameRow[`${side}_team_abbrev`],
+      gameRow[`${side}_name`],
+      gameRow[`${side}_team_name`]
+    ].filter(Boolean).some((candidate) => String(candidate).trim().toLowerCase() === wanted);
   }
 
   function emptyReason(meta, fallback) {

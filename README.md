@@ -1,4 +1,4 @@
-# Sports Analytics: NHL and NFL
+# Sports Analytics: Multi-Sport Prediction and Stats
 
 This repository now contains two pregame sports-modeling research tracks: the original NHL work and a new NFL prediction project. The common theme is honest out-of-sample evaluation, explicit data provenance, and resisting headline accuracy claims that do not survive audit.
 
@@ -131,7 +131,7 @@ Older reports are retained for history. Reports with invalidated accuracy claims
 
 ## Web UI
 
-The repository includes a FastAPI + vanilla-JS web UI for browsing NHL and NFL standings, team summaries, player leaders, schedules, and honestly-labelled model predictions. It uses one shared response envelope and one shared standings table shape across both leagues so the frontend can render NHL and NFL data consistently.
+The repository includes a FastAPI + vanilla-JS web UI for browsing NHL, NFL, NBA, and MLB standings, team summaries, player leaders, schedules, live games when an upstream source reports them, and honestly-labelled model predictions. It uses one shared response envelope and one shared standings table shape across all four leagues so the frontend can render them consistently.
 
 ### Quickstart
 
@@ -163,17 +163,30 @@ All API routes return HTTP 200 with `{ ok, data, error, meta }`, including valid
 | `/api/nfl/teams` and `/api/nfl/teams/{abbrev}` | NFL team summaries and detail |
 | `/api/nfl/players` | NFL QB leaders (`team`, `stat`, `limit`) |
 | `/api/nfl/schedule` | NFL schedule by `season` and optional `week` |
+| `/api/nfl/live` | NFL games currently in progress when ESPN reports them |
+| `/api/nba/standings` | NBA standings for the current or requested season |
+| `/api/nba/teams` and `/api/nba/teams/{abbrev}` | NBA team summaries and detail |
+| `/api/nba/players` | NBA player leaders (`team`, `stat`, `limit`) |
+| `/api/nba/schedule` | NBA schedule by optional `date=YYYY-MM-DD` |
+| `/api/nba/live` | NBA games currently in progress when ESPN reports them |
+| `/api/mlb/standings` | MLB standings for the current or requested season |
+| `/api/mlb/teams` and `/api/mlb/teams/{abbrev}` | MLB team summaries and detail |
+| `/api/mlb/players` | MLB player leaders (`team`, `stat`, `group`, `limit`) |
+| `/api/mlb/schedule` | MLB schedule by optional `date=YYYY-MM-DD` |
+| `/api/mlb/live` | MLB games currently in progress from MLB StatsAPI/ESPN-normalized rows |
 | `/api/predictions/nhl` | NHL prediction rows when real fixtures are available |
 | `/api/predictions/nfl` | NFL prediction rows when real fixtures are available |
+| `/api/predictions/nba` | NBA prediction rows when real fixtures are available |
+| `/api/predictions/mlb` | MLB prediction rows when real fixtures are available |
 | `/api/predictions/matchup` | Hypothetical matchup prediction with `league`, `home`, and `away` |
 
 ### Caching and refresh
 
 Backend fetches use the disk-backed cache in `data\ui_cache\`: standings refresh about every 5 minutes, schedules every 2 minutes, stats every 15 minutes, and predictions every 10 minutes. If an upstream refresh fails but a cached copy exists, the API serves the stale cached payload with `meta.stale: true` instead of blanking the UI. The frontend auto-refreshes data and surfaces stale/offseason notes from `meta`.
 
-### Offseason behavior
+### Season-state behavior
 
-As of August 2026, both leagues are between seasons. "Current standings" means the most recently completed season, and endpoints include `meta.season_state` so the UI can display an offseason banner rather than implying live in-season standings.
+As of 2026-08-05, NHL and NBA are between seasons, NFL is entering preseason, and MLB is in its regular season. Endpoints include `meta.season_state` so the UI can display offseason/preseason/live-season banners rather than implying the wrong freshness.
 
 ### Tests
 
@@ -220,7 +233,7 @@ MLB data:
 - 2020 is COVID-shortened (898 completed games); 2026 is in progress (1,709 completed as of 2026-08-05).
 - Doubleheaders are preserved and keyed by `gamePk` (verified: 2026-07-29 ATL at NYM, gamePks 823596 and 823598).
 - Spot-check: 2025 World Series Game 7, LAD 5 at TOR 4.
-- MLB is currently mid-season and is the only league serving genuinely live data (games were observed transitioning Warmup -> In Progress).
+- MLB is currently mid-season and was the only league with live games observed on 2026-08-05 (games were observed transitioning Warmup -> In Progress).
 
 ### MLB model (fourth honest negative)
 
@@ -238,7 +251,16 @@ Known limitation, now measured rather than merely noted: the served model uses *
 
 ## External API caveats
 
-ESPN endpoints return HTTP 403 for NFL, NBA, and MLB and are deliberately not used. NBA source checks also found `stats.nba.com` timing out, `cdn.nba.com` returning 403, and balldontlie returning 401.
+The shared ESPN client uses ESPN's `site.web.api.espn.com` scoreboard API with a browser `User-Agent`, one request per slate. The similar `site.api.espn.com` host returned HTTP 403 even with a browser `User-Agent`; that earlier host mix-up caused the now-corrected conclusion that ESPN was unavailable. NBA source checks also found `stats.nba.com` timing out, `cdn.nba.com` returning 403, and balldontlie returning 401.
+
+ESPN scoreboard validation measured on 2026-08-05:
+
+- NFL 2025-11-01..2025-11-10 reconciled against this repo's databases with **27/27 exact score matches**.
+- NBA 2025-01-10..2025-01-20 reconciled with **79/79 exact score matches**.
+- ESPN also listed three postponed NBA games on 2025-01-11 that this repo's stored data omits.
+- ESPN listed 17 NFL preseason events from 2026-08-05 through 2026-08-15; nflverse's regular-season structure cannot provide those preseason games.
+
+Maintainer gotchas: ESPN reports `score: "0"` for games that never happened, including scheduled and postponed games, so unplayed scores must be nulled. `dates=` filters by US Eastern date, not UTC; the Hall of Fame game at `2026-08-07T00:00Z` appears under `dates=20260806`. Calling the scoreboard with no `dates` returns the next season. ESPN carries All-Star exhibitions on the normal slate with `season.type` still 2, so filter them via `competitions[0].type.abbreviation == "ALLSTAR"`. ESPN team abbreviations differ from this repo's abbreviations for NBA (`GS`, `NO`, `NY`, `SA`, `UTAH`, `WSH`) and NFL (`LAR`, `WSH`).
 
 ## Live games and week schedules
 
@@ -264,24 +286,14 @@ This differs by league, and the differences are real limitations rather than bug
 | --- | --- | --- |
 | MLB | yes | **yes** — StatsAPI, with inning, balls, strikes, outs and runners |
 | NHL | yes | yes, when the season is running |
-| NBA | yes | **no** — no free verified source exposes it |
-| NFL | yes | **no** — nflverse does not publish real-time clock/quarter/last-play |
+| NBA | yes | yes via ESPN scoreboard schema, but not observed live on 2026-08-05 because the NBA was in offseason |
+| NFL | yes, including ESPN preseason coverage | yes via ESPN scoreboard schema, but not observed live on 2026-08-05 because the first preseason game had not started |
 
-NBA and NFL therefore return an empty live list with an explicit `meta.empty_reason`
-naming the limitation. They do not approximate or simulate live state.
+NBA and NFL live support is sourced from ESPN, not nflverse. The live row shape was validated structurally and against ESPN's MLB feed, whose schema matched and had two genuinely in-progress games cross-checked against MLB StatsAPI. No NBA or NFL game was observed live on 2026-08-05, so do not claim production-observed NBA/NFL live rendering from that date.
 
 ### Empty is a correct answer
 
-As of August 2026 the NHL and NBA are in their offseason and the NFL regular season has
-not started, so three of the four leagues legitimately return no games. The API says so
-in `meta.empty_reason` and the UI renders that reason verbatim.
-
-Note the deliberate difference in wording. The NHL source covers preseason, so
-"no games are scheduled in this window" is a verified claim. The nflverse source used
-here carries regular-season and postseason games only, so the NFL text instead says that
-no *covered* games fall in the window and that preseason is outside the source — because
-the NFL does play preseason games in August. Claiming "there are no games" would have
-been a statement about the world that our data cannot support.
+As of 2026-08-05 the NHL and NBA are in their offseason, the first NFL preseason game is about 20 hours away, and MLB is active. Empty live lists remain correct when `meta.empty_reason` truthfully says no games are currently in progress. Do not approximate or simulate live state.
 
 ### Notes for future maintainers
 

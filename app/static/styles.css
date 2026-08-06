@@ -351,6 +351,32 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary), transparent 92%)
 .scoreline strong {
   font-size: 1.35rem;
 }
+.score-team {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  min-width: 0;
+}
+.score-team.has-possession {
+  color: var(--success);
+}
+.possession-chip {
+  border: 1px solid color-mix(in srgb, var(--success), var(--border) 45%);
+  border-radius: 999px;
+  padding: .12rem .38rem;
+  color: var(--success);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.score-team.red-zone, .possession-chip.red-zone {
+  color: var(--danger);
+}
+.possession-chip.red-zone {
+  border-color: color-mix(in srgb, var(--danger), var(--border) 35%);
+  background: color-mix(in srgb, var(--danger), transparent 88%);
+}
 .live-context {
   display: flex;
   flex-wrap: wrap;

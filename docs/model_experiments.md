@@ -21,7 +21,7 @@ The positive finding is narrower and should be stated only as probability qualit
 
 The methodology lesson is the important part. On development folds from 2009-2022, totaling 16,640 games, the stack beat Elo on accuracy, 66.46% versus 65.97%. That edge did not survive on the frozen holdout, illustrating why configuration must be frozen before touching holdout rows.
 
-No serving artifact was promoted. Live NBA serving is unchanged.
+No blend serving artifact was promoted. This model-result note is separate from the later ESPN scoreboard integration for NBA live/schedule data.
 
 ## NHL improvement attempt: point estimate up, not accepted
 
