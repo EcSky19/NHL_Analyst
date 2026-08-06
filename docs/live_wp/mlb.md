@@ -111,3 +111,22 @@ Measured from the saved artifact:
 These pass the intended directionality checks: home win probability rises with
 lead, the same lead is worth more later, and bottom-9 proxies favor the home
 team. The tied top-1st proxy is slightly below 0.500 in this sample.
+
+## Known limitation: home-field bias in the training sample
+
+At a 0-0 start of game the model returns **0.4953** for the home team, i.e. it
+very slightly favours the *away* side. Real MLB home teams win about 53% of the
+time, so that intercept is wrong in direction.
+
+It is, however, faithful to what the model was shown. The harvest covers 264
+games per season, not a full 2,430-game slate, and in the 2024 training sample
+the home team won only **46.2%** of games. The 2025 test sample came in at
+51.9%, and among tied snapshots with >95% of regulation remaining the home side
+actually won 51.1%. So the model inherited a home-field disadvantage that exists
+in the sample but not in the sport.
+
+The practical effect is confined to the earliest, least informative part of a
+game, where the margin term carries almost no signal and the intercept dominates;
+by the middle innings the score difference swamps it. It is nonetheless a real
+defect, and the honest fix is a larger harvest rather than hand-patching the
+intercept. Recorded here rather than silently corrected.

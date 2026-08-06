@@ -715,17 +715,18 @@
     const wp = normalizeObject(gameRow.win_probability);
     const homeProb = asNumber(wp.home);
     const awayProb = asNumber(wp.away);
-    const valid = wp.available === true && homeProb != null && awayProb != null && homeProb > 0 && homeProb < 1 && awayProb > 0 && awayProb < 1;
+    const sumsToOne = homeProb != null && awayProb != null && Math.abs((homeProb + awayProb) - 1) < 0.0001;
+    const valid = wp.available === true && homeProb != null && awayProb != null && homeProb > 0 && homeProb < 1 && awayProb > 0 && awayProb < 1 && sumsToOne;
     if (!valid) {
       const reason = wp.reason || 'No validated live win-probability model is available for this league.';
-      return `<div class="live-winprob unavailable"><strong>Live win probability unavailable</strong><p class="honesty">${escapeHtml(reason)} Model estimate only; not betting advice.</p></div>`;
+      return `<div class="live-winprob unavailable"><strong>Live win probability unavailable</strong><p class="honesty">${escapeHtml(reason)} Model estimate only; not a betting line.</p></div>`;
     }
     const homePct = clampPct(homeProb);
     const awayPct = clampPct(awayProb);
     return `
       <div class="live-winprob" aria-label="Live win probability model estimate">
-        <div class="wp-head"><strong>Live win probability</strong><span>Model estimate - Not betting advice.</span></div>
-        <div class="wp-labels"><span>${escapeHtml(awayLabel)} ${pct(awayProb)}</span><span>${escapeHtml(homeLabel)} ${pct(homeProb)}</span></div>
+        <div class="wp-head"><strong>Live win probability</strong><span>Model estimate - not a betting line.</span></div>
+        <div class="wp-labels"><span>${escapeHtml(awayLabel)} ${wpPct(awayProb)}</span><span>${escapeHtml(homeLabel)} ${wpPct(homeProb)}</span></div>
         <div class="live-wp-track" aria-hidden="true"><span class="away" style="width:${awayPct}%"></span><span class="home" style="width:${homePct}%"></span></div>
         <p class="honesty">${escapeHtml(wp.model || `${state.league}_live_wp`)} from the validated live model.</p>
       </div>`;
@@ -735,6 +736,17 @@
     const n = asNumber(valueIn);
     if (n == null) return 0;
     return Math.max(0, Math.min(100, n * 100)).toFixed(2);
+  }
+
+  // Win probabilities must never be displayed as a flat 100% or 0%. The models
+  // legitimately return values like 0.9996, which naive rounding would print as
+  // "100.0%" — claiming a certainty no model here has earned.
+  function wpPct(valueIn) {
+    const n = asNumber(valueIn);
+    if (n == null) return '—';
+    if (n >= 0.999) return '>99.9%';
+    if (n <= 0.001) return '<0.1%';
+    return `${(n * 100).toFixed(1)}%`;
   }
 
   function formatPeriodLabel(label) {
@@ -1255,5 +1267,12 @@
   }
   function escapeAttr(valueIn) {
     return escapeHtml(valueIn).replace(/`/g, '&#96;');
+  }
+  if (typeof window !== 'undefined' && window.__SPORTS_ANALYTICS_TEST_HOOKS__) {
+    window.__sportsAnalyticsTestHooks__ = {
+      liveGameCard,
+      liveWinProbabilityMarkup,
+      setLeagueForTest: (league) => { state.league = league; }
+    };
   }
 })();

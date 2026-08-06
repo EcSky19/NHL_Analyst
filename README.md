@@ -188,6 +188,8 @@ Backend fetches use the disk-backed cache in `data\ui_cache\`: standings refresh
 
 Live game rows expose a `win_probability` object with the modelled chance the **home** team wins, given the current score and how much of the game is left. Models are trained on in-game snapshots derived from ESPN play-by-play (~780k snapshots across 2,069 games) and are split **by game**, never by snapshot, so no game appears in both train and test.
 
+The cross-league model selection policy and verification commands are documented in `docs\live_wp\README.md`.
+
 Measured on a held-out season, alongside ESPN's own published win-probability curve as an independent professional benchmark:
 
 | League | Ours (Brier) | Ours (log loss) | Analytic baseline (Brier) | ESPN (Brier) |

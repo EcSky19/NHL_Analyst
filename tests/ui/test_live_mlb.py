@@ -121,3 +121,30 @@ def test_mlb_status_uses_abstract_state_for_live():
     assert mlb._contract_status({"status": {"abstractGameState": "Live", "detailedState": "Player challenge"}}) == "live"
     assert mlb._contract_status({"status": {"abstractGameState": "Preview", "detailedState": "Warmup"}}) == "scheduled"
     assert mlb._contract_status({"status": {"abstractGameState": "Preview", "detailedState": "In Progress"}}) == "scheduled"
+
+
+def test_warmup_and_pregame_are_not_reported_live():
+    """MLB sends abstractGameState "Live" before the first pitch.
+
+    "Warmup" and "Pre-Game" arrive as Live, so treating abstractGameState as
+    authoritative would publish a fake 0-0 score and a live win probability for
+    a game that has not started.
+    """
+    from app.routers.mlb import _contract_status, _score_for_status
+
+    for detailed in ("Warmup", "Pre-Game"):
+        game = {"status": {"detailedState": detailed, "abstractGameState": "Live"}}
+        status = _contract_status(game)
+        assert status == "scheduled", f"{detailed} must not be reported as live"
+        assert _score_for_status(0, status, detailed) is None, "unplayed score must be null, never 0"
+
+    in_progress = {"status": {"detailedState": "In Progress", "abstractGameState": "Live"}}
+    assert _contract_status(in_progress) == "live"
+
+
+def test_warmup_game_gets_no_win_probability():
+    """A not-yet-started game must not carry a win probability at all."""
+    from app.routers.mlb import _with_live_win_probability
+
+    row = {"status": "scheduled", "home_score": None, "away_score": None}
+    assert "win_probability" not in _with_live_win_probability(row, "mlb")

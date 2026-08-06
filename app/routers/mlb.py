@@ -321,6 +321,12 @@ def _contract_status(game: dict[str, Any]) -> str:
     if abstract == "final" or detailed in {"final", "game over"} or coded == "f":
         return "final"
     if abstract == "live":
+        # MLB reports abstractGameState "Live" from the moment the teams take
+        # the field, so "Warmup" and "Pre-Game" arrive as Live even though no
+        # pitch has been thrown. Reporting those as in-progress would show a
+        # fake 0-0 score and a win probability for a game that has not started.
+        if "warmup" in detailed or "pre-game" in detailed or "pregame" in detailed:
+            return "scheduled"
         return "live"
     return "scheduled"
 

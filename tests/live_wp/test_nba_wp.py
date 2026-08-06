@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import math
 
+import pytest
+
 from app.services.live_winprob import FEATURE_NAMES, GameState, has_model, load_model, predict_home_win_prob
 
 
@@ -36,9 +38,27 @@ def test_nba_artifact_declares_fixed_split_and_serving_features():
 
 
 def test_nba_probability_is_monotone_in_margin():
-    probs = [score(margin, 0.5, period=2) for margin in (-15, -5, 0, 5, 15)]
-    assert probs == sorted(probs)
-    assert len(set(probs)) == len(probs)
+    for frac, period in ((1.0, 1), (0.75, 2), (0.5, 2), (0.25, 4), (120 / 2880, 4), (30 / 2880, 4)):
+        probs = [score(margin, frac, period=period) for margin in range(-30, 31, 5)]
+        assert probs == sorted(probs)
+
+
+def test_nba_late_blowout_matches_observed_outcome_rate():
+    """A 10-point lead with 2:00 left really is nearly decided.
+
+    This state was investigated as a suspected overconfidence bug because the
+    model returns ~0.998. Measuring the held-out 2024 season settled it: of the
+    193 snapshots with a home margin of +9..+11 and roughly 1:26-2:38 left, the
+    home team won 192, an actual rate of 0.9948. ESPN's published curve averages
+    0.9865 for the same states, i.e. slightly UNDER-confident. So a high number
+    here is correct, and an earlier attempt to "fix" it down to ~0.968 was
+    rejected for making held-out log loss worse.
+
+    The assertion is therefore a floor, not a ceiling.
+    """
+    prob = score(10, 120 / 2880, period=4)
+    assert prob > 0.95, "a +10 lead with 2:00 left should be near-decided"
+    assert prob < 1.0
 
 
 def test_nba_same_lead_is_more_valuable_late():

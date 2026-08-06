@@ -44,13 +44,17 @@ from app.services.live_winprob import (
 )
 
 DB_PATH = ROOT / "data" / "live_wp" / "nba_snapshots.db"
-ROUND1_REFERENCE = {
-    "name": "round1_current_artifact",
-    "brier": 0.171201,
-    "log_loss": 0.507814,
+CURRENT_REFERENCE = {
+    "name": "published_current_artifact",
+    "brier": 0.167947,
+    "log_loss": 0.491963,
+    "max_calibration_gap": 0.0656,
+    "defect_home_plus_10_2min": 0.9980,
 }
 ESPN_REFERENCE = {"name": "espn_published_curve", "brier": 0.157319, "log_loss": 0.462902}
-NORMAL_REFERENCE = {"name": "analytic_normal_round1", "brier": 0.171684}
+NORMAL_REFERENCE = {"name": "analytic_normal_reference", "brier": 0.166237, "log_loss": 0.509335}
+DEFECT_FRAC = 120 / 2880
+DEFECT_MAX_PROB = 0.98
 
 CORE_FEATURES = ["margin", "margin_scaled", "frac_remaining", "is_overtime"]
 ALL_FEATURES = list(FEATURE_NAMES)
@@ -62,6 +66,66 @@ class Candidate:
     feature_names: list[str]
     model: object
     description: str
+
+
+class LogitBlendModel:
+    """Blend a monotone HGB model with a smooth logistic model in logit space.
+
+    The estimator expects columns ``[margin, margin_scaled, frac_remaining,
+    is_overtime]``. Both submodels are monotone non-decreasing in margin on the
+    grids used here, and a non-negative logit-space blend preserves that order.
+    """
+
+    def __init__(self, hgb_weight: float = 0.4, seed: int = 20260805) -> None:
+        self.hgb_weight = float(hgb_weight)
+        self.seed = int(seed)
+        self.classes_ = np.array([0, 1])
+
+    def fit(self, X, y):
+        arr = np.asarray(X, dtype=float)
+        self.hgb_ = HistGradientBoostingClassifier(
+            max_iter=200,
+            learning_rate=0.05,
+            l2_regularization=0.1,
+            max_leaf_nodes=31,
+            min_samples_leaf=80,
+            random_state=self.seed,
+            monotonic_cst=[1, 1, -1, 0],
+        )
+        self.lr_ = Pipeline(
+            [
+                ("scale", StandardScaler()),
+                ("lr", LogisticRegression(max_iter=3000, C=1.0, solver="lbfgs")),
+            ]
+        )
+        self.hgb_.fit(arr, y)
+        self.lr_.fit(arr[:, :2], y)
+        return self
+
+    def predict_proba(self, X) -> np.ndarray:
+        arr = np.asarray(X, dtype=float)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+        hgb = self.hgb_.predict_proba(arr)[:, 1]
+        smooth = self.lr_.predict_proba(arr[:, :2])[:, 1]
+        home = _inv_logit(self.hgb_weight * _logit(hgb) + (1.0 - self.hgb_weight) * _logit(smooth))
+        home = np.clip(home, 1e-6, 1.0 - 1e-6)
+        return np.column_stack([1.0 - home, home])
+
+
+# If this script is executed directly and a blend ever passes the shipping gate,
+# store an importable module path in the pickle so fresh-process serving can load it.
+sys.modules.setdefault("scripts.live_wp.train_nba", sys.modules[__name__])
+LogitBlendModel.__module__ = "scripts.live_wp.train_nba"
+
+
+def _logit(p: np.ndarray) -> np.ndarray:
+    p = np.clip(np.asarray(p, dtype=float), 1e-6, 1.0 - 1e-6)
+    return np.log(p / (1.0 - p))
+
+
+def _inv_logit(x: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-x))
 
 
 def rows_from_db() -> list[dict]:
@@ -144,6 +208,24 @@ def candidates(seed: int) -> list[Candidate]:
                 ]
             ),
             "Round-1 shape: two features with scaled logistic regression.",
+        ),
+        Candidate(
+            "logit_blend_hgb40_smooth60",
+            CORE_FEATURES,
+            LogitBlendModel(hgb_weight=0.4, seed=seed),
+            "Validation-selected fix attempt: 40% monotone HGB and 60% smooth two-feature logistic in logit space.",
+        ),
+        Candidate(
+            "logit_blend_hgb50_smooth50",
+            CORE_FEATURES,
+            LogitBlendModel(hgb_weight=0.5, seed=seed),
+            "Equal logit-space blend of monotone HGB and smooth two-feature logistic.",
+        ),
+        Candidate(
+            "logit_blend_hgb70_smooth30",
+            CORE_FEATURES,
+            LogitBlendModel(hgb_weight=0.7, seed=seed),
+            "Higher-HGB logit-space blend; less defect shrinkage but better validation than the raw HGB.",
         ),
         Candidate(
             "poly3_logistic_all6",
@@ -257,6 +339,65 @@ def score_state(model: object, feature_names: list[str], margin: int, frac: floa
     return float(model.predict_proba(vector)[0][1])
 
 
+def monotone_grid_check(model: object, feature_names: list[str]) -> dict:
+    frac_points = [1.0, 0.75, 0.5, 0.25, 0.10, DEFECT_FRAC, 30 / 2880, 0.0]
+    margins = list(range(-60, 61))
+    failures: list[dict] = []
+    checked = 0
+    for frac in frac_points:
+        for period in (1, 2, 4, 5):
+            probs = [score_state(model, feature_names, margin, frac, period) for margin in margins]
+            diffs = np.diff(probs)
+            checked += len(diffs)
+            if np.any(diffs < -1e-12):
+                idx = int(np.argmin(diffs))
+                failures.append(
+                    {
+                        "frac_remaining": frac,
+                        "period": period,
+                        "margin": margins[idx],
+                        "next_margin": margins[idx + 1],
+                        "drop": float(diffs[idx]),
+                    }
+                )
+    return {"passed": not failures, "checked_adjacent_pairs": checked, "failures": failures}
+
+
+def tail_table(model: object, feature_names: list[str]) -> list[dict]:
+    rows: list[dict] = []
+    for label, frac in (("2:00", DEFECT_FRAC), ("0:30", 30 / 2880)):
+        for margin in (5, 10, 15, 20):
+            rows.append(
+                {
+                    "time_remaining": label,
+                    "frac_remaining": frac,
+                    "margin": margin,
+                    "prob": score_state(model, feature_names, margin, frac, 4),
+                }
+            )
+    return rows
+
+
+def comparable_espn_state(rows: list[dict], margin: int = 10, frac: float = DEFECT_FRAC) -> dict:
+    comparable = [
+        r
+        for r in rows
+        if int(r["margin"]) == margin
+        and r["espn_home_wp"] is not None
+        and abs(float(r["frac_remaining"]) - frac) <= 30 / 2880
+    ]
+    if not comparable:
+        return {"n": 0}
+    probs = [float(r["espn_home_wp"]) for r in comparable]
+    return {
+        "n": len(probs),
+        "mean": float(np.mean(probs)),
+        "median": float(np.median(probs)),
+        "min": float(np.min(probs)),
+        "max": float(np.max(probs)),
+    }
+
+
 def sanity_checks(model: object, feature_names: list[str]) -> dict:
     margin_points = (-20, -10, 0, 10, 20)
     margin_probs = [score_state(model, feature_names, margin, 0.5, 2) for margin in margin_points]
@@ -273,6 +414,9 @@ def sanity_checks(model: object, feature_names: list[str]) -> dict:
     checks = {
         "margin_grid_frac_0_5": {str(m): p for m, p in zip(margin_points, margin_probs)},
         "probability_increases_with_home_margin": all(a < b for a, b in zip(margin_probs, margin_probs[1:])),
+        "monotone_grid": monotone_grid_check(model, feature_names),
+        "home_plus_10_2min": score_state(model, feature_names, 10, DEFECT_FRAC, 4),
+        "late_tail_table": tail_table(model, feature_names),
         "home_plus_8_frac_0_8": lead_early,
         "home_plus_8_frac_0_2": lead_late,
         "same_lead_higher_with_less_time": lead_late > lead_early,
@@ -281,6 +425,7 @@ def sanity_checks(model: object, feature_names: list[str]) -> dict:
         "strictly_inside_0_1": strictly_inside,
     }
     assert checks["probability_increases_with_home_margin"]
+    assert checks["monotone_grid"]["passed"]
     assert checks["same_lead_higher_with_less_time"]
     assert checks["finite_edge_predictions"]
     assert checks["strictly_inside_0_1"]
@@ -334,25 +479,32 @@ def main() -> int:
     y_val = labels(val)
 
     validation_results: list[dict] = []
-    fitted_by_name: dict[str, Candidate] = {}
     for cand in candidates(args.seed):
         cand.model.fit(matrix(fit, cand.feature_names), y_fit)
         val_probs = cand.model.predict_proba(matrix(val, cand.feature_names))[:, 1]
+        monotone = monotone_grid_check(cand.model, cand.feature_names)
+        defect_prob = score_state(cand.model, cand.feature_names, 10, DEFECT_FRAC, 4)
         row = metric_row(cand.name, val_probs, y_val)
         row.update(
             {
                 "feature_names": cand.feature_names,
                 "description": cand.description,
                 "max_calibration_gap": max_calibration_gap(val_probs.tolist(), y_val.tolist(), bins=10, min_n=100),
+                "monotone_grid_passed": monotone["passed"],
+                "home_plus_10_2min": defect_prob,
+                "fixes_overconfidence_gate": defect_prob <= DEFECT_MAX_PROB,
             }
         )
         validation_results.append(row)
-        fitted_by_name[cand.name] = cand
 
-    # Model selection happens here, before the 2024 holdout is scored. Log loss is
-    # the primary criterion because it rewards calibrated probabilities and heavily
-    # penalizes confident misses.
-    selected_name = min(validation_results, key=lambda r: (r["log_loss"], r["brier"]))["name"]
+    # Model selection happens here, before the 2024 holdout is scored. Because
+    # this run targets a specific late-blowout overconfidence defect, candidates
+    # must first be monotone and pull the +10/2:00 state below the data-justified
+    # 0.98 sanity threshold; validation log loss is then the primary criterion.
+    eligible = [r for r in validation_results if r["monotone_grid_passed"] and r["fixes_overconfidence_gate"]]
+    if not eligible:
+        raise SystemExit("No validation candidate both fixed the defect threshold and passed monotonicity.")
+    selected_name = min(eligible, key=lambda r: (r["log_loss"], r["brier"]))["name"]
     selected_template = next(c for c in candidates(args.seed) if c.name == selected_name)
     selected_template.model.fit(matrix(train, selected_template.feature_names), labels(train))
     selected_model = selected_template.model
@@ -366,9 +518,13 @@ def main() -> int:
     mu, sigma = normal_params(train)
     base = baseline_probs(test, mu, sigma)
     espn_y = labels([r for r in test if r["espn_home_wp"] is not None])
+    test_frac = np.asarray([float(r["frac_remaining"]) for r in test], dtype=float)
+    late_idx = np.where(test_frac <= 0.25)[0]
+    espn_late_rows = [r for r in test if r["espn_home_wp"] is not None and float(r["frac_remaining"]) <= 0.25]
+    espn_late_y = labels(espn_late_rows)
     comparisons = [
         final_metric,
-        {**ROUND1_REFERENCE, "n": len(test)},
+        {**CURRENT_REFERENCE, "n": len(test)},
         {**NORMAL_REFERENCE, "n": len(test)},
         metric_row("normal_recomputed_in_script", base["normal_recomputed"], y_test),
         {**ESPN_REFERENCE, "n": int(len(espn_y))},
@@ -376,11 +532,23 @@ def main() -> int:
         metric_row("leader", base["leader"], y_test),
         metric_row("constant_0.5", base["constant_0.5"], y_test),
     ]
+    late_comparisons = [
+        metric_row("selected_model_late_frac_le_0_25", test_probs[late_idx], y_test[late_idx]),
+        metric_row(
+            "espn_late_frac_le_0_25",
+            [float(r["espn_home_wp"]) for r in espn_late_rows],
+            espn_late_y,
+        ),
+    ]
 
     sanity = sanity_checks(selected_model, selected_features)
     calib = calibration_table(test_probs.tolist(), y_test.tolist(), bins=10)
     phases = phase_metrics(test, test_probs)
-    should_overwrite = final_metric["brier"] < ROUND1_REFERENCE["brier"] and final_metric["log_loss"] < ROUND1_REFERENCE["log_loss"]
+    should_overwrite = (
+        final_metric["log_loss"] < CURRENT_REFERENCE["log_loss"]
+        and sanity["monotone_grid"]["passed"]
+        and sanity["home_plus_10_2min"] <= DEFECT_MAX_PROB
+    )
 
     artifact = {
         "model": selected_model,
@@ -392,8 +560,17 @@ def main() -> int:
         "log_loss": final_metric["log_loss"],
         "train_seasons": [args.train_season],
         "test_seasons": [args.test_season],
+        "max_calibration_gap": final_metric["max_calibration_gap"],
+        "notes": (
+            "NBA late-blowout calibration experiment. Candidate selected only from 2023 validation "
+            "after passing monotonicity and +10/2:00 overconfidence gates; artifact is saved only if "
+            "it beats the published model's held-out 2024 log loss."
+        ),
         "validation": {
-            "selection_rule": "lowest validation log_loss, then Brier, using only 2023 game-level validation split",
+            "selection_rule": (
+                "among 2023 validation candidates with monotone margin grid and home +10 at 2:00 <= "
+                f"{DEFECT_MAX_PROB}, choose lowest validation log_loss, then Brier"
+            ),
             "selected_model": selected_name,
             "validation_split": {
                 "type": "stratified_game_level_split_within_train_season",
@@ -415,12 +592,14 @@ def main() -> int:
             "candidates": validation_results,
             "holdout_metrics": final_metric,
             "comparisons": comparisons,
+            "late_comparisons": late_comparisons,
             "normal_baseline_params_recomputed": {"mu": mu, "sigma": sigma},
             "calibration_table": calib,
             "max_calibration_gap": final_metric["max_calibration_gap"],
             "phase_breakdown": phases,
             "sanity_checks": sanity,
-            "round1_reference": ROUND1_REFERENCE,
+            "espn_comparable_home_plus_10_2min": comparable_espn_state(test),
+            "current_reference": CURRENT_REFERENCE,
             "espn_reference": ESPN_REFERENCE,
             "normal_reference_from_round1": NORMAL_REFERENCE,
             "overwrote_artifact": should_overwrite,
@@ -434,7 +613,9 @@ def main() -> int:
         artifact["validation"]["serving_check"] = fresh_serving_check()
         joblib.dump(artifact, path)
     else:
-        artifact["validation"]["serving_check"] = {"skipped": "candidate did not beat round-1 reference; artifact not overwritten"}
+        artifact["validation"]["serving_check"] = {
+            "skipped": "candidate did not beat the published artifact's held-out log loss; artifact not overwritten"
+        }
 
     print(json.dumps(rounded(artifact["validation"]), indent=2, sort_keys=True))
     if should_overwrite:
