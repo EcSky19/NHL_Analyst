@@ -5,24 +5,33 @@ import sqlite3
 import sys
 import time
 from dataclasses import asdict
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.services.espn_client import fetch_window
+from app.services.espn_client import (
+    date_range_param,
+    dedupe_by_game_id,
+    fetch_scoreboard,
+    normalize_events,
+)
 from app.services.espn_pbp import fetch_summary, snapshots_from_summary
 
 DB_PATH = ROOT / "data" / "live_wp" / "mlb_snapshots.db"
 
-# Two mid-season windows with full regular-season slates. This keeps the target
-# near 300-600 games while avoiding known no-game dates such as the All-Star break.
+# Full MLB regular-season date ranges. These deliberately include the
+# international openers and 2024's Sep. 30 makeup doubleheader.
 HARVEST_WINDOWS = {
-    2024: (date(2024, 7, 20), 20),
-    2025: (date(2025, 7, 20), 20),
+    2024: (date(2024, 3, 20), date(2024, 9, 30)),
+    2025: (date(2025, 3, 18), date(2025, 9, 28)),
 }
+SCOREBOARD_CHUNK_DAYS = 14
+MAX_ATTEMPTS = 4
+SUMMARY_SLEEP_SECONDS = 0.25
 
 
 def connect() -> sqlite3.Connection:
@@ -69,16 +78,52 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+def _season_chunks(start: date, end: date):
+    current = start
+    while current <= end:
+        chunk_end = min(end, current + timedelta(days=SCOREBOARD_CHUNK_DAYS - 1))
+        yield current, (chunk_end - current).days + 1
+        current = chunk_end + timedelta(days=1)
+
+
+def fetch_regular_window(start: date, days: int) -> list[dict]:
+    end = start + timedelta(days=days - 1)
+    padded = date_range_param(start - timedelta(days=1), end + timedelta(days=1))
+    events, _meta = fetch_scoreboard("mlb", dates=padded, ttl=60 * 60 * 24 * 30)
+    regular = [e for e in events if (e.get("season") or {}).get("type") == 2]
+    rows = normalize_events(regular, "mlb")
+    lo, hi = start.isoformat(), end.isoformat()
+    rows = [r for r in rows if r["game_date"] and lo <= r["game_date"] <= hi]
+    rows = dedupe_by_game_id(rows)
+    rows.sort(key=lambda r: (r["start_time_utc"] or "", r["game_id"]))
+    return rows
+
+
 def game_rows() -> list[dict]:
     rows: list[dict] = []
-    for season, (start, days) in HARVEST_WINDOWS.items():
-        season_rows, _meta = fetch_window("mlb", start, days, ttl=60 * 60 * 24 * 30)
-        finals = [r for r in season_rows if r.get("status") == "final"]
+    for season, (start, end) in HARVEST_WINDOWS.items():
+        season_rows: list[dict] = []
+        for chunk_start, days in _season_chunks(start, end):
+            chunk_rows = fetch_regular_window(chunk_start, days)
+            season_rows.extend(chunk_rows)
+            print(
+                f"{season}: scoreboard {chunk_start} +{days}d -> {len(chunk_rows)} events",
+                flush=True,
+            )
+        deduped = {str(row["game_id"]): row for row in season_rows}.values()
+        status_counts: dict[str, int] = {}
+        for row in deduped:
+            status_counts[str(row.get("status"))] = status_counts.get(str(row.get("status")), 0) + 1
+        finals = [r for r in deduped if r.get("status") == "final"]
         for row in finals:
             row = dict(row)
             row["season"] = season
             rows.append(row)
-        print(f"{season}: found {len(finals)} final games from {start} for {days} days", flush=True)
+        print(
+            f"{season}: found {len(finals)} final games from {start} through {end}; "
+            f"statuses={status_counts}",
+            flush=True,
+        )
     return rows
 
 
@@ -122,6 +167,26 @@ def insert_snapshots(conn: sqlite3.Connection, season: int, snapshots) -> None:
     )
 
 
+def fetch_summary_with_retry(game_id: str) -> dict[str, Any]:
+    delay = 1.0
+    last_exc: Exception | None = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            return fetch_summary("mlb", game_id)
+        except Exception as exc:
+            last_exc = exc
+            if attempt == MAX_ATTEMPTS:
+                break
+            print(
+                f"retry {attempt}/{MAX_ATTEMPTS} for {game_id} after {type(exc).__name__}: {exc}",
+                flush=True,
+            )
+            time.sleep(delay)
+            delay *= 2
+    assert last_exc is not None
+    raise last_exc
+
+
 def harvest(limit: int | None = None) -> None:
     conn = connect()
     rows = game_rows()
@@ -131,6 +196,7 @@ def harvest(limit: int | None = None) -> None:
 
     total = len(rows)
     skipped = harvested = empty = errors = 0
+    failures: list[tuple[str, str, str]] = []
     for idx, row in enumerate(rows, 1):
         game_id = str(row["game_id"])
         if already_harvested(conn, game_id):
@@ -139,7 +205,7 @@ def harvest(limit: int | None = None) -> None:
                 print(f"{idx}/{total}: skipped cached {game_id}", flush=True)
             continue
         try:
-            summary = fetch_summary("mlb", game_id)
+            summary = fetch_summary_with_retry(game_id)
             snaps = snapshots_from_summary(
                 summary,
                 "mlb",
@@ -149,7 +215,9 @@ def harvest(limit: int | None = None) -> None:
             )
         except Exception as exc:
             errors += 1
-            print(f"{idx}/{total}: ERROR {game_id}: {exc}", flush=True)
+            failures.append((game_id, type(exc).__name__, str(exc)))
+            print(f"{idx}/{total}: ERROR {game_id}: {type(exc).__name__}: {exc}", flush=True)
+            time.sleep(SUMMARY_SLEEP_SECONDS)
             continue
         insert_snapshots(conn, int(row["season"]), snaps)
         insert_game(conn, row, len(snaps))
@@ -158,12 +226,15 @@ def harvest(limit: int | None = None) -> None:
             harvested += 1
         else:
             empty += 1
+            failures.append((game_id, "empty_snapshots", "summary returned no usable snapshots"))
         print(
             f"{idx}/{total}: {row['season']} {row.get('away')}@{row.get('home')} "
             f"{game_id}: {len(snaps)} snapshots",
             flush=True,
         )
-        time.sleep(0.15)
+        if not snaps:
+            print(f"{idx}/{total}: EMPTY {game_id}: summary returned no usable snapshots", flush=True)
+        time.sleep(SUMMARY_SLEEP_SECONDS)
 
     counts = conn.execute(
         "SELECT COUNT(DISTINCT game_id), COUNT(*), SUM(espn_home_wp IS NOT NULL) FROM snapshots"
@@ -174,6 +245,10 @@ def harvest(limit: int | None = None) -> None:
         f"harvested={harvested}, skipped={skipped}, empty={empty}, errors={errors}",
         flush=True,
     )
+    if failures:
+        print("failures:", flush=True)
+        for game_id, kind, detail in failures:
+            print(f"  {kind}\t{game_id}\t{detail}", flush=True)
 
 
 def main() -> None:

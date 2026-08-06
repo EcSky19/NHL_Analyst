@@ -10,20 +10,22 @@ from __future__ import annotations
 import argparse
 import sqlite3
 import sys
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.services.espn_client import fetch_window
-from app.services.espn_pbp import harvest_games
+from app.services.espn_pbp import fetch_summary, snapshots_from_summary
 
 DB_PATH = ROOT / "data" / "live_wp" / "nba_snapshots.db"
 DEFAULT_WINDOWS = (
-    ("2023-10-24", 70),
-    ("2024-10-22", 70),
+    ("2023-10-24", 174),
+    ("2024-10-22", 174),
 )
 
 
@@ -64,6 +66,19 @@ def connect() -> sqlite3.Connection:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS harvest_failures (
+            game_id TEXT PRIMARY KEY,
+            game_date TEXT,
+            season_start_year INTEGER,
+            reason TEXT NOT NULL,
+            detail TEXT,
+            attempts INTEGER NOT NULL,
+            failed_at TEXT NOT NULL
+        )
+        """
+    )
     return conn
 
 
@@ -81,11 +96,12 @@ def existing_harvested_ids(conn: sqlite3.Connection) -> set[str]:
     }
 
 
-def enumerate_final_games(windows: list[tuple[str, int]], max_games: int) -> list[dict]:
-    """Return final games, capped per window so seasons stay represented."""
+def enumerate_final_games(windows: list[tuple[str, int]], max_games: int | None) -> list[dict]:
+    """Return final games, optionally capped per window so seasons stay represented."""
     all_rows: dict[str, dict] = {}
-    base_quota = max_games // max(len(windows), 1)
-    remainder = max_games % max(len(windows), 1)
+    capped = max_games is not None and max_games > 0
+    base_quota = (max_games or 0) // max(len(windows), 1)
+    remainder = (max_games or 0) % max(len(windows), 1)
     for window_index, (start_text, days) in enumerate(windows):
         window_rows: dict[str, dict] = {}
         quota = base_quota + (1 if window_index < remainder else 0)
@@ -105,13 +121,13 @@ def enumerate_final_games(windows: list[tuple[str, int]], max_games: int) -> lis
             )
             cursor += timedelta(days=chunk)
             remaining -= chunk
-            if len(window_rows) >= quota:
+            if capped and len(window_rows) >= quota:
                 break
         rows = sorted(window_rows.values(), key=lambda r: (r.get("game_date") or "", r["game_id"]))
-        for row in rows[:quota]:
+        for row in rows[:quota] if capped else rows:
             all_rows[row["game_id"]] = row
     rows = sorted(all_rows.values(), key=lambda r: (r.get("game_date") or "", r["game_id"]))
-    return rows[:max_games]
+    return rows[:max_games] if capped else rows
 
 
 def store_game(conn: sqlite3.Connection, row: dict, snapshots: list) -> None:
@@ -161,6 +177,48 @@ def store_game(conn: sqlite3.Connection, row: dict, snapshots: list) -> None:
         ],
     )
     conn.commit()
+    conn.execute("DELETE FROM harvest_failures WHERE game_id = ?", (game_id,))
+    conn.commit()
+
+
+def record_failure(
+    conn: sqlite3.Connection,
+    row: dict[str, Any],
+    reason: str,
+    detail: str,
+    attempts: int,
+) -> None:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    game_id = str(row["game_id"])
+    game_date = row.get("game_date") or ""
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO harvest_failures
+            (game_id, game_date, season_start_year, reason, detail, attempts, failed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (game_id, game_date, season_start_year(game_date), reason, detail[:1000], attempts, now),
+    )
+    conn.commit()
+
+
+def fetch_snapshots_with_retries(
+    game_id: str,
+    *,
+    attempts: int,
+    backoff_seconds: float,
+):
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            summary = fetch_summary("nba", game_id)
+            return snapshots_from_summary(summary, "nba", game_id), None, attempt
+        except Exception as exc:  # noqa: BLE001 - long harvest should continue after final failure.
+            last_error = exc
+            if attempt < attempts:
+                time.sleep(backoff_seconds * (2 ** (attempt - 1)))
+    detail = f"{type(last_error).__name__}: {last_error}" if last_error else "unknown error"
+    return None, detail, attempts
 
 
 def parse_windows(values: list[str] | None) -> list[tuple[str, int]]:
@@ -175,8 +233,10 @@ def parse_windows(values: list[str] | None) -> list[tuple[str, int]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--max-games", type=int, default=500)
-    parser.add_argument("--sleep-seconds", type=float, default=0.15)
+    parser.add_argument("--max-games", type=int, default=None)
+    parser.add_argument("--sleep-seconds", type=float, default=0.25)
+    parser.add_argument("--attempts", type=int, default=3)
+    parser.add_argument("--backoff-seconds", type=float, default=1.0)
     parser.add_argument(
         "--window",
         action="append",
@@ -200,14 +260,28 @@ def main() -> int:
     fetched = 0
     saved = 0
     skipped_empty = 0
-    for snapshots in harvest_games(
-        "nba", [str(g["game_id"]) for g in to_fetch], sleep_seconds=args.sleep_seconds
-    ):
+    fetch_errors = 0
+    for row in to_fetch:
+        game_id = str(row["game_id"])
         fetched += 1
-        game_id = snapshots[0].game_id if snapshots else str(to_fetch[fetched - 1]["game_id"])
+        snapshots, error_detail, attempts = fetch_snapshots_with_retries(
+            game_id,
+            attempts=max(1, args.attempts),
+            backoff_seconds=max(0.0, args.backoff_seconds),
+        )
+        if error_detail is not None:
+            fetch_errors += 1
+            record_failure(conn, row, "fetch_error", error_detail, attempts)
+            print(f"[{fetched}/{len(to_fetch)}] {game_id}: fetch failed: {error_detail}", flush=True)
+            if args.sleep_seconds:
+                time.sleep(args.sleep_seconds)
+            continue
         if not snapshots:
             skipped_empty += 1
+            record_failure(conn, row, "no_labelled_snapshots", "summary produced no labelled snapshots", attempts)
             print(f"[{fetched}/{len(to_fetch)}] {game_id}: no labelled snapshots", flush=True)
+            if args.sleep_seconds:
+                time.sleep(args.sleep_seconds)
             continue
         store_game(conn, by_id[game_id], snapshots)
         saved += 1
@@ -220,6 +294,8 @@ def main() -> int:
                 f"db now {total_games} games / {total_snaps} snapshots",
                 flush=True,
             )
+        if args.sleep_seconds:
+            time.sleep(args.sleep_seconds)
 
     total_games, total_snaps, total_wp = conn.execute(
         """
@@ -231,7 +307,7 @@ def main() -> int:
         "SELECT season_start_year, COUNT(*), SUM(n_snapshots) FROM games WHERE n_snapshots > 0 GROUP BY season_start_year ORDER BY season_start_year"
     ).fetchall()
     print(
-        f"Harvest complete: fetched={fetched}, saved={saved}, empty={skipped_empty}; "
+        f"Harvest complete: fetched={fetched}, saved={saved}, empty={skipped_empty}, fetch_errors={fetch_errors}; "
         f"database has {total_games} games / {total_snaps} snapshots / {total_wp} ESPN WP values.",
         flush=True,
     )

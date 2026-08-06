@@ -11,22 +11,66 @@ import argparse
 import sqlite3
 import sys
 import time
-from datetime import date, datetime, timezone
+from collections.abc import Callable
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import TypeVar
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.services.espn_client import fetch_window  # noqa: E402
+from app.services.espn_client import (  # noqa: E402
+    date_range_param,
+    dedupe_by_game_id,
+    fetch_scoreboard,
+    normalize_events,
+)
 from app.services.espn_pbp import fetch_summary, snapshots_from_summary  # noqa: E402
 
 DB_PATH = ROOT / "data" / "live_wp" / "nhl_snapshots.db"
+T = TypeVar("T")
+REGULAR_SEASON_TYPE = 2
 
 SEASONS = [
     ("2024-25", date(2024, 10, 4), date(2025, 4, 17)),
     ("2025-26", date(2025, 10, 7), date(2026, 4, 16)),
 ]
+
+NHL_TEAMS = {
+    "ANA",
+    "BOS",
+    "BUF",
+    "CAR",
+    "CBJ",
+    "CGY",
+    "CHI",
+    "COL",
+    "DAL",
+    "DET",
+    "EDM",
+    "FLA",
+    "LA",
+    "MIN",
+    "MTL",
+    "NJ",
+    "NSH",
+    "NYI",
+    "NYR",
+    "OTT",
+    "PHI",
+    "PIT",
+    "SEA",
+    "SJ",
+    "STL",
+    "TB",
+    "TOR",
+    "UTAH",
+    "VAN",
+    "VGK",
+    "WPG",
+    "WSH",
+}
 
 
 def connect() -> sqlite3.Connection:
@@ -76,13 +120,55 @@ def connect() -> sqlite3.Connection:
     return con
 
 
+def retry_call(action: Callable[[], T], *, label: str, attempts: int = 4, base_sleep: float = 1.0) -> T:
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return action()
+        except Exception as exc:  # noqa: BLE001 - transient ESPN/API failures are retried here
+            last_exc = exc
+            if attempt == attempts:
+                break
+            delay = base_sleep * (2 ** (attempt - 1))
+            print(
+                f"[retry] {label}: attempt {attempt}/{attempts} failed "
+                f"({type(exc).__name__}: {exc}); sleeping {delay:.1f}s",
+                flush=True,
+            )
+            time.sleep(delay)
+    assert last_exc is not None
+    raise last_exc
+
+
 def enumerate_completed_games(con: sqlite3.Connection, days: int) -> None:
     for season, start, end in SEASONS:
         cursor = start
         seen = 0
         while cursor <= end:
             window_days = min(days, (end - cursor).days + 1)
-            rows, meta = fetch_window("nhl", cursor, window_days, ttl=60 * 60 * 24 * 30)
+            window_end = cursor + timedelta(days=window_days - 1)
+            padded_dates = date_range_param(cursor - timedelta(days=1), window_end + timedelta(days=1))
+            events, meta = retry_call(
+                lambda: fetch_scoreboard("nhl", dates=padded_dates, ttl=60 * 60 * 24 * 30),
+                label=f"scoreboard {season} {cursor.isoformat()} +{window_days}d",
+            )
+            regular_ids = {
+                str(event.get("id") or ((event.get("competitions") or [{}])[0]).get("id") or "")
+                for event in events
+                if (event.get("season") or {}).get("type") == REGULAR_SEASON_TYPE
+            }
+            lo, hi = cursor.isoformat(), window_end.isoformat()
+            rows = [
+                row
+                for row in normalize_events(events, "nhl")
+                if row["game_date"]
+                and lo <= row["game_date"] <= hi
+                and row["game_id"] in regular_ids
+                and row.get("home") in NHL_TEAMS
+                and row.get("away") in NHL_TEAMS
+            ]
+            rows = dedupe_by_game_id(rows)
+            rows.sort(key=lambda row: (row["start_time_utc"] or "", row["game_id"]))
             completed = [row for row in rows if row.get("status") == "final"]
             for row in completed:
                 con.execute(
@@ -116,28 +202,35 @@ def enumerate_completed_games(con: sqlite3.Connection, days: int) -> None:
             seen += len(completed)
             print(
                 f"[enumerate] {season} {cursor.isoformat()} +{window_days}d: "
-                f"{len(completed)} finals (cache={meta.get('cached')})"
+                f"{len(completed)} finals (cache={meta.get('cached')})",
+                flush=True,
             )
             cursor = cursor.fromordinal(cursor.toordinal() + window_days)
-        print(f"[enumerate] {season}: {seen} final rows seen")
+        print(f"[enumerate] {season}: {seen} final rows seen", flush=True)
 
 
-def choose_games(con: sqlite3.Connection, max_games: int, per_season: int) -> list[tuple[str, str]]:
+def choose_games(
+    con: sqlite3.Connection, max_games: int | None, per_season: int | None
+) -> list[tuple[str, str]]:
     selected: list[tuple[str, str]] = []
     for season, _, _ in SEASONS:
-        rows = con.execute(
-            """
+        query = """
             SELECT game_id, season
             FROM games
             WHERE season = ? AND status = 'final'
-              AND (harvested_at IS NULL OR n_snapshots IS NULL)
+              AND NOT (harvested_at IS NOT NULL AND COALESCE(n_snapshots, 0) > 0)
+              AND home IN ({teams})
+              AND away IN ({teams})
             ORDER BY game_date, game_id
-            LIMIT ?
-            """,
-            (season, per_season),
-        ).fetchall()
+            """.format(teams=",".join("?" for _ in NHL_TEAMS))
+        team_params = tuple(sorted(NHL_TEAMS))
+        params: tuple[object, ...] = (season, *team_params, *team_params)
+        if per_season is not None:
+            query += "\n            LIMIT ?"
+            params = (*params, per_season)
+        rows = con.execute(query, params).fetchall()
         selected.extend((str(gid), str(season_name)) for gid, season_name in rows)
-    if len(selected) > max_games:
+    if max_games is not None and len(selected) > max_games:
         selected = selected[:max_games]
     return selected
 
@@ -154,8 +247,10 @@ def harvest(con: sqlite3.Connection, games: list[tuple[str, str]], sleep_seconds
     total = len(games)
     for i, (game_id, season) in enumerate(games, start=1):
         try:
-            summary = fetch_summary("nhl", game_id)
+            summary = retry_call(lambda: fetch_summary("nhl", game_id), label=f"summary {game_id}")
             snaps = snapshots_from_summary(summary, "nhl", game_id)
+            if not snaps:
+                raise ValueError("no labelled snapshots returned")
             now = datetime.now(timezone.utc).isoformat()
             con.execute("DELETE FROM snapshots WHERE game_id = ?", (game_id,))
             con.executemany(
@@ -193,22 +288,26 @@ def harvest(con: sqlite3.Connection, games: list[tuple[str, str]], sleep_seconds
                 (now, len(snaps), sum(1 for s in snaps if s.espn_home_wp is not None), game_id),
             )
             con.commit()
-            print(f"[harvest] {i}/{total} {game_id} {season}: {len(snaps)} snapshots")
+            print(f"[harvest] {i}/{total} {game_id} {season}: {len(snaps)} snapshots", flush=True)
         except Exception as exc:  # noqa: BLE001 - cache the failed attempt
             con.execute(
                 "UPDATE games SET harvested_at = ?, n_snapshots = 0, espn_wp_count = 0, error = ? WHERE game_id = ?",
                 (datetime.now(timezone.utc).isoformat(), f"{type(exc).__name__}: {exc}", game_id),
             )
             con.commit()
-            print(f"[harvest] {i}/{total} {game_id} {season}: ERROR {type(exc).__name__}: {exc}")
+            print(
+                f"[harvest] {i}/{total} {game_id} {season}: "
+                f"ERROR {type(exc).__name__}: {exc}",
+                flush=True,
+            )
         if sleep_seconds:
             time.sleep(sleep_seconds)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--max-games", type=int, default=500)
-    parser.add_argument("--per-season", type=int, default=250)
+    parser.add_argument("--max-games", type=int, default=None)
+    parser.add_argument("--per-season", type=int, default=None)
     parser.add_argument("--window-days", type=int, default=14)
     parser.add_argument("--sleep-seconds", type=float, default=0.15)
     args = parser.parse_args()
