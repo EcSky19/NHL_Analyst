@@ -52,6 +52,18 @@ def _validate_date(date: str | None) -> str:
     return date
 
 
+def _validate_week_params(start: str | None, days: str | int | None) -> tuple[str, int, str]:
+    start_date = _validate_date(start)
+    try:
+        day_count = 7 if days is None else int(days)
+    except (TypeError, ValueError):
+        raise ValueError("days must be an integer between 1 and 14") from None
+    if day_count < 1 or day_count > 14:
+        raise ValueError("days must be an integer between 1 and 14")
+    end_date = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=day_count - 1)).strftime("%Y-%m-%d")
+    return start_date, day_count, end_date
+
+
 def _api_json(url: str) -> Any:
     headers = {"User-Agent": BROWSER_USER_AGENT, "Accept": "application/json"}
     with httpx.Client(headers=headers, timeout=settings.request_timeout, follow_redirects=True) as client:
@@ -285,21 +297,80 @@ def _db_standings(season: str) -> list[dict[str, Any]]:
 
 
 def _status(game: dict[str, Any]) -> str:
+    normalized = _contract_status(game)
+    return "in-progress" if normalized == "live" else normalized
+
+
+def _contract_status(game: dict[str, Any]) -> str:
     status = game.get("status") or {}
     abstract = str(status.get("abstractGameState") or "").lower()
     detailed = str(status.get("detailedState") or "").lower()
-    if "suspend" in detailed:
-        return "suspended"
-    if "postpon" in detailed:
+    coded = str(status.get("codedGameState") or "").lower()
+    if "postpon" in detailed or "suspend" in detailed or "delay" in detailed:
+        # The shared contract has no delayed/suspended bucket. Treat them as
+        # postponed rather than live because play is not currently in progress.
         return "postponed"
-    if abstract == "final":
+    if abstract == "final" or detailed in {"final", "game over"} or coded == "f":
         return "final"
     if abstract == "live":
-        return "in-progress"
+        return "live"
     return "scheduled"
 
 
-def _normalize_game(game: dict[str, Any], teams_by_id: dict[int, dict[str, Any]]) -> dict[str, Any]:
+def _score_for_status(score: Any, status: str, detailed_status: Any) -> int | None:
+    detailed = str(detailed_status or "").lower()
+    if status == "scheduled" or "postpon" in detailed:
+        return None
+    return _as_int(score)
+
+
+def _runner_name(value: Any) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    return value.get("fullName") or value.get("name")
+
+
+def _period_label(inning: int | None, half: str | None) -> str | None:
+    if inning is None:
+        return None
+    half_lower = str(half or "").lower()
+    if half_lower.startswith("top"):
+        return f"T{inning}"
+    if half_lower.startswith("bottom"):
+        return f"B{inning}"
+    if half_lower.startswith("middle"):
+        return f"M{inning}"
+    if half_lower.startswith("end"):
+        return f"E{inning}"
+    return str(inning)
+
+
+def _live_object(game: dict[str, Any]) -> dict[str, Any]:
+    linescore = game.get("linescore") or {}
+    inning = _as_int(linescore.get("currentInning"))
+    half = linescore.get("inningState") or linescore.get("inningHalf")
+    current_play = linescore.get("currentPlay") or game.get("currentPlay") or {}
+    result = current_play.get("result") if isinstance(current_play, dict) else {}
+    live: dict[str, Any] = {
+        "period": inning,
+        "period_label": _period_label(inning, half),
+        "clock": None,
+        "last_play": result.get("description") if isinstance(result, dict) else None,
+    }
+    for key in ("balls", "strikes", "outs"):
+        value = _as_int(linescore.get(key))
+        if value is not None:
+            live[key] = value
+    offense = linescore.get("offense") or {}
+    if isinstance(offense, dict):
+        runner_names = {base: _runner_name(offense.get(base)) for base in ("first", "second", "third")}
+        if any(name is not None for name in runner_names.values()):
+            live["runners_on_base"] = {base: name is not None for base, name in runner_names.items()}
+            live["runners"] = runner_names
+    return live
+
+
+def _normalize_game(game: dict[str, Any], teams_by_id: dict[int, dict[str, Any]], slate_date: str | None = None) -> dict[str, Any]:
     home = (game.get("teams") or {}).get("home") or {}
     away = (game.get("teams") or {}).get("away") or {}
     home_team = home.get("team") or {}
@@ -310,7 +381,7 @@ def _normalize_game(game: dict[str, Any], teams_by_id: dict[int, dict[str, Any]]
     return {
         "game_id": str(game.get("gamePk")) if game.get("gamePk") is not None else game.get("gameGuid"),
         "game_guid": game.get("gameGuid"),
-        "game_date": game.get("officialDate"),
+        "game_date": slate_date or game.get("officialDate"),
         "season": str(game.get("season")) if game.get("season") is not None else None,
         "game_type": game.get("gameType"),
         "status": _status(game),
@@ -328,7 +399,63 @@ def _normalize_game(game: dict[str, Any], teams_by_id: dict[int, dict[str, Any]]
         "doubleheader": game.get("doubleHeader"),
         "game_number": game.get("gameNumber"),
         "calendar_event_id": game.get("calendarEventID"),
+        "rescheduled_from": game.get("rescheduledFrom"),
+        "live": _live_object(game) if _contract_status(game) == "live" else None,
     }
+
+
+def _dedupe_schedule_games(games: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep one row per gamePk in a response.
+
+    StatsAPI can list a postponed game on its original slate and again on the
+    makeup slate with the same gamePk. The UI keys rows by game_id, so we drop
+    the superseded postponed ledger row and keep the resolved non-postponed row.
+    Doubleheaders remain safe because they use distinct gamePks.
+    """
+    by_id: dict[str, dict[str, Any]] = {}
+    no_id: list[dict[str, Any]] = []
+    for game in games:
+        game_id = game.get("game_id")
+        if game_id is None:
+            no_id.append(game)
+            continue
+        key = str(game_id)
+        current = by_id.get(key)
+        if current is None:
+            by_id[key] = game
+            continue
+        current_status = _contract_game_row(current)["status"]
+        candidate_status = _contract_game_row(game)["status"]
+        if current_status == "postponed" and candidate_status != "postponed":
+            by_id[key] = game
+        elif current_status == candidate_status and str(game.get("start_time_utc") or "") > str(current.get("start_time_utc") or ""):
+            by_id[key] = game
+    return [*by_id.values(), *no_id]
+
+
+def _contract_game_row(game: dict[str, Any]) -> dict[str, Any]:
+    status = "live" if game.get("status") == "in-progress" else game.get("status")
+    if status not in {"scheduled", "live", "final", "postponed"}:
+        status = "scheduled"
+    detailed = game.get("detailed_status")
+    row = {
+        "game_id": str(game.get("game_id")) if game.get("game_id") is not None else None,
+        "league": "mlb",
+        "game_date": game.get("game_date"),
+        "start_time_utc": game.get("start_time_utc"),
+        "home": game.get("home"),
+        "away": game.get("away"),
+        "home_name": game.get("home_name"),
+        "away_name": game.get("away_name"),
+        "home_score": _score_for_status(game.get("home_score"), status, detailed),
+        "away_score": _score_for_status(game.get("away_score"), status, detailed),
+        "status": status,
+        "detailed_status": detailed,
+        "venue": game.get("venue"),
+    }
+    if status == "live":
+        row["live"] = game.get("live") or {"period": None, "period_label": None, "clock": None, "last_play": None}
+    return row
 
 
 def _fetch_schedule(date: str, season: str) -> tuple[list[dict[str, Any]], dict[str, Any], str]:
@@ -340,6 +467,26 @@ def _fetch_schedule(date: str, season: str) -> tuple[list[dict[str, Any]], dict[
     games = [_normalize_game(game, teams_by_id) for day in raw.get("dates", []) for game in day.get("games", [])]
     resolved = next((game.get("season") for game in games if game.get("season")), season)
     return games, _merge_cache_meta(schedule_meta, teams_meta), str(resolved)
+
+
+def _fetch_schedule_range(start_date: str, end_date: str, season: str, ttl: int | None = None) -> tuple[list[dict[str, Any]], dict[str, Any], str]:
+    url = f"{settings.mlb_api_base}/schedule?sportId=1&startDate={start_date}&endDate={end_date}&hydrate=linescore,team"
+    raw, schedule_meta = _cached_api_json(f"mlb:schedule-range:{start_date}:{end_date}", url, ttl or settings.ttl_schedule)
+    teams_by_id, teams_meta = _team_meta(season)
+    if not isinstance(raw, dict):
+        raise ValueError("schedule response was not a JSON object")
+    games = [_normalize_game(game, teams_by_id, day.get("date")) for day in raw.get("dates", []) for game in day.get("games", [])]
+    resolved = next((game.get("season") for game in games if game.get("season")), season)
+    return games, _merge_cache_meta(schedule_meta, teams_meta), str(resolved)
+
+
+def _fetch_live_window() -> tuple[list[dict[str, Any]], dict[str, Any], str]:
+    now = datetime.now(timezone.utc)
+    start_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    end_date = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    season = _current_mlb_season()
+    games, meta, resolved = _fetch_schedule_range(start_date, end_date, season, ttl=30)
+    return [game for game in _dedupe_schedule_games(games) if _contract_game_row(game)["status"] == "live"], meta, resolved
 
 
 def _normalize_player(split: dict[str, Any], group: str, stat_name: str) -> dict[str, Any]:
@@ -468,6 +615,92 @@ def players(team: str | None = None, stat: str | None = None, group: str = "hitt
     except Exception as exc:  # noqa: BLE001
         logger.warning("MLB players failed: %s", exc)
         return fail("upstream_unavailable", "MLB player leaders are unavailable.", source=SOURCE_API, season_state=season_state_for(league="mlb"))
+
+
+@router.get("/schedule/week")
+def schedule_week(start: str | None = None, days: str | None = None) -> dict[str, Any]:
+    """Return a flat MLB schedule window in the frozen shared game-row shape."""
+    league_state = season_state_for(league="mlb")
+    try:
+        start_date, day_count, end_date = _validate_week_params(start, days)
+        requested_season = _validate_season(start_date[:4])
+        games, cache_meta, resolved = _fetch_schedule_range(start_date, end_date, requested_season)
+        if cache_meta.get("stale"):
+            return fail(
+                "upstream_unavailable",
+                "MLB schedule is unavailable from StatsAPI.",
+                source=SOURCE_API,
+                **cache_meta,
+                season=resolved,
+                season_state=league_state,
+                league="mlb",
+                start_date=start_date,
+                end_date=end_date,
+                days=day_count,
+                count=0,
+                empty_reason=None,
+            )
+        rows = [_contract_game_row(game) for game in _dedupe_schedule_games(games)]
+        rows.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
+        empty_reason = None if rows else "No MLB games are scheduled in this window."
+        return ok(
+            rows,
+            source=SOURCE_API,
+            **cache_meta,
+            season=resolved,
+            season_state=league_state,
+            league="mlb",
+            start_date=start_date,
+            end_date=end_date,
+            days=day_count,
+            count=len(rows),
+            empty_reason=empty_reason,
+        )
+    except ValueError as exc:
+        return fail("bad_request", str(exc), source=SOURCE_API, season_state=league_state, league="mlb")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MLB week schedule failed: %s", exc)
+        return fail("upstream_unavailable", "MLB schedule is unavailable from StatsAPI.", source=SOURCE_API, season_state=league_state, league="mlb")
+
+
+@router.get("/live")
+def live() -> dict[str, Any]:
+    """Return currently in-progress MLB games only."""
+    league_state = season_state_for(league="mlb")
+    try:
+        games, cache_meta, resolved = _fetch_live_window()
+        if cache_meta.get("stale"):
+            return fail(
+                "upstream_unavailable",
+                "MLB live games are unavailable from StatsAPI.",
+                source=SOURCE_API,
+                **cache_meta,
+                season=resolved,
+                season_state=league_state,
+                league="mlb",
+                count=0,
+                polled_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                poll_interval_seconds=30,
+                empty_reason=None,
+            )
+        rows = [_contract_game_row(game) for game in games if _contract_game_row(game)["status"] == "live"]
+        rows.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
+        empty_reason = None if rows else "No MLB games are currently in progress."
+        return ok(
+            rows,
+            source=SOURCE_API,
+            **cache_meta,
+            season=resolved,
+            season_state=league_state,
+            league="mlb",
+            count=len(rows),
+            polled_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            poll_interval_seconds=30,
+            empty_reason=empty_reason,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MLB live failed: %s", exc)
+        return fail("upstream_unavailable", "MLB live games are unavailable from StatsAPI.", source=SOURCE_API, season_state=league_state, league="mlb")
 
 
 @router.get("/schedule")

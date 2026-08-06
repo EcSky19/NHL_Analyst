@@ -239,3 +239,62 @@ Known limitation, now measured rather than merely noted: the served model uses *
 ## External API caveats
 
 ESPN endpoints return HTTP 403 for NFL, NBA, and MLB and are deliberately not used. NBA source checks also found `stats.nba.com` timing out, `cdn.nba.com` returning 403, and balldontlie returning 401.
+
+## Live games and week schedules
+
+All four leagues expose two endpoints, specified in `docs/ui_api_contract.md`:
+
+- `GET /api/{league}/live` — games currently in progress
+- `GET /api/{league}/schedule/week?start=YYYY-MM-DD&days=7` — a date window (1-14 days)
+
+NFL additionally accepts `?week=N`, since its natural unit is the game week rather than
+seven calendar days.
+
+Every league emits the same shared keys (`game_id`, `league`, `game_date`,
+`start_time_utc`, `home`, `away`, `home_name`, `away_name`, `home_score`, `away_score`,
+`status`, `detailed_status`, `venue`), and `status` is normalized to exactly
+`scheduled`, `live`, `final` or `postponed`. Raw upstream state is preserved in
+`detailed_status`. Scores for unplayed games are `null`, never `0`.
+
+### What each league can actually do
+
+This differs by league, and the differences are real limitations rather than bugs:
+
+| league | week schedule | true live in-game state |
+| --- | --- | --- |
+| MLB | yes | **yes** — StatsAPI, with inning, balls, strikes, outs and runners |
+| NHL | yes | yes, when the season is running |
+| NBA | yes | **no** — no free verified source exposes it |
+| NFL | yes | **no** — nflverse does not publish real-time clock/quarter/last-play |
+
+NBA and NFL therefore return an empty live list with an explicit `meta.empty_reason`
+naming the limitation. They do not approximate or simulate live state.
+
+### Empty is a correct answer
+
+As of August 2026 the NHL and NBA are in their offseason and the NFL regular season has
+not started, so three of the four leagues legitimately return no games. The API says so
+in `meta.empty_reason` and the UI renders that reason verbatim.
+
+Note the deliberate difference in wording. The NHL source covers preseason, so
+"no games are scheduled in this window" is a verified claim. The nflverse source used
+here carries regular-season and postseason games only, so the NFL text instead says that
+no *covered* games fall in the window and that preseason is outside the source — because
+the NFL does play preseason games in August. Claiming "there are no games" would have
+been a statement about the world that our data cannot support.
+
+### Notes for future maintainers
+
+Two upstream behaviours caused real bugs during development and are worth knowing:
+
+- **MLB evening games cross midnight UTC.** Games with a 7pm ET or later first pitch sit
+  on the previous UTC date's slate. Querying only "today in UTC" returned zero live games
+  while nine were actually in progress. The live path queries a multi-day window.
+- **A postponed MLB game keeps its `gamePk` and appears on two slates** — its original
+  date as `Postponed` and its makeup date as `Final`. Emitting both produced duplicate
+  `game_id`s that looked like a team playing twice in one day. Superseded postponed rows
+  are dropped. This is distinct from doubleheaders, which are genuinely separate games
+  with different `gamePk`s and are preserved.
+- **NHL `schedule.nextStartDate` is a pagination cursor, not a game date.** Using it
+  advertised a "next game" on 2026-09-17, a day with zero games; the true next date was
+  2026-09-19. Both endpoints now scan forward for the first day with at least one game.

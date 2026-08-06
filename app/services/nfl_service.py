@@ -6,11 +6,13 @@ import csv
 import sqlite3
 import threading
 from collections import defaultdict
+from datetime import date, datetime, time, timezone
 from functools import lru_cache
 from io import StringIO
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.cache import cached_fetch
 from app.config import BROWSER_USER_AGENT, settings
@@ -91,6 +93,41 @@ TEAM_INFO: dict[str, dict[str, str]] = {
     "TB": {"name": "Tampa Bay Buccaneers", "conference": "NFC", "division": "South"},
     "TEN": {"name": "Tennessee Titans", "conference": "AFC", "division": "South"},
     "WAS": {"name": "Washington Commanders", "conference": "NFC", "division": "East"},
+}
+
+TEAM_TIME_ZONES = {
+    "ARI": "America/Phoenix",
+    "ATL": "America/New_York",
+    "BAL": "America/New_York",
+    "BUF": "America/New_York",
+    "CAR": "America/New_York",
+    "CHI": "America/Chicago",
+    "CIN": "America/New_York",
+    "CLE": "America/New_York",
+    "DAL": "America/Chicago",
+    "DEN": "America/Denver",
+    "DET": "America/New_York",
+    "GB": "America/Chicago",
+    "HOU": "America/Chicago",
+    "IND": "America/Indiana/Indianapolis",
+    "JAX": "America/New_York",
+    "KC": "America/Chicago",
+    "LA": "America/Los_Angeles",
+    "LAC": "America/Los_Angeles",
+    "LV": "America/Los_Angeles",
+    "MIA": "America/New_York",
+    "MIN": "America/Chicago",
+    "NE": "America/New_York",
+    "NO": "America/Chicago",
+    "NYG": "America/New_York",
+    "NYJ": "America/New_York",
+    "PHI": "America/New_York",
+    "PIT": "America/New_York",
+    "SEA": "America/Los_Angeles",
+    "SF": "America/Los_Angeles",
+    "TB": "America/New_York",
+    "TEN": "America/Chicago",
+    "WAS": "America/New_York",
 }
 
 _OLD_ALIGNMENT: dict[str, tuple[str, str]] = {
@@ -202,6 +239,40 @@ def schedule_for(games: list[dict[str, Any]], season: int, week: int | None = No
         if row.get("season") == season and (week is None or row.get("week") == week)
     ]
     return sorted(rows, key=lambda row: (row["week"] or 0, row["gameday"] or "", row["game_id"] or ""))
+
+
+def schedule_window(games: list[dict[str, Any]], start_date: date, days: int) -> list[dict[str, Any]]:
+    """Return contract schedule rows in an inclusive calendar window."""
+    end_date = start_date.toordinal() + days - 1
+    rows: list[dict[str, Any]] = []
+    for row in games:
+        game_date = _parse_date(row.get("gameday"))
+        if game_date is None:
+            continue
+        ordinal = game_date.toordinal()
+        if start_date.toordinal() <= ordinal <= end_date:
+            rows.append(_schedule_row(row))
+    return _sort_contract_rows(rows)
+
+
+def schedule_week(games: list[dict[str, Any]], season: int, week: int) -> list[dict[str, Any]]:
+    """Return contract schedule rows for one NFL week."""
+    rows = [
+        _schedule_row(row)
+        for row in games
+        if row.get("season") == season and row.get("week") == week
+    ]
+    return _sort_contract_rows(rows)
+
+
+def live_games(games: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return live NFL games if the upstream feed exposes true in-progress state.
+
+    nflverse games.csv is a schedule/results feed and does not include live clock,
+    quarter, last-play, or a reliable in-progress status. Returning an empty list is
+    more honest than fabricating live state from scheduled or final rows.
+    """
+    return []
 
 
 def teams_payload(season: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -399,20 +470,34 @@ def _split_text(split: dict[str, int]) -> str:
 
 def _schedule_row(row: dict[str, Any]) -> dict[str, Any]:
     played = _is_played(row)
+    away = row.get("away_team")
+    home = row.get("home_team")
+    status, detailed_status = _normalize_status(row, played)
+    away_score = row.get("away_score") if played else None
+    home_score = row.get("home_score") if played else None
     return {
         "game_id": row.get("game_id"),
+        "league": "nfl",
         "season": row.get("season"),
         "week": row.get("week"),
         "game_type": row.get("game_type"),
+        "game_date": row.get("gameday") or None,
+        "start_time_utc": _start_time_utc(row),
         "gameday": row.get("gameday"),
         "weekday": row.get("weekday"),
         "gametime": row.get("gametime"),
-        "away_team": row.get("away_team"),
-        "home_team": row.get("home_team"),
-        "away_score": row.get("away_score"),
-        "home_score": row.get("home_score"),
+        "away": away,
+        "home": home,
+        "away_team": away,
+        "home_team": home,
+        "away_name": _team_name(away, row.get("season")),
+        "home_name": _team_name(home, row.get("season")),
+        "away_score": away_score,
+        "home_score": home_score,
         "played": played,
-        "status": "final" if played else "scheduled",
+        "status": status,
+        "detailed_status": detailed_status,
+        "venue": row.get("stadium") or None,
         "location": row.get("location"),
         "stadium": row.get("stadium"),
         "roof": row.get("roof"),
@@ -518,6 +603,99 @@ def _is_regular(row: dict[str, Any]) -> bool:
 
 def _is_played(row: dict[str, Any]) -> bool:
     return row.get("away_score") is not None and row.get("home_score") is not None
+
+
+def _normalize_status(row: dict[str, Any], played: bool) -> tuple[str, str | None]:
+    raw = row.get("status") or row.get("game_status") or row.get("game_status_detail")
+    # nflverse games.csv exposes no raw upstream status text; keep this null
+    # rather than duplicating our normalized status as if it came from upstream.
+    if raw in (None, ""):
+        return ("final" if played else "scheduled"), None
+    detailed = str(raw)
+    text = detailed.strip().lower()
+    if any(token in text for token in ("postponed", "postpon", "cancelled", "canceled", "suspended")):
+        return "postponed", detailed
+    if any(token in text for token in ("in progress", "in-progress", "live", "halftime")):
+        return "live", detailed
+    if played:
+        return "final", detailed
+    return "scheduled", detailed
+
+
+def _team_name(abbrev: Any, season: Any) -> str | None:
+    if abbrev is None:
+        return None
+    try:
+        season_int = int(season) if season is not None else _fallback_team_name_season()
+    except (TypeError, ValueError):
+        season_int = _fallback_team_name_season()
+    return _team_info_for(str(abbrev), season_int).get("name")
+
+
+def _fallback_team_name_season() -> int:
+    cached = _games_cache or []
+    seasons = []
+    for row in cached:
+        try:
+            seasons.append(int(row["season"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+    if seasons:
+        return max(seasons)
+    now = datetime.now(timezone.utc)
+    return now.year if now.month >= 8 else now.year - 1
+
+
+def _start_time_utc(row: dict[str, Any]) -> str | None:
+    game_date = _parse_date(row.get("gameday"))
+    game_time = _parse_time(row.get("gametime"))
+    if game_date is None or game_time is None:
+        return None
+    tz_name = _time_zone_for(row)
+    if tz_name is None:
+        return None
+    try:
+        local = datetime.combine(game_date, game_time, ZoneInfo(tz_name))
+    except ZoneInfoNotFoundError:
+        return None
+    return local.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _time_zone_for(row: dict[str, Any]) -> str | None:
+    if str(row.get("location") or "").lower() == "neutral":
+        return None
+    team = canonical_team(str(row.get("home_team") or "")) or row.get("home_team")
+    return TEAM_TIME_ZONES.get(str(team))
+
+
+def _parse_date(value: Any) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def _parse_time(value: Any) -> time | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.strptime(str(value), "%H:%M")
+    except ValueError:
+        return None
+    return parsed.time()
+
+
+def _sort_contract_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        rows,
+        key=lambda row: (
+            row.get("start_time_utc") is None,
+            row.get("start_time_utc") or row.get("game_date") or "",
+            row.get("game_id") or "",
+        ),
+    )
 
 
 def _to_int(value: Any) -> int | None:

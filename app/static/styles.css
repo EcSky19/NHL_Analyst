@@ -301,7 +301,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary), transparent 92%)
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
 }
-.team-card, .prediction-card, .detail-panel, .empty-state, .error-state {
+.team-card, .prediction-card, .detail-panel, .empty-state, .error-state, .live-game-card, .schedule-day {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
@@ -325,6 +325,55 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary), transparent 92%)
 }
 .stat-box span { color: var(--muted); display: block; font-size: .8rem; }
 .stat-box strong { display: block; margin-top: .18rem; font-size: 1.08rem; }
+
+.live-section, .week-schedule-section {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.live-game-grid, .schedule-days {
+  display: grid;
+  gap: 1rem;
+}
+.live-game-card h4, .schedule-day h4 {
+  margin: 0;
+}
+.scoreline {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .45rem .9rem;
+  align-items: center;
+  padding: .75rem;
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-weight: 800;
+}
+.scoreline strong {
+  font-size: 1.35rem;
+}
+.live-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-top: .75rem;
+  color: var(--muted);
+  font-weight: 800;
+}
+.live-context span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: .22rem .55rem;
+}
+.live-extra-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: .55rem;
+  margin-top: .75rem;
+}
+.last-play {
+  margin: .85rem 0 0;
+  line-height: 1.45;
+}
 
 .detail-panel { margin-top: 1rem; }
 .detail-list {

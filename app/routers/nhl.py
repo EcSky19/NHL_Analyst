@@ -7,7 +7,8 @@ import re
 import sqlite3
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import date as date_type
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -50,6 +51,12 @@ def _validate_date(date: str | None) -> str | None:
         raise ValueError("date must use format YYYY-MM-DD")
     datetime.strptime(date, "%Y-%m-%d")
     return date
+
+
+def _validate_days(days: int) -> int:
+    if days < 1 or days > 14:
+        raise ValueError("days must be between 1 and 14")
+    return days
 
 
 def _api_json(url: str) -> Any:
@@ -220,35 +227,110 @@ def _team_from_standing(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _normalize_game(game: dict[str, Any], date: str) -> dict[str, Any]:
+def _team_name(team: dict[str, Any]) -> str | None:
+    direct = _name(team.get("name"))
+    if direct:
+        return direct
+    return " ".join(
+        part
+        for part in [_name(team.get("placeName")), _name(team.get("commonName"))]
+        if part
+    ) or None
+
+
+def _normalized_status(game: dict[str, Any]) -> str:
+    raw_values = {str(game.get(key) or "").upper() for key in ("gameState", "gameScheduleState")}
+    if raw_values & {"PPD", "POSTPONED"}:
+        return "postponed"
+    if raw_values & {"LIVE", "CRIT"}:
+        return "live"
+    if raw_values & {"OFF", "FINAL"}:
+        return "final"
+    return "scheduled"
+
+
+def _detailed_status(game: dict[str, Any]) -> str | None:
+    schedule_state = game.get("gameScheduleState")
+    if schedule_state and str(schedule_state).upper() != "OK":
+        return str(schedule_state)
+    game_state = game.get("gameState")
+    return str(game_state) if game_state is not None else None
+
+
+def _score_for(team: dict[str, Any], status: str) -> int | None:
+    if status == "scheduled":
+        return None
+    score = team.get("score")
+    return int(score) if score is not None else None
+
+
+def _period_label(period_descriptor: dict[str, Any] | None) -> str | None:
+    if not isinstance(period_descriptor, dict):
+        return None
+    number = period_descriptor.get("number")
+    period_type = str(period_descriptor.get("periodType") or "").upper()
+    if period_type == "OT":
+        return "OT"
+    if period_type == "SO":
+        return "SO"
+    if number is None:
+        return None
+    if period_type == "REG" or int(number) <= 3:
+        return f"P{int(number)}"
+    return "OT"
+
+
+def _last_play(game: dict[str, Any]) -> str | None:
+    for key in ("lastPlay", "last_play"):
+        value = game.get(key)
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            text = value.get("description") or value.get("desc") or value.get("eventOwnerTeamName")
+            if isinstance(text, dict):
+                return _name(text)
+            if isinstance(text, str):
+                return text
+    return None
+
+
+def _normalize_game(game: dict[str, Any], date: str | None) -> dict[str, Any]:
     home = game.get("homeTeam") or {}
     away = game.get("awayTeam") or {}
+    status = _normalized_status(game)
     return {
         "game_id": str(game.get("id")) if game.get("id") is not None else None,
-        "game_date": date,
+        "league": "nhl",
+        "game_date": date or game.get("gameDate"),
         "season": str(game.get("season")) if game.get("season") is not None else None,
         "game_type": game.get("gameType"),
-        "status": game.get("gameState"),
+        "status": status,
+        "detailed_status": _detailed_status(game),
         "start_time_utc": game.get("startTimeUTC"),
         "venue": _name(game.get("venue")),
         "neutral_site": game.get("neutralSite"),
         "home": home.get("abbrev"),
         "away": away.get("abbrev"),
-        "home_name": f"{_name(home.get('placeName'))} {_name(home.get('commonName'))}".strip(),
-        "away_name": f"{_name(away.get('placeName'))} {_name(away.get('commonName'))}".strip(),
-        "home_score": home.get("score"),
-        "away_score": away.get("score"),
+        "home_name": _team_name(home),
+        "away_name": _team_name(away),
+        "home_score": _score_for(home, status),
+        "away_score": _score_for(away, status),
         "home_logo_url": home.get("logo"),
         "away_logo_url": away.get("logo"),
     }
 
 
-def _fetch_schedule(date: str | None) -> tuple[list[dict[str, Any]], dict[str, Any], str | None]:
+def _fetch_schedule_raw(date: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
     path = date or "now"
     url = f"{settings.nhl_api_base}/schedule/{path}"
     raw, cache_meta = _cached_api_json(f"nhl:schedule:{path}", url, settings.ttl_schedule)
     if not isinstance(raw, dict) or not isinstance(raw.get("gameWeek"), list):
         raise ValueError("schedule response shape was unexpected")
+    return raw, cache_meta
+
+
+def _fetch_schedule(date: str | None) -> tuple[list[dict[str, Any]], dict[str, Any], str | None]:
+    raw, cache_meta = _fetch_schedule_raw(date)
     games: list[dict[str, Any]] = []
     selected_date = date
     for day in raw["gameWeek"]:
@@ -260,6 +342,95 @@ def _fetch_schedule(date: str | None) -> tuple[list[dict[str, Any]], dict[str, A
         games.extend(_normalize_game(game, day_date) for game in day.get("games", []))
     season = next((game.get("season") for game in games if game.get("season")), None)
     return games, cache_meta, season
+
+
+def _first_scheduled_game_date(raw: dict[str, Any], start_date: date_type) -> str | None:
+    for day in raw.get("gameWeek", []):
+        day_date = day.get("date")
+        if not day_date:
+            continue
+        parsed_day = datetime.strptime(day_date, "%Y-%m-%d").date()
+        if parsed_day >= start_date and (day.get("numberOfGames") or len(day.get("games", []))):
+            return day_date
+    return None
+
+
+def _next_scheduled_game_date(start_date: date_type, max_days: int = 370) -> tuple[str | None, dict[str, Any]]:
+    cursor = start_date
+    end_date = start_date + timedelta(days=max_days)
+    metas: list[dict[str, Any]] = []
+    while cursor <= end_date:
+        raw, cache_meta = _fetch_schedule_raw(cursor.isoformat())
+        metas.append(cache_meta)
+        next_date = _first_scheduled_game_date(raw, start_date)
+        if next_date:
+            return next_date, _merge_cache_meta(*metas)
+        cursor += timedelta(days=7)
+    return None, _merge_cache_meta(*metas)
+
+
+def _fetch_schedule_week(start_date: date_type, days: int) -> tuple[list[dict[str, Any]], dict[str, Any], str | None]:
+    end_date = start_date + timedelta(days=days - 1)
+    cursor = start_date
+    games: list[dict[str, Any]] = []
+    metas: list[dict[str, Any]] = []
+    season: str | None = None
+    seen_dates: set[str] = set()
+    while cursor <= end_date:
+        raw, cache_meta = _fetch_schedule_raw(cursor.isoformat())
+        metas.append(cache_meta)
+        for day in raw.get("gameWeek", []):
+            day_date = day.get("date")
+            if not day_date or day_date in seen_dates:
+                continue
+            parsed_day = datetime.strptime(day_date, "%Y-%m-%d").date()
+            if start_date <= parsed_day <= end_date:
+                seen_dates.add(day_date)
+                for game in day.get("games", []):
+                    row = _normalize_game(game, day_date)
+                    games.append(row)
+                    if season is None and row.get("season"):
+                        season = row["season"]
+        cursor += timedelta(days=7)
+    games.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
+    return games, _merge_cache_meta(*metas), season
+
+
+def _live_row(row: dict[str, Any], game: dict[str, Any]) -> dict[str, Any]:
+    period_descriptor = game.get("periodDescriptor")
+    clock = game.get("clock") if isinstance(game.get("clock"), dict) else {}
+    return {
+        **row,
+        "live": {
+            "period": (period_descriptor or {}).get("number") if isinstance(period_descriptor, dict) else game.get("period"),
+            "period_label": _period_label(period_descriptor),
+            "clock": clock.get("timeRemaining"),
+            "last_play": _last_play(game),
+        },
+    }
+
+
+def _fetch_live_games(date: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    url = f"{settings.nhl_api_base}/score/{date}"
+    raw, cache_meta = _cached_api_json(f"nhl:score:{date}", url, settings.ttl_schedule)
+    if not isinstance(raw, dict) or not isinstance(raw.get("games"), list):
+        raise ValueError("score response shape was unexpected")
+    live_games: list[dict[str, Any]] = []
+    for game in raw.get("games", []):
+        row = _normalize_game(game, game.get("gameDate") or raw.get("currentDate") or date)
+        if row["status"] == "live":
+            live_games.append(_live_row(row, game))
+    live_games.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
+    return live_games, cache_meta
+
+
+def _empty_reason(kind: str, season_state: str) -> str:
+    if season_state == "offseason":
+        suffix = "no games are scheduled in this window" if kind == "schedule" else "no games are live"
+        return f"NHL is in its offseason; {suffix}."
+    if kind == "schedule":
+        return "No NHL games are scheduled in this window."
+    return "No NHL games are currently live."
 
 
 def _player_name(player: dict[str, Any]) -> str:
@@ -553,3 +724,67 @@ def schedule(date: str | None = None) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         logger.warning("NHL schedule failed: %s", exc)
         return fail("upstream_unavailable", "NHL schedule is unavailable.", source=SOURCE_API)
+
+
+@router.get("/schedule/week")
+def schedule_week(start: str | None = None, days: int = 7) -> dict[str, Any]:
+    """Return a flat NHL schedule window in the UI contract v2 shape."""
+    try:
+        requested_start = _validate_date(start) or datetime.now(timezone.utc).date().isoformat()
+        requested_days = _validate_days(days)
+        start_date = datetime.strptime(requested_start, "%Y-%m-%d").date()
+        end_date = start_date + timedelta(days=requested_days - 1)
+        games, cache_meta, season = _fetch_schedule_week(start_date, requested_days)
+        season_state = season_state_for(league="nhl")
+        next_scheduled = None
+        if not games:
+            next_scheduled, next_meta = _next_scheduled_game_date(start_date)
+            cache_meta = _merge_cache_meta(cache_meta, next_meta)
+        return ok(
+            games,
+            source=SOURCE_API,
+            **cache_meta,
+            season=season,
+            season_state=season_state,
+            league="nhl",
+            start_date=requested_start,
+            end_date=end_date.isoformat(),
+            days=requested_days,
+            count=len(games),
+            empty_reason=None if games else _empty_reason("schedule", season_state),
+            next_scheduled_game_date=next_scheduled if not games else None,
+        )
+    except ValueError as exc:
+        return fail("bad_request", str(exc), source=SOURCE_API, season_state=season_state_for(league="nhl"), league="nhl")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("NHL weekly schedule failed: %s", exc)
+        return fail("upstream_unavailable", "NHL weekly schedule is unavailable.", source=SOURCE_API, season_state=season_state_for(league="nhl"), league="nhl")
+
+
+@router.get("/live")
+def live() -> dict[str, Any]:
+    """Return currently in-progress NHL games only."""
+    season_state = season_state_for(league="nhl")
+    polled_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        today = datetime.now(timezone.utc).date().isoformat()
+        games, cache_meta = _fetch_live_games(today)
+        next_scheduled = None
+        if not games:
+            next_scheduled, next_meta = _next_scheduled_game_date(datetime.strptime(today, "%Y-%m-%d").date())
+            cache_meta = _merge_cache_meta(cache_meta, next_meta)
+        return ok(
+            games,
+            source=SOURCE_API,
+            **cache_meta,
+            season_state=season_state,
+            league="nhl",
+            count=len(games),
+            polled_at=polled_at,
+            poll_interval_seconds=30,
+            empty_reason=None if games else _empty_reason("live", season_state),
+            next_scheduled_game_date=next_scheduled if not games else None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("NHL live games failed: %s", exc)
+        return fail("upstream_unavailable", "NHL live games are unavailable.", source=SOURCE_API, season_state=season_state, league="nhl", polled_at=polled_at, poll_interval_seconds=30)

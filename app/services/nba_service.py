@@ -5,8 +5,10 @@ from __future__ import annotations
 import re
 import sqlite3
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, time, timezone
+from json import loads
 from typing import Any, Literal, NamedTuple
+from zoneinfo import ZoneInfo
 
 from app.cache import cached_fetch
 from app.config import settings
@@ -25,6 +27,11 @@ class SeasonKey(NamedTuple):
 def db_available() -> bool:
     """Return whether the local NBA database exists."""
     return settings.nba_db.exists()
+
+
+def recent_games_available() -> bool:
+    """Return whether the verified basketball-reference game cache exists."""
+    return settings.nba_recent_games_db.exists()
 
 
 def coverage() -> dict[str, Any]:
@@ -61,6 +68,31 @@ def coverage() -> dict[str, Any]:
                 """
             )
         ]
+    recent_games: list[dict[str, Any]] = []
+    if recent_games_available():
+        with _connect_recent_games() as con:
+            recent_games = [
+                {
+                    "season": _label_for_end_year(int(row["season"])),
+                    "season_end_year": int(row["season"]),
+                    "games": int(row["games"]),
+                    "completed_games": int(row["completed_games"]),
+                    "first_game_date": row["first_game_date"],
+                    "last_game_date": row["last_game_date"],
+                }
+                for row in con.execute(
+                    """
+                    SELECT season,
+                           COUNT(*) AS games,
+                           SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) AS completed_games,
+                           MIN(game_date) AS first_game_date,
+                           MAX(game_date) AS last_game_date
+                    FROM nba_games
+                    GROUP BY season
+                    ORDER BY season
+                    """
+                )
+            ]
     return {
         "season_key_format": "YYYY-YY (for historical nba_games, YYYY is end_year-1)",
         "historical_games": {
@@ -71,6 +103,11 @@ def coverage() -> dict[str, Any]:
         "current_standings": {
             "source": "nba_current_standings / basketball-reference cross-check",
             "seasons": current,
+        },
+        "recent_games": {
+            "source": "nba_recent_games / basketball-reference",
+            "season_key_format": "INTEGER season END YEAR (2024 means 2023-24)",
+            "seasons": recent_games,
         },
     }
 
@@ -134,6 +171,11 @@ def resolve_season(value: str | int | None = None, *, default_current: bool = Tr
 
 def latest_schedule_season() -> SeasonKey:
     """Return the newest season with local game rows."""
+    cov = coverage()
+    recent = cov.get("recent_games", {}).get("seasons") or []
+    if recent:
+        latest = max(recent, key=lambda item: int(item["season_end_year"]))
+        return SeasonKey(latest["season"], int(latest["season_end_year"]), "current")
     return resolve_season(None, default_current=False)
 
 
@@ -181,16 +223,43 @@ def schedule_payload(game_date: str | None, season: SeasonKey | None) -> tuple[l
     """Return local NBA game rows by date and/or season."""
     key_season = season.label if season else "all"
     return cached_fetch(
-        f"nba:schedule:{key_season}:{game_date or 'all'}",
+        f"nba:schedule:v3:{key_season}:{game_date or 'all'}",
         settings.ttl_schedule,
         lambda: _schedule_rows(game_date, season),
     )
+
+
+def schedule_window_payload(start_date: str, end_date: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Return verified NBA game rows in an inclusive date window without season fallback."""
+    return cached_fetch(
+        f"nba:schedule-week:v3:{start_date}:{end_date}",
+        settings.ttl_schedule,
+        lambda: _schedule_rows_between(start_date, end_date),
+    )
+
+
+def live_payload() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Return in-progress NBA games if a verified source supports them.
+
+    The available free, verified basketball-reference cache is historical/final-only;
+    it does not expose real-time in-game state, so returning an honest empty list is
+    safer than fabricating live data or trusting blocked/unauthenticated feeds.
+    """
+    return [], {"cached": False, "stale": False, "age_seconds": 0.0}
 
 
 def _connect() -> sqlite3.Connection:
     if not settings.nba_db.exists():
         raise FileNotFoundError(f"NBA database not found: {settings.nba_db}")
     con = sqlite3.connect(f"file:{settings.nba_db}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def _connect_recent_games() -> sqlite3.Connection:
+    if not settings.nba_recent_games_db.exists():
+        raise FileNotFoundError(f"NBA recent games database not found: {settings.nba_recent_games_db}")
+    con = sqlite3.connect(f"file:{settings.nba_recent_games_db}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     return con
 
@@ -498,6 +567,9 @@ def _current_player_leaders(team: str | None, stat: str, limit: int) -> list[dic
 
 
 def _schedule_rows(game_date: str | None, season: SeasonKey | None) -> list[dict[str, Any]]:
+    if season is not None and _recent_season_available(season.end_year):
+        return _recent_schedule_rows(game_date, season.end_year, None)
+
     clauses = ["completed IS NOT NULL"]
     params: list[Any] = []
     if season is not None:
@@ -520,26 +592,175 @@ def _schedule_rows(game_date: str | None, season: SeasonKey | None) -> list[dict
             """,
             params,
         ).fetchall()
+    return _normalize_schedule_rows(rows, source_kind="historical")
+
+
+def _schedule_rows_between(start_date: str, end_date: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if recent_games_available():
+        rows.extend(_recent_schedule_rows(None, None, (start_date, end_date)))
+    rows.extend(_historical_schedule_rows_between(start_date, end_date))
+    rows.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
+    return rows
+
+
+def _recent_schedule_rows(game_date: str | None, season_end_year: int | None, date_range: tuple[str, str] | None) -> list[dict[str, Any]]:
+    clauses = ["g.completed IS NOT NULL"]
+    params: list[Any] = []
+    if season_end_year is not None:
+        clauses.append("g.season = ?")
+        params.append(season_end_year)
+    if game_date is not None:
+        clauses.append("g.game_date = ?")
+        params.append(game_date)
+    if date_range is not None:
+        clauses.append("g.game_date BETWEEN ? AND ?")
+        params.extend(date_range)
+    where = " AND ".join(clauses)
+    with _connect_recent_games() as con:
+        rows = con.execute(
+            f"""
+            SELECT g.*, tb.raw_stats_json
+            FROM nba_games AS g
+            LEFT JOIN nba_team_box AS tb
+              ON tb.game_id = g.game_id
+             AND tb.is_home = 1
+            WHERE {where}
+            ORDER BY g.game_date DESC, g.game_id
+            LIMIT 1400
+            """,
+            params,
+        ).fetchall()
+    return _normalize_schedule_rows(rows, source_kind="recent")
+
+
+def _historical_schedule_rows_between(start_date: str, end_date: str) -> list[dict[str, Any]]:
+    if recent_games_available():
+        with _connect_recent_games() as con:
+            recent_ranges = con.execute(
+                """
+                SELECT season, MIN(game_date) AS first_game_date, MAX(game_date) AS last_game_date
+                FROM nba_games
+                GROUP BY season
+                """
+            ).fetchall()
+        for row in recent_ranges:
+            if row["first_game_date"] <= end_date and row["last_game_date"] >= start_date:
+                return []
+    with _connect() as con:
+        rows = con.execute(
+            """
+            SELECT *
+            FROM nba_games
+            WHERE completed IS NOT NULL
+              AND game_date BETWEEN ? AND ?
+            ORDER BY game_date DESC, game_id
+            LIMIT 1400
+            """,
+            (start_date, end_date),
+        ).fetchall()
+    return _normalize_schedule_rows(rows, source_kind="historical")
+
+
+def _normalize_schedule_rows(rows: list[sqlite3.Row], *, source_kind: Literal["historical", "recent"]) -> list[dict[str, Any]]:
     aliases = _team_aliases()
+    teams = _teams()
     return [
-        {
-            "game_id": row["game_id"],
-            "season": _label_for_end_year(int(row["season"])),
-            "season_end_year": int(row["season"]),
-            "game_date": row["game_date"],
-            "season_type": row["season_type"],
-            "home_team": aliases.get(str(row["home_team"]).upper(), row["home_team"]),
-            "away_team": aliases.get(str(row["away_team"]).upper(), row["away_team"]),
-            "home_score": _to_int(row["home_score"]),
-            "away_score": _to_int(row["away_score"]),
-            "played": bool(row["home_score"] is not None and row["away_score"] is not None),
-            "status": "final" if row["completed"] else "scheduled",
-            "neutral_site": bool(row["neutral_site"]) if row["neutral_site"] is not None else None,
-            "venue": row["venue"],
-            "attendance": _to_int(row["attendance"]),
-        }
+        _normalize_schedule_row(row, aliases, teams, source_kind=source_kind)
         for row in rows
     ]
+
+
+def _normalize_schedule_row(
+    row: sqlite3.Row,
+    aliases: dict[str, str],
+    teams: dict[str, dict[str, Any]],
+    *,
+    source_kind: Literal["historical", "recent"],
+) -> dict[str, Any]:
+    home = aliases.get(str(row["home_team"]).upper(), row["home_team"])
+    away = aliases.get(str(row["away_team"]).upper(), row["away_team"])
+    played = _row_is_played(row)
+    status = _normalized_game_status(row)
+    detailed_status = _detailed_status(row, status)
+    start_time_utc = _start_time_utc(row) if source_kind == "recent" else None
+    return {
+        "game_id": str(row["game_id"]),
+        "league": "nba",
+        "season": _label_for_end_year(int(row["season"])),
+        "season_end_year": int(row["season"]),
+        "game_date": row["game_date"],
+        "season_type": row["season_type"],
+        "start_time_utc": start_time_utc,
+        "home": home,
+        "away": away,
+        "home_team": home,
+        "away_team": away,
+        "home_name": teams.get(home, {}).get("name") or home,
+        "away_name": teams.get(away, {}).get("name") or away,
+        "home_score": _to_int(row["home_score"]) if played else None,
+        "away_score": _to_int(row["away_score"]) if played else None,
+        "played": played,
+        "status": status,
+        "detailed_status": detailed_status,
+        "neutral_site": bool(row["neutral_site"]) if row["neutral_site"] is not None else None,
+        "venue": row["venue"],
+        "attendance": _to_int(row["attendance"]),
+    }
+
+
+def _recent_season_available(season_end_year: int) -> bool:
+    if not recent_games_available():
+        return False
+    with _connect_recent_games() as con:
+        row = con.execute("SELECT 1 FROM nba_games WHERE season = ? LIMIT 1", (season_end_year,)).fetchone()
+    return row is not None
+
+
+def _row_is_played(row: sqlite3.Row) -> bool:
+    if row["home_score"] is not None and row["away_score"] is not None:
+        return True
+    game_date = validate_date(str(row["game_date"]))
+    return game_date < datetime.now(timezone.utc).date().isoformat()
+
+
+def _normalized_game_status(row: sqlite3.Row) -> str:
+    if _row_is_played(row):
+        return "final"
+    return "scheduled"
+
+
+def _detailed_status(row: sqlite3.Row, status: str) -> str:
+    if status == "final" and (row["home_score"] is None or row["away_score"] is None):
+        return "historical-final-score-missing"
+    if row["completed"] == 1:
+        return "completed"
+    if row["completed"] == 0:
+        return "not-started"
+    return str(row["completed"])
+
+
+def _start_time_utc(row: sqlite3.Row) -> str | None:
+    try:
+        raw = loads(row["raw_stats_json"] or "{}")
+    except (TypeError, ValueError, KeyError):
+        return None
+    start = raw.get("Start (ET)")
+    if not isinstance(start, str):
+        return None
+    match = re.fullmatch(r"(\d{1,2})(?::(\d{2}))?([ap])", start.strip().lower())
+    if not match:
+        return None
+    hour = int(match.group(1))
+    minute = int(match.group(2) or "0")
+    if match.group(3) == "p" and hour != 12:
+        hour += 12
+    if match.group(3) == "a" and hour == 12:
+        hour = 0
+    local_date = date.fromisoformat(str(row["game_date"]))
+    eastern = ZoneInfo("America/New_York")
+    starts_at = datetime.combine(local_date, time(hour, minute), tzinfo=eastern)
+    return starts_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def validate_date(value: str) -> str:

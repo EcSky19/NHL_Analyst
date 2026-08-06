@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter
@@ -13,9 +14,11 @@ from app.services.nba_service import (
     coverage,
     db_available,
     latest_schedule_season,
+    live_payload,
     players_payload,
     resolve_season,
     schedule_payload,
+    schedule_window_payload,
     standings_payload,
     teams_payload,
     validate_date,
@@ -110,18 +113,79 @@ def schedule(date: str | None = None, season: str | None = None) -> dict[str, An
                 **cache_meta,
             )
         meta_season = selected.label if selected else rows[0].get("season")
+        historical_meta = _historical_schedule_meta(rows)
         return ok(
             rows,
             source=SOURCE,
             season=meta_season,
             season_state=season_state_for(league="nba"),
             season_coverage=_safe_coverage(),
+            **historical_meta,
             **cache_meta,
         )
     except ValueError as exc:
         return fail("bad_request", str(exc), source=SOURCE, season_coverage=_safe_coverage())
     except Exception as exc:  # noqa: BLE001
         return fail("upstream_unavailable", str(exc), source=SOURCE, season_coverage=_safe_coverage())
+
+
+@router.get("/schedule/week")
+def schedule_week(start: str | None = None, days: str | None = None) -> dict[str, Any]:
+    """Return a flat NBA schedule window in the frozen shared game-row shape."""
+    league_state = season_state_for(league="nba")
+    try:
+        start_date, day_count, end_date = _validate_week_params(start, days)
+        rows, cache_meta = schedule_window_payload(start_date, end_date)
+        rows.sort(key=lambda row: (row.get("start_time_utc") or "", row.get("game_id") or ""))
+        empty_reason = None
+        if not rows:
+            empty_reason = (
+                "NBA is in its offseason; no games are scheduled in this window."
+                if league_state == "offseason"
+                else "No NBA games are scheduled in this window."
+            )
+        return ok(
+            rows,
+            source=SOURCE,
+            **cache_meta,
+            start_date=start_date,
+            end_date=end_date,
+            days=day_count,
+            count=len(rows),
+            season_state=league_state,
+            league="nba",
+            empty_reason=empty_reason,
+        )
+    except ValueError as exc:
+        return fail("bad_request", str(exc), source=SOURCE, season_state=league_state, league="nba")
+    except Exception as exc:  # noqa: BLE001
+        return fail("upstream_unavailable", str(exc), source=SOURCE, season_state=league_state, league="nba")
+
+
+@router.get("/live")
+def live() -> dict[str, Any]:
+    """Return currently in-progress NBA games only, if a verified source exists."""
+    league_state = season_state_for(league="nba")
+    try:
+        rows, cache_meta = live_payload()
+        empty_reason = None
+        if not rows:
+            empty_reason = (
+                "No free verified NBA source available to this app exposes true real-time in-game state; returning no live games rather than fabricating data."
+            )
+        return ok(
+            rows,
+            source=SOURCE,
+            **cache_meta,
+            count=len(rows),
+            season_state=league_state,
+            league="nba",
+            polled_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            poll_interval_seconds=30,
+            empty_reason=empty_reason,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return fail("upstream_unavailable", str(exc), source=SOURCE, season_state=league_state, league="nba")
 
 
 def _success(data: Any, selected: Any, cache_meta: dict[str, Any]) -> dict[str, Any]:
@@ -154,3 +218,32 @@ def _safe_coverage() -> dict[str, Any]:
         return coverage()
     except Exception as exc:  # noqa: BLE001
         return {"available": False, "error": str(exc)}
+
+
+def _validate_week_params(start: str | None, days: str | None) -> tuple[str, int, str]:
+    start_date = validate_date(start) if start else datetime.now(timezone.utc).date().isoformat()
+    try:
+        day_count = int(days) if days is not None else 7
+    except ValueError as exc:
+        raise ValueError("days must be an integer between 1 and 14") from exc
+    if day_count < 1 or day_count > 14:
+        raise ValueError("days must be between 1 and 14")
+    end_date = (datetime.fromisoformat(start_date).date() + timedelta(days=day_count - 1)).isoformat()
+    return start_date, day_count, end_date
+
+
+def _historical_schedule_meta(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {"historical": False, "empty_reason": None}
+    today = datetime.now(timezone.utc).date().isoformat()
+    latest_game_date = max(str(row.get("game_date") or "") for row in rows)
+    historical = latest_game_date < today
+    return {
+        "historical": historical,
+        "latest_game_date": latest_game_date,
+        "empty_reason": (
+            "Latest available NBA schedule data is historical; no upcoming NBA schedule is available locally."
+            if historical
+            else None
+        ),
+    }

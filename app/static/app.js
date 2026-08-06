@@ -13,8 +13,11 @@
     groupStandings: true,
     scheduleDate: '',
     scheduleWeek: '',
+    liveWeekStart: todayInputDate(),
+    livePollSeconds: 30,
     failureCount: 0,
     timer: null,
+    loadSeq: 0,
     cache: {},
     teams: [],
     selectedTeam: null,
@@ -31,6 +34,8 @@
     schedule: (league) => league === 'nfl'
       ? `/api/nfl/schedule${state.scheduleWeek ? `?week=${encodeURIComponent(state.scheduleWeek)}` : ''}`
       : `/api/${league}/schedule${state.scheduleDate ? `?date=${encodeURIComponent(state.scheduleDate)}` : ''}`,
+    live: (league) => `/api/${league}/live`,
+    weekSchedule: (league) => `/api/${league}/schedule/week?start=${encodeURIComponent(state.liveWeekStart)}&days=7`,
     predictions: (league) => `/api/predictions/${league}`,
     matchup: (league, home, away) => `/api/predictions/matchup?league=${encodeURIComponent(league)}&home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`
   };
@@ -129,6 +134,14 @@
   sample.nfl.schedule = [game('2026-01-04', 'KC', 'BUF', 'Final', '24-21'), game('2026-01-04', 'PHI', 'DET', 'Final', '31-28')];
   sample.nba.schedule = [game('2026-04-12', 'BOS', 'NYK', 'Final', '118-111'), game('2026-04-12', 'OKC', 'DEN', 'Final', '124-119')];
   sample.mlb.schedule = [game('2026-08-05', 'TOR', 'TB', 'Scheduled', ''), game('2026-08-05', 'TOR', 'TB', 'In Progress', '2-1'), game('2026-08-05', 'SF', 'LAD', 'Final', '4-7')];
+  sample.nhl.live = [];
+  sample.nfl.live = [];
+  sample.nba.live = [];
+  sample.mlb.live = [{ ...game('2026-08-05', 'TOR', 'TB', 'live', ''), league: 'mlb', home_name: 'Tampa Bay Rays', away_name: 'Toronto Blue Jays', home_score: 1, away_score: 2, detailed_status: 'In Progress', venue: 'Tropicana Field', start_time_utc: '2026-08-05T23:10:00Z', live: { period: 7, period_label: 'T7', clock: null, last_play: 'Single to right field.', balls: 1, strikes: 2, outs: 1, runners: ['1B'] } }];
+  sample.nhl.weekSchedule = [];
+  sample.nfl.weekSchedule = [];
+  sample.nba.weekSchedule = [];
+  sample.mlb.weekSchedule = sample.mlb.schedule.map((item, index) => ({ ...item, league: 'mlb', home_name: item.home, away_name: item.away, start_time_utc: index === 0 ? '2026-08-05T17:10:00Z' : index === 1 ? '2026-08-05T23:10:00Z' : '2026-08-06T02:10:00Z', detailed_status: item.status, venue: index === 2 ? 'Dodger Stadium' : 'Tropicana Field' }));
 
   function row(abbrev, name, conference, division, rank, games, wins, losses, otl, ties, points, gf, ga, streak, last10) {
     return {
@@ -159,6 +172,8 @@
       meta: {
         source: 'mock-fixture', fetched_at: new Date().toISOString(), cached: false, stale: false,
         season: league === 'nhl' ? '20252026' : league === 'nba' ? '2025-26' : '2026', season_state: league === 'mlb' ? 'regular' : 'offseason',
+        poll_interval_seconds: 30,
+        empty_reason: data && data.length ? null : `${league.toUpperCase()} has no games in this mock window.`,
         season_coverage: league === 'nba' ? {
           historical_game_logs: '2001-02 through 2022-23',
           current_standings: { seasons: [{ season: '2023-24' }, { season: '2024-25' }, { season: '2025-26' }] }
@@ -211,6 +226,8 @@
       state.teams = [];
       state.scheduleWeek = '';
       state.scheduleDate = '';
+      state.liveWeekStart = todayInputDate();
+      state.livePollSeconds = 30;
       if (state.league === 'mlb' && state.view === 'schedule') state.scheduleDate = todayInputDate();
       state.cache = {};
       updateActive();
@@ -219,6 +236,7 @@
     document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
       state.view = button.dataset.view;
       if (state.league === 'mlb' && state.view === 'schedule' && !state.scheduleDate) state.scheduleDate = todayInputDate();
+      if (state.view === 'liveSchedule' && !state.liveWeekStart) state.liveWeekStart = todayInputDate();
       updateActive();
       loadView(true);
     }));
@@ -257,19 +275,22 @@
       b.classList.toggle('active', b.dataset.league === state.league);
       b.setAttribute('aria-selected', String(b.dataset.league === state.league));
     });
-    document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === state.view));
+    document.querySelectorAll('[data-view]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.view === state.view);
+      b.setAttribute('aria-selected', String(b.dataset.view === state.view));
+    });
   }
 
   function startPolling() {
     clearTimeout(state.timer);
     if (state.paused || document.hidden) return;
-    const base = state.league === 'mlb' && state.view === 'standings' ? 300000 : state.view === 'standings' ? 60000 : 120000;
+    const base = state.view === 'liveSchedule' ? Math.max(5, state.livePollSeconds || 30) * 1000 : state.league === 'mlb' && state.view === 'standings' ? 300000 : state.view === 'standings' ? 60000 : 120000;
     const delay = Math.min(base * Math.max(1, 2 ** Math.min(state.failureCount, 4)), 15 * 60000);
     state.timer = setTimeout(() => loadView(), delay);
   }
 
   function updatePollState() {
-    const activeText = state.league === 'mlb' && state.view === 'standings' ? 'Auto-refresh active · MLB standings refresh about every 5 minutes' : 'Auto-refresh active';
+    const activeText = state.view === 'liveSchedule' ? `Auto-refresh active · live games refresh about every ${state.livePollSeconds || 30}s` : state.league === 'mlb' && state.view === 'standings' ? 'Auto-refresh active · MLB standings refresh about every 5 minutes' : 'Auto-refresh active';
     const text = state.paused ? 'Auto-refresh paused' : document.hidden ? 'Auto-refresh paused while tab is hidden' : state.failureCount ? `Backoff active after ${state.failureCount} failed refresh${state.failureCount > 1 ? 'es' : ''}` : activeText;
     $('#poll-state').textContent = text;
     $('#pause-btn').textContent = state.paused ? 'Resume updates' : 'Pause updates';
@@ -277,22 +298,60 @@
   }
 
   async function loadView(force) {
+    const seq = ++state.loadSeq;
     showSkeleton();
     setNotice('', 'neutral');
     try {
+      if (state.view === 'liveSchedule') {
+        await loadLiveSchedule(force, seq);
+        if (!isCurrentLoad(seq)) return;
+        state.failureCount = 0;
+        return;
+      }
       await ensureTeams();
       const envelope = await getEnvelope(state.view, force);
+      if (!isCurrentLoad(seq)) return;
       state.failureCount = 0;
       handleMeta(envelope.meta);
       render(state.view, envelope);
       $('#last-updated').textContent = `Last updated ${formatDateTime(envelope.meta && envelope.meta.fetched_at ? envelope.meta.fetched_at : new Date().toISOString())}`;
     } catch (error) {
+      if (!isCurrentLoad(seq)) return;
       state.failureCount += 1;
       renderError(error.message || 'Could not load this view.', true);
     } finally {
+      if (!isCurrentLoad(seq)) return;
       updatePollState();
       startPolling();
     }
+  }
+
+  async function loadLiveSchedule(force, seq) {
+    const [liveResult, scheduleResult] = await Promise.allSettled([
+      getEnvelope('live', true),
+      getEnvelope('weekSchedule', force)
+    ]);
+    if (!isCurrentLoad(seq)) return;
+    const liveEnvelope = liveResult.status === 'fulfilled' ? liveResult.value : errorEnvelope(liveResult.reason, 'live games');
+    const scheduleEnvelope = scheduleResult.status === 'fulfilled' ? scheduleResult.value : errorEnvelope(scheduleResult.reason, 'week schedule');
+    const poll = asNumber(liveEnvelope.meta && liveEnvelope.meta.poll_interval_seconds);
+    state.livePollSeconds = poll || 30;
+    handleMeta(liveEnvelope.meta && Object.keys(liveEnvelope.meta).length ? liveEnvelope.meta : scheduleEnvelope.meta);
+    renderLiveSchedule({ live: liveEnvelope, schedule: scheduleEnvelope });
+    $('#last-updated').textContent = `Last updated ${formatDateTime(new Date().toISOString())}`;
+  }
+
+  function isCurrentLoad(seq) {
+    return seq === state.loadSeq;
+  }
+
+  function errorEnvelope(error, label) {
+    return {
+      ok: false,
+      data: [],
+      error: { message: error && error.message ? error.message : `${title(label)} could not be loaded.` },
+      meta: { fetched_at: new Date().toISOString(), empty_reason: null }
+    };
   }
 
   async function ensureTeams() {
@@ -313,7 +372,7 @@
   }
 
   async function getEnvelope(key, force) {
-    const cacheKey = `${key}:${state.league}:${state.playerStat}:${state.playerTeam}:${state.playerGroup}:${state.scheduleDate}:${state.scheduleWeek}`;
+    const cacheKey = `${key}:${state.league}:${state.playerStat}:${state.playerTeam}:${state.playerGroup}:${state.scheduleDate}:${state.scheduleWeek}:${state.liveWeekStart}`;
     if (!force && state.cache[cacheKey]) return state.cache[cacheKey];
     let envelope;
     if (state.mock) {
@@ -329,7 +388,7 @@
         }
       }
     }
-    state.cache[cacheKey] = envelope;
+    if (key !== 'live') state.cache[cacheKey] = envelope;
     if (key === 'teams') state.cache[`teams:${state.league}`] = envelope;
     return envelope;
   }
@@ -383,6 +442,7 @@
     if (view === 'standings') renderStandings(rows, envelope.meta);
     if (view === 'teams') renderTeams(rows, envelope.meta);
     if (view === 'players') renderPlayers(rows, envelope.meta);
+    if (view === 'liveSchedule') renderLiveSchedule(envelope);
     if (view === 'schedule') renderSchedule(rows, envelope.meta);
     if (view === 'predictions') renderPredictions(rows, envelope.meta);
   }
@@ -570,6 +630,133 @@
     if (date) date.addEventListener('change', (e) => { state.scheduleDate = e.target.value; state.cache = {}; loadView(true); });
   }
 
+  function renderLiveSchedule(envelopes) {
+    const liveEnvelope = envelopes.live || { data: [], meta: {} };
+    const scheduleEnvelope = envelopes.schedule || { data: [], meta: {} };
+    const liveRows = normalizeRows(liveEnvelope.data, 'live');
+    const scheduleRows = normalizeRows(scheduleEnvelope.data, 'weekSchedule');
+    const weekLabel = weekRangeLabel(state.liveWeekStart, 7);
+    $('#view-content').innerHTML = `
+      <div class="section-head">
+        <div>
+          <h2>${state.league.toUpperCase()} Live &amp; Schedule</h2>
+          <p class="honesty">Live games and the selected seven-day schedule are rendered only from the league API contract; empty offseason windows are shown as normal states.</p>
+        </div>
+        <div class="control-row live-schedule-controls">
+          <button id="prev-live-week" class="ghost-btn" type="button">Previous week</button>
+          <label class="small-label">Week starting <input id="live-week-start" type="date" value="${escapeAttr(state.liveWeekStart)}"></label>
+          <button id="next-live-week" class="ghost-btn" type="button">Next week</button>
+        </div>
+      </div>
+      ${nbaCoverageMarkup(liveEnvelope.meta || scheduleEnvelope.meta)}
+      <section class="live-section" aria-labelledby="live-games-heading">
+        <div class="section-head">
+          <h3 id="live-games-heading">Live games</h3>
+          <span class="pill">Refresh ${escapeHtml(String(state.livePollSeconds || 30))}s</span>
+        </div>
+        ${liveEnvelope.ok === false ? sectionErrorMarkup('Live games unavailable', liveEnvelope.error && liveEnvelope.error.message) : liveRows.length ? `<div class="live-game-grid">${liveRows.map(liveGameCard).join('')}</div>` : emptyMarkup('No live games', emptyReason(liveEnvelope.meta, 'No games are currently live.'))}
+      </section>
+      <section class="week-schedule-section" aria-labelledby="week-schedule-heading">
+        <div class="section-head">
+          <h3 id="week-schedule-heading">Week schedule</h3>
+          <span class="pill">${escapeHtml(weekLabel)}</span>
+        </div>
+        ${scheduleEnvelope.ok === false ? sectionErrorMarkup('Week schedule unavailable', scheduleEnvelope.error && scheduleEnvelope.error.message) : scheduleRows.length ? weekScheduleMarkup(scheduleRows) : emptyMarkup('No scheduled games', emptyReason(scheduleEnvelope.meta, 'No games are scheduled in this window.'))}
+      </section>`;
+    $('#prev-live-week').addEventListener('click', () => moveLiveWeek(-7));
+    $('#next-live-week').addEventListener('click', () => moveLiveWeek(7));
+    $('#live-week-start').addEventListener('change', (e) => {
+      state.liveWeekStart = e.target.value || todayInputDate();
+      state.cache = {};
+      loadView(true);
+    });
+  }
+
+  function liveGameCard(gameRow) {
+    const live = normalizeObject(gameRow.live);
+    const away = teamLabel(gameRow, 'away');
+    const home = teamLabel(gameRow, 'home');
+    const score = scoreText(gameRow) || 'Score unavailable';
+    const clock = live.clock == null || live.clock === '' ? '' : `<span>${escapeHtml(live.clock)}</span>`;
+    const rawPeriod = live.period_label || (live.period == null ? '' : `Period ${live.period}`);
+    const period = rawPeriod ? formatPeriodLabel(rawPeriod) : '';
+    const periodTitle = period && period !== rawPeriod ? ` title="Raw period label ${escapeAttr(rawPeriod)}"` : '';
+    const extras = mlbLiveExtras(live);
+    return `
+      <article class="live-game-card">
+        <div class="section-head">
+          <h4>${escapeHtml(away)} at ${escapeHtml(home)}</h4>
+          <span class="live-badge">Live</span>
+        </div>
+        <div class="scoreline"><span>${escapeHtml(away)}</span><strong>${value(gameRow.away_score)}</strong><span>${escapeHtml(home)}</span><strong>${value(gameRow.home_score)}</strong></div>
+        <div class="live-context">${period ? `<span${periodTitle}>${escapeHtml(period)}</span>` : ''}${clock}${gameRow.detailed_status ? `<span>${escapeHtml(gameRow.detailed_status)}</span>` : ''}</div>
+        ${extras}
+        ${live.last_play ? `<p class="last-play"><strong>Last play:</strong> ${escapeHtml(live.last_play)}</p>` : ''}
+        <p class="honesty">${escapeHtml(gameRow.venue || 'Venue TBD')} · ${escapeHtml(score)}</p>
+      </article>`;
+  }
+
+  function formatPeriodLabel(label) {
+    const raw = String(label || '');
+    const match = raw.match(/^([TBME])(\d+)$/i);
+    if (!match) return raw;
+    const prefix = match[1].toUpperCase();
+    const inning = Number(match[2]);
+    const half = prefix === 'T' ? 'Top' : prefix === 'B' ? 'Bot' : prefix === 'M' ? 'Mid' : 'End';
+    return `${half} ${ordinal(inning)}`;
+  }
+
+  function ordinal(n) {
+    if (!Number.isFinite(n)) return '';
+    const mod100 = n % 100;
+    const suffix = mod100 >= 11 && mod100 <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
+    return `${n}${suffix}`;
+  }
+
+  function mlbLiveExtras(live) {
+    const count = [['Balls', live.balls], ['Strikes', live.strikes], ['Outs', live.outs]].filter(([, val]) => val != null && val !== '');
+    const runners = live.runners == null || live.runners === '' ? '' : Array.isArray(live.runners) ? live.runners.join(', ') : typeof live.runners === 'object' ? Object.entries(live.runners).filter(([, val]) => Boolean(val)).map(([key]) => key).join(', ') : String(live.runners);
+    if (!count.length && !runners) return '';
+    return `<div class="live-extra-grid">${count.map(([label, val]) => statBox(label, escapeHtml(String(val)))).join('')}${runners ? statBox('Runners', escapeHtml(runners)) : ''}</div>`;
+  }
+
+  function weekScheduleMarkup(rows) {
+    const grouped = groupScheduleByDate(rows);
+    return `<div class="schedule-days">${grouped.map(([date, items]) => `
+      <section class="schedule-day">
+        <h4>${escapeHtml(dayHeading(date))}</h4>
+        <div class="table-wrap"><table>
+          <caption class="sr-only">${state.league.toUpperCase()} games on ${escapeHtml(date)}</caption>
+          <thead><tr><th>Time</th><th>Matchup</th><th>Venue</th><th>Status</th><th>Score</th></tr></thead>
+          <tbody>${items.map((gameRow) => `<tr><td>${escapeHtml(formatLocalStart(gameRow.start_time_utc))}</td><td>${escapeHtml(teamLabel(gameRow, 'away'))} at ${escapeHtml(teamLabel(gameRow, 'home'))}</td><td>${value(gameRow.venue)}</td><td>${statusMarkup(gameRow)}</td><td>${value(gameRow.status === 'final' || /final|completed/i.test(String(gameRow.status || gameRow.detailed_status || '')) ? scoreText(gameRow) : '')}</td></tr>`).join('')}</tbody>
+        </table></div>
+      </section>`).join('')}</div>`;
+  }
+
+  function groupScheduleByDate(rows) {
+    const sorted = [...rows].sort((a, b) => {
+      const ad = a.start_time_utc ? new Date(a.start_time_utc).getTime() : Number.POSITIVE_INFINITY;
+      const bd = b.start_time_utc ? new Date(b.start_time_utc).getTime() : Number.POSITIVE_INFINITY;
+      if (ad !== bd) return ad - bd;
+      return String(a.game_id || '').localeCompare(String(b.game_id || ''));
+    });
+    const groups = new Map();
+    sorted.forEach((row) => {
+      const date = row.game_date || localDateKey(row.start_time_utc) || 'Date TBD';
+      if (!groups.has(date)) groups.set(date, []);
+      groups.get(date).push(row);
+    });
+    return [...groups.entries()];
+  }
+
+  function moveLiveWeek(days) {
+    const base = parseDateInput(state.liveWeekStart) || new Date();
+    base.setDate(base.getDate() + days);
+    state.liveWeekStart = toInputDate(base);
+    state.cache = {};
+    loadView(true);
+  }
+
   function scheduleTable(rows) {
     return `<div class="table-wrap"><table><caption class="sr-only">${state.league.toUpperCase()} schedule</caption><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Status</th><th>Score</th></tr></thead><tbody>${rows.map((gameRow) => `<tr><td>${value(gameRow.game_date || gameRow.date || gameRow.start_time)}</td><td>${value(teamName(gameRow, 'away'))}</td><td>${value(teamName(gameRow, 'home'))}</td><td>${statusMarkup(gameRow)}</td><td>${value(gameRow.score || scoreText(gameRow))}</td></tr>`).join('')}</tbody></table></div>`;
   }
@@ -578,6 +765,60 @@
     const away = gameRow.away_score ?? gameRow.visitor_score;
     const home = gameRow.home_score;
     return away == null || home == null ? '' : `${away}-${home}`;
+  }
+
+  function teamLabel(gameRow, side) {
+    const name = gameRow[`${side}_name`] || gameRow[`${side}_team_name`];
+    const abbrev = teamName(gameRow, side);
+    if (name && abbrev && name !== abbrev) return `${name} (${abbrev})`;
+    return name || abbrev || title(side);
+  }
+
+  function emptyReason(meta, fallback) {
+    return meta && meta.empty_reason ? meta.empty_reason : fallback;
+  }
+
+  function sectionErrorMarkup(titleText, message) {
+    return `<div class="error-state"><h2>${escapeHtml(titleText)}</h2><p>${escapeHtml(message || 'The endpoint returned an error.')}</p></div>`;
+  }
+
+  function formatLocalStart(iso) {
+    if (iso == null || iso === '') return 'TBD';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return 'TBD';
+    return d.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+  }
+
+  function localDateKey(iso) {
+    if (iso == null || iso === '') return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return toInputDate(d);
+  }
+
+  function dayHeading(dateText) {
+    const d = parseDateInput(dateText);
+    if (!d) return dateText;
+    return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  function weekRangeLabel(start, days) {
+    const d = parseDateInput(start);
+    if (!d) return 'Selected week';
+    const end = new Date(d);
+    end.setDate(end.getDate() + Math.max(1, days) - 1);
+    return `${dayHeading(toInputDate(d))} – ${dayHeading(toInputDate(end))}`;
+  }
+
+  function parseDateInput(valueIn) {
+    const match = String(valueIn || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+  }
+
+  function toInputDate(dateIn) {
+    const d = new Date(dateIn);
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 10);
   }
 
   function renderPredictions(rows, meta) {
@@ -610,7 +851,6 @@
     }
     target.innerHTML = loadingMarkup(2);
     try {
-      if (state.mock && state.league === 'mlb') throw new Error('MLB no model exists yet, so no fabricated matchup probability is shown.');
       const env = state.mock ? { ok: true, data: prediction(state.league, home, away, .55, mockAccuracy(state.league)), meta: { fetched_at: new Date().toISOString(), season_state: state.league === 'mlb' ? 'regular' : 'offseason', season: state.league === 'nba' ? '2025-26' : state.league === 'mlb' ? '2026' : '2025', stale: false, season_coverage: state.league === 'nba' ? { historical_game_logs: '2001-02 through 2022-23', current_standings: { seasons: [{ season: '2023-24' }, { season: '2024-25' }, { season: '2025-26' }] } } : null } } : await fetchEnvelope(endpoints.matchup(state.league, home, away), 'matchup prediction');
       handleMeta(env.meta);
       const cards = Array.isArray(env.data) ? env.data.map(normalizeObject) : [normalizeObject(env.data)];
@@ -895,14 +1135,14 @@
   function honestyText(league) {
     if (league === 'nhl') return 'NHL model accuracy is 56.82% versus a 53.5% always-home baseline. These are modest statistical estimates, not guaranteed edges.';
     if (league === 'nfl') return 'NFL market-free accuracy is 66.11% and full-model accuracy is 67.40% versus a 68.51% Vegas bar; neither beats the market. Not betting advice.';
-    if (league === 'mlb') return 'MLB no model exists yet; this UI must not fabricate a probability. Not betting advice.';
+    if (league === 'mlb') return 'MLB model accuracy is 55.72% and explicitly does NOT beat the 56.13% pure-Elo baseline. Not betting advice.';
     return 'NBA model accuracy is 62.52% and explicitly does NOT beat the 62.95% pure-Elo baseline. Not betting advice.';
   }
   function mockAccuracy(league) {
     if (league === 'nhl') return [0.5682, 0.535, 'Model accuracy 56.82% vs 53.5% home baseline.'];
     if (league === 'nfl') return [0.6611, 0.6851, 'NFL market-free accuracy 66.11%; full 67.40%; Vegas bar 68.51%, so it does not beat the market.'];
     if (league === 'nba') return [0.6252, 0.6295, 'NBA model accuracy is 62.52%; it does NOT beat the 62.95% pure-Elo baseline.'];
-    return [null, null, 'MLB no model exists yet; no probability should be trusted or fabricated.'];
+    return [0.5572, 0.5613, 'MLB model accuracy is 55.72%; it does NOT beat the 56.13% pure-Elo baseline.'];
   }
   function teamDetailStats(local) {
     const config = leagueConfig[state.league];

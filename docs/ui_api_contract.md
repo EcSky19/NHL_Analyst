@@ -224,3 +224,66 @@ schedule 120s, predictions 600s. Cache is on-disk under `data/ui_cache/` so a re
 - **ESPN NFL API returns 403 and must not be used.** ESPN NBA and MLB also return 403 and are
   deliberately not used.
 - Local databases: `data/processed/nhl_research.db`, `data/nfl/nfl_research.db` (read-only).
+
+## Live games and week schedule (contract v2)
+
+Frozen before implementation so the four league routers and the frontend can be built
+in parallel. All responses use the standard `ok()` / `fail()` envelope from
+`app/config.py`. Failures are still HTTP 200.
+
+### `GET /api/{league}/schedule/week`
+
+Query params:
+
+| param | type | default | notes |
+| --- | --- | --- | --- |
+| `start` | `YYYY-MM-DD` | today (UTC) | first day of the window, inclusive |
+| `days` | int | 7 | 1-14; reject anything else with `fail("bad_request", ...)` |
+
+`data` is a **flat array** of game rows sorted by `start_time_utc` then `game_id`,
+not a nested per-day structure. The frontend groups by `game_date` itself.
+
+`meta` adds: `start_date`, `end_date`, `days`, `count`, `season_state`, `league`,
+and `empty_reason` (string or null).
+
+### `GET /api/{league}/live`
+
+No required params. `data` is a flat array of **currently in-progress games only**.
+`meta` adds: `count`, `season_state`, `league`, `polled_at`, `poll_interval_seconds`
+(integer hint for the frontend; use 30), and `empty_reason` (string or null).
+
+Each live row carries all shared keys below plus a `live` object:
+
+- `period` — integer or null
+- `period_label` — short display string, league-specific (`"T7"`, `"Q3"`, `"P2"`)
+- `clock` — string or null (null is legitimate for baseball)
+- `last_play` — string or null
+
+### Shared game row keys (all four leagues, both endpoints)
+
+Every league MUST emit these exact key names, even where its internal schema differs.
+NFL and NBA currently expose `home_team`/`away_team`; they must **also** emit
+`home`/`away`. Existing keys stay for backward compatibility; this is additive.
+
+`game_id` (string), `league`, `game_date` (`YYYY-MM-DD`), `start_time_utc` (ISO-8601
+string or null), `home`, `away` (abbrev), `home_name`, `away_name`, `home_score`,
+`away_score` (int or null, null when not yet played), `status`, `detailed_status`,
+`venue`.
+
+`status` MUST be normalized to exactly one of: `scheduled`, `live`, `final`,
+`postponed`. Raw upstream values (`FUT`, `OFF`, `In Progress`, ...) go in
+`detailed_status`.
+
+### Honesty rules (non-negotiable)
+
+As of August 2026 the NHL and NBA are in their offseason and the NFL has not played
+a regular-season game yet. Therefore:
+
+- An empty week or empty live list is a **correct answer**, not a bug to paper over.
+  Return `ok` with `data: []` and a truthful `meta.empty_reason`, for example
+  `"NHL is in its offseason; no games are scheduled in this window."`
+- Never invent, simulate, or placeholder a game.
+- Never substitute games from a previous season and present them as upcoming. A
+  historical row must never appear in `/schedule/week` or `/live`.
+- Never mark a game `live` unless upstream genuinely reports it in progress.
+- Scores for unplayed games are `null`, never `0`.
