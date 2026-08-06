@@ -37,6 +37,12 @@ FEATURE_NAMES = [
     "pregame_logit_decay",
     "is_overtime",
 ]
+"""The original core feature set, kept for backward compatibility.
+
+`build_features` returns a SUPERSET of these keys. Models select the columns
+they need by name via their artifact's `feature_names`, so new keys can be
+added to the map without disturbing any already-trained model.
+"""
 
 LEAGUES = ("nhl", "nfl", "nba", "mlb")
 
@@ -57,6 +63,16 @@ class GameState:
     period: int | None = None
     is_overtime: bool = False
     pregame_home_prob: float | None = None
+
+    # Optional league-specific situational state. Every field defaults to None,
+    # meaning "not observed", and every model declares in its artifact which
+    # features it actually consumes -- so adding fields here can never disturb
+    # an existing model. Only populate a field when it is genuinely known.
+    outs: int | None = None                 # MLB: outs in the current half-inning, 0-2
+    offense_is_home: bool | None = None     # NFL: which side has possession
+    down: int | None = None                 # NFL: 1-4
+    distance: int | None = None             # NFL: yards needed for a first down
+    yards_to_endzone: int | None = None     # NFL: 1-99, from the offense's view
 
 
 def logit(p: float) -> float:
@@ -85,6 +101,8 @@ def build_features(state: GameState) -> dict[str, float]:
     margin = float(state.margin)
     pregame = state.pregame_home_prob
     pregame_logit = logit(pregame) if pregame is not None else 0.0
+    offense = state.offense_is_home
+    yte = state.yards_to_endzone
     return {
         "margin": margin,
         "margin_scaled": margin / math.sqrt(frac + _EPS),
@@ -93,6 +111,28 @@ def build_features(state: GameState) -> dict[str, float]:
         # The pregame prior should fade as the game resolves itself.
         "pregame_logit_decay": pregame_logit * frac,
         "is_overtime": 1.0 if state.is_overtime else 0.0,
+        # --- Optional situational state. -----------------------------------
+        # Each value is paired with a *_known flag so a model can tell a
+        # genuine zero from an unobserved field instead of silently treating
+        # "missing" as "first down on the goal line".
+        "outs": float(state.outs) if state.outs is not None else 0.0,
+        "outs_known": 1.0 if state.outs is not None else 0.0,
+        # 0.5 encodes "possession unknown", which is neutral between the teams.
+        "offense_is_home": 0.5 if offense is None else (1.0 if offense else 0.0),
+        "down": float(state.down) if state.down is not None else 0.0,
+        "distance": float(state.distance) if state.distance is not None else 0.0,
+        "yards_to_endzone": float(yte) if yte is not None else 50.0,
+        # Field position signed toward the home team: large positive means the
+        # home offense is close to scoring, large negative means the away
+        # offense is. Zero when possession or field position is unknown.
+        "field_position_home": (
+            0.0
+            if (offense is None or yte is None)
+            else (1.0 if offense else -1.0) * (100.0 - float(yte))
+        ),
+        "situation_known": (
+            1.0 if (offense is not None and yte is not None and state.down is not None) else 0.0
+        ),
     }
 
 
