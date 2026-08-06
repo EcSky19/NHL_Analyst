@@ -100,6 +100,15 @@ def test_mlb_live_contract_shape_and_empty_safe(client, mocked_mlb, monkeypatch)
     assert LIVE_KEYS <= set(row["live"])
     assert row["live"]["period_label"] == "T7"
     assert row["live"]["clock"] is None
+    assert row["win_probability"]["available"] is True
+    assert row["win_probability"]["home"] is not None
+
+    no_outs = _game("823599", "in-progress", 2, 2)
+    no_outs["live"].pop("outs")
+    monkeypatch.setattr(mlb, "_fetch_live_window", lambda: ([no_outs], meta, "2026"))
+    missing_outs = client.get("/api/mlb/live").json()
+    assert missing_outs["ok"] is True
+    assert missing_outs["data"][0]["win_probability"]["available"] is True
 
     monkeypatch.setattr(mlb, "_fetch_live_window", lambda: ([], meta, "2026"))
     empty = client.get("/api/mlb/live").json()
@@ -148,3 +157,36 @@ def test_warmup_game_gets_no_win_probability():
 
     row = {"status": "scheduled", "home_score": None, "away_score": None}
     assert "win_probability" not in _with_live_win_probability(row, "mlb")
+
+
+def test_mlb_live_win_probability_normalizes_outs_boundaries(monkeypatch):
+    import app.routers.mlb as mlb
+
+    captured = []
+
+    def fake_predict(state):
+        captured.append(state)
+        return 0.5, {"available": True}
+
+    monkeypatch.setattr(mlb, "predict_home_win_prob", fake_predict)
+
+    base = {
+        "status": "live",
+        "home_score": 4,
+        "away_score": 3,
+        "live": {"period": 7, "period_label": "T7", "outs": 2},
+    }
+    assert mlb._live_win_probability(base, "mlb")["available"] is True
+    assert captured[-1].outs == 2
+
+    missing = {**base, "live": {"period": 7, "period_label": "T7"}}
+    mlb._live_win_probability(missing, "mlb")
+    assert captured[-1].outs is None
+
+    middle = {**base, "live": {"period": 7, "period_label": "M7", "outs": 3}}
+    mlb._live_win_probability(middle, "mlb")
+    assert captured[-1].outs is None
+
+    end = {**base, "live": {"period": 7, "period_label": "E7", "outs": 3}}
+    mlb._live_win_probability(end, "mlb")
+    assert captured[-1].outs is None

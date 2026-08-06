@@ -750,18 +750,27 @@ def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
     if home_score is None or away_score is None or period is None:
         return unavailable
 
+    outs: int | None = None
     if league == "mlb":
         # _period_label emits T5 / M5 (middle) / B5 / E5 (end) / bare "5".
         # "M" (top over, bottom not started) is equivalent to bottom of the
         # same inning, but "E" means the inning is COMPLETE, so the live state
         # is the top of the next inning. Folding E into the bottom case leaves
         # the model half an inning behind the real game.
+        # Outs are only meaningful during an active top/bottom half-inning.
+        # MLB can transiently publish outs=3 at M/E boundaries; treat that and
+        # any non-T/B state as unobserved instead of extrapolating beyond 0-2.
         label = str(live.get("period_label") or row.get("detailed_status") or "").strip().upper()
         inning, is_top = period, False
         if label.startswith("T"):
             is_top = True
+            raw_outs = _wp_int(live.get("outs"))
+            outs = raw_outs if raw_outs in (0, 1, 2) else None
         elif label.startswith("E"):
             inning, is_top = period + 1, True
+        elif label.startswith("B"):
+            raw_outs = _wp_int(live.get("outs"))
+            outs = raw_outs if raw_outs in (0, 1, 2) else None
         is_overtime = inning > MLB_REGULATION_INNINGS
         frac_remaining = 0.0 if is_overtime else frac_remaining_innings(inning, is_top)
     else:
@@ -775,6 +784,7 @@ def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
             frac_remaining=frac_remaining,
             period=period,
             is_overtime=is_overtime,
+            outs=outs,
         )
     )
     if prob is None:

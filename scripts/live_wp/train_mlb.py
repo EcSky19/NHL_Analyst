@@ -37,9 +37,11 @@ from app.services.live_winprob import (
 DB_PATH = ROOT / "data" / "live_wp" / "mlb_snapshots.db"
 NORMAL_MU = 0.25
 NORMAL_SIGMA = 4.5
+BLEND_ALPHA = 0.3
 MAX_TRAIN_SNAPSHOTS_PER_GAME = 120
-CURRENT_BRIER = 0.154604
-CURRENT_LOG_LOSS = 0.463933
+CURRENT_BRIER = 0.154305
+CURRENT_LOG_LOSS = 0.462951
+MLB_FEATURE_NAMES = [*FEATURE_NAMES, "outs", "outs_known"]
 
 
 class MonotoneBlendModel:
@@ -88,17 +90,11 @@ class MonotoneBlendModel:
         return [values[name] for name in self.feature_names]
 
     def _blend_prob(self, row: np.ndarray, frac: float) -> float:
-        values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
-        key = (
-            values.get("margin", 0.0),
-            round(float(frac), 8),
-            values.get("pregame_logit", 0.0),
-            values.get("is_overtime", 0.0),
-        )
+        vector = self._with_frac(row, frac)
+        key = tuple(round(float(v), 8) for v in vector)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        vector = self._with_frac(row, frac)
         base = float(self.base_model.predict_proba([vector])[0][1])
         margin = float(vector[self.feature_names.index("margin")])
         normal = self._normal_prob(int(round(margin)), frac)
@@ -201,18 +197,21 @@ def rows() -> list[dict]:
 
 def state(row: dict) -> GameState:
     period = int(row["period"])
+    raw_outs = row.get("outs")
+    outs = int(raw_outs) if raw_outs in (0, 1, 2) else None
     return GameState(
         league="mlb",
         margin=int(row["margin"]),
         frac_remaining=float(row["frac_remaining"]),
         period=period,
         is_overtime=period > 9,
+        outs=outs,
     )
 
 
-def vector(row: dict) -> list[float]:
+def vector(row: dict, feature_names: list[str] = MLB_FEATURE_NAMES) -> list[float]:
     feats = build_features(state(row))
-    return [feats[name] for name in FEATURE_NAMES]
+    return [feats[name] for name in feature_names]
 
 
 def outcomes(data: list[dict]) -> list[int]:
@@ -220,7 +219,7 @@ def outcomes(data: list[dict]) -> list[int]:
 
 
 def probs_for_model(model, data: list[dict]) -> list[float]:
-    return [float(p) for p in model.predict_proba([vector(r) for r in data])[:, 1]]
+    return [float(p) for p in model.predict_proba([vector(r, model.feature_names) for r in data])[:, 1]]
 
 
 def metric_block(probs: list[float], ys: list[int]) -> dict:
@@ -232,7 +231,7 @@ def metric_block(probs: list[float], ys: list[int]) -> dict:
 
 def predict_state(model, margin: int, frac_remaining: float) -> float:
     feats = build_features(GameState(league="mlb", margin=margin, frac_remaining=frac_remaining))
-    return float(model.predict_proba([[feats[name] for name in FEATURE_NAMES]])[0][1])
+    return float(model.predict_proba([[feats[name] for name in model.feature_names]])[0][1])
 
 
 def monotonicity_checks(model) -> dict:
@@ -330,7 +329,7 @@ def evaluate(model, data: list[dict]) -> dict:
         "extra_tied": GameState(league="mlb", margin=0, frac_remaining=0.0, period=10, is_overtime=True),
     }
     sanity = {
-        k: round(float(model.predict_proba([[build_features(s)[n] for n in FEATURE_NAMES]])[0][1]), 6)
+        k: round(float(model.predict_proba([[build_features(s)[n] for n in model.feature_names]])[0][1]), 6)
         for k, s in sanity_states.items()
     }
 
@@ -371,7 +370,7 @@ def main() -> None:
         GradientBoostingClassifier(n_estimators=120, learning_rate=0.05, max_depth=2, random_state=42),
     )
     model = CalibratedClassifierCV(base_model, method="sigmoid", cv=3)
-    model.fit([vector(r) for r in train], outcomes(train))
+    model.fit([vector(r, MLB_FEATURE_NAMES) for r in train], outcomes(train))
     wrapper_cls = (
         MonotoneBlendModel
         if __name__ != "__main__"
@@ -379,9 +378,9 @@ def main() -> None:
     )
     model = wrapper_cls(
         model,
-        FEATURE_NAMES,
+        MLB_FEATURE_NAMES,
         league="mlb",
-        alpha=0.3,
+        alpha=BLEND_ALPHA,
         normal_mu=NORMAL_MU,
         normal_sigma=NORMAL_SIGMA,
         margin_min=-15,
@@ -394,7 +393,7 @@ def main() -> None:
     test_games = len({r["game_id"] for r in test})
     bundle = {
         "model": model,
-        "feature_names": FEATURE_NAMES,
+        "feature_names": MLB_FEATURE_NAMES,
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "n_games": all_games,
         "n_snapshots": len(data),
@@ -416,23 +415,24 @@ def main() -> None:
                 "test_season": test_season,
                 "normal_baseline": {"mu": NORMAL_MU, "sigma": NORMAL_SIGMA},
                 "estimator": "GradientBoostingClassifier calibrated with 3-fold sigmoid calibration on training games only",
-                "post_processor": "30% blend with normal baseline plus time and margin monotone envelopes",
+                "post_processor": f"{BLEND_ALPHA:.0%} blend with normal baseline plus time and margin monotone envelopes",
+                "outs_handling": "outs 0-2 are used with outs_known=1; transient outs=3 is treated as unknown",
             },
         },
         "notes": (
             "MLB live WP trained only on frozen live_winprob.build_features fields and post-processed "
-            "with a 30% normal-baseline blend plus monotone envelopes. "
+            f"with a {BLEND_ALPHA:.0%} normal-baseline blend plus monotone envelopes. "
             "No test-set tuning; the latest harvested season is a held-out game-level season. "
-            "Top/bottom half-inning is represented only through frac_remaining; outs are harvested "
-            "but intentionally not used because the frozen serving feature map has no outs field. "
+            "Top/bottom half-inning is represented through frac_remaining. Outs 0-2 are used with "
+            "an outs_known flag; transient outs=3 is treated as unobserved to avoid extrapolating "
+            "outside the active half-inning training range. "
             "ESPN WP remains better on its partial-coverage benchmark."
         ),
     }
 
     path = artifact_path("mlb")
     should_save = (
-        validation["model"]["brier"] <= CURRENT_BRIER
-        and validation["model"]["log_loss"] <= CURRENT_LOG_LOSS
+        validation["model"]["log_loss"] < CURRENT_LOG_LOSS
         and validation["monotonicity_checks"]["passed"]
     )
     if should_save:

@@ -27,6 +27,14 @@ def test_mlb_output_is_probability():
     assert 0.0 < prob < 1.0
 
 
+def test_mlb_output_accepts_known_and_missing_outs():
+    for outs in (2, None):
+        prob, meta = predict_home_win_prob(GameState(league="mlb", margin=1, frac_remaining=0.2, outs=outs))
+        assert meta["available"] is True
+        assert prob is not None
+        assert 0.0 < prob < 1.0
+
+
 def test_mlb_monotonic_in_margin():
     away_leads = _prob(-1, 0.5)
     tied = _prob(0, 0.5)

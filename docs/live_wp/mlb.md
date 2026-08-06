@@ -42,6 +42,12 @@ envelopes. This was selected because a direct monotone HGB over
 `margin`/`margin_scaled` fixed the wobble but missed the shipping gate
 (held-out log loss 0.469488).
 
+An August 2026 outs experiment added `outs` and `outs_known` to the candidate
+model and live serving path, treating transient `outs=3` as unknown. With the
+otherwise unchanged round-3 recipe it scored Brier **0.154306** and log loss
+**0.462952** on the 2025 holdout, narrowly worse than the published
+0.154305 / 0.462951, so the artifact was not overwritten.
+
 ## Held-out 2025 results
 
 | Predictor | Brier | Log loss | Notes |
@@ -92,8 +98,12 @@ Baseball has no game clock. ESPN play `period.number` is the inning and
 `period.type` is Top/Bottom; the shared harvester converts that into
 `frac_remaining` in half-inning steps over nine regulation innings. That means
 top/bottom asymmetry is represented only by the remaining half-inning count.
-Outs were harvested but are not used because the frozen serving interface has no
-outs feature.
+Outs are harvested and the live router passes active-half-inning values 0-2 to
+the shared `GameState`, but the published artifact still does not consume them
+because the held-out shipping gate above did not improve. MLB can transiently
+report `outs=3` at middle/end-of-inning boundaries; serving treats that and
+middle/end labels as unknown rather than extrapolating beyond the 0-2 active
+half-inning range.
 
 Extra innings use `is_overtime=True` and `frac_remaining=0.0`. The model remains
 finite at those states, but it cannot distinguish top vs bottom of an extra
