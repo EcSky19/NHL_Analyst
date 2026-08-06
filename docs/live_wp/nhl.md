@@ -1,182 +1,143 @@
 # NHL live win probability
 
-Harvested with `scripts\live_wp\harvest_nhl.py --max-games 500 --per-season 250`.
-
-**The published artifact is the two-parameter analytic baseline, not a learned
-model.** Rounds 1 and 2 trained seven learned models between them and not one
-beat the baseline on held-out data, so shipping any of them would have meant
-serving a worse predictor than a two-line formula. Fit with
-`scripts\live_wp\fit_nhl_baseline.py`; the learned-model experiments remain in
-`scripts\live_wp\train_nhl.py` and are documented below.
+The NHL artifact is still the two-parameter analytic normal baseline, not a
+learned model.  After the snapshot database was expanded to complete regular
+seasons, learned models again looked better on a train-season validation split
+but failed to beat the refit baseline on the untouched 2025-26 holdout.
 
 ## Data and split
 
-- Harvested: 497 games / 157,945 snapshots in `data/live_wp/nhl_snapshots.db`.
-- Seasons: 2024-25 and 2025-26.
-- Split: game-level season holdout, never snapshot-random.
-  - Train: 2024-25, 249 games / 78,979 snapshots.
-  - Test: 2025-26, 248 games / 78,966 snapshots.
-  - Game overlap: 0.
-- ESPN NHL win probability benchmark: unavailable in this harvest; 0 snapshots
-  had `espn_home_wp`.
+- Database: `data\live_wp\nhl_snapshots.db`.
+- Train: 2024-25, 1,312 games / 416,699 snapshots.
+- Test: 2025-26, 1,312 games / 410,454 snapshots.
+- Split is by game and season; train/test game overlap is 0.
+- Model tuning used only a chronological game-level validation split carved
+  from 2024-25: 1,049 fit games / 333,641 snapshots and 263 validation games /
+  83,058 snapshots.
+- ESPN NHL win probability benchmark remains unavailable: 0 snapshots carry
+  `espn_home_wp`.
 
 Labels use the final NHL result, including overtime/shootout. Regulation
 `frac_remaining` is 0.0 in overtime; snapshots from period 4+ set
 `is_overtime=1`.
 
-## Round 3: ship the analytic baseline (published)
+## Full-season retrain result
 
-After round 2 failed, the round-1 artifact was re-audited independently and a
-second, worse problem surfaced: **it was not monotone in margin.** At 75% of
-regulation remaining it rated a four-goal home lead at 0.809, *below* the 0.821
-it gave a three-goal lead. A win-probability display that says a team got worse
-by scoring is not shippable regardless of its Brier score.
+The old published baseline parameters were `mu=0.3908`, `sigma=2.7339`. Refit
+on the full 2024-25 training season by log loss, the baseline is:
 
-Since no learned model beat the baseline anyway, the baseline is now what we
-serve (`app/services/live_wp_baseline.py`, `model_kind="analytic_normal_baseline"`).
-It treats the remaining margin as `Normal(mu*f, sigma^2*f)` and asks for
-`P(final margin > 0)`. `mu` and `sigma` are fit by log loss on the 2024-25
-training season only: **`mu=0.3908`, `sigma=2.7339`**.
+```text
+NormalBaselineModel(mu=0.4627, sigma=2.8187)
+```
 
-Held-out 2025-26 (independently reproduced from the snapshot DB):
+Held-out 2025-26:
+
+| Method | Brier | Log loss | Max calibration gap | Shipped |
+| --- | ---: | ---: | ---: | :---: |
+| Old baseline params (`0.3908`, `2.7339`) | 0.174603 | 0.513313 | 0.0590 | no |
+| **Refit analytic baseline (`0.4627`, `2.8187`)** | **0.174911** | **0.513699** | **0.0456** | **yes** |
+| Best validation-selected learned blend | 0.175321 | 0.513911 | 0.0533 | no |
+
+The old parameters happened to score slightly better on 2025-26, but the fair
+baseline for this retrain is the model refit on the expanded 2024-25 training
+season. No learned model beat that refit baseline on held-out log loss, so the
+artifact remains analytic.
+
+## Validation experiments
+
+Validation baseline fit on the 1,049 fit games scored Brier **0.174529**, log
+loss **0.512757** on the 263 validation games.
+
+| Approach | Raw validation Brier | Raw validation log loss | Best simple baseline-blend log loss | Best monotone-envelope validation log loss |
+| --- | ---: | ---: | ---: | ---: |
+| Polynomial degree-2 logistic, C=0.05 | 0.174669 | 0.509588 | 0.508639 (alpha=0.55) | 0.508640 (alpha=0.60) |
+| Polynomial degree-2 logistic, C=0.20 | 0.174594 | 0.509416 | 0.508858 (alpha=0.50) | 0.508884 (alpha=0.40) |
+| HGB, leaf 200, l2=0.05 | 0.174110 | 0.508742 | 0.508605 (alpha=0.20) | 0.508822 (alpha=0.40) |
+| **HGB, leaf 400, l2=0.20** | **0.174006** | **0.508545** | 0.508457 (alpha=0.20) | **0.508465 (alpha=0.20)** |
+| ExtraTrees, leaf 300 | 0.174400 | 0.508903 | **0.508359 (alpha=0.40)** | rejected: non-monotone and >10 ms |
+
+The selected shippable learned candidate was the HGB leaf-400 model with a 20%
+normal-baseline blend and cumulative monotone envelope. It passed the shape and
+latency gates on validation, but on 2025-26 scored Brier **0.175321**, log loss
+**0.513911**, which is worse than the refit baseline's **0.513699** log loss.
+
+## Monotonicity and latency
+
+The final learned candidate, though not shipped, passed the requested shape
+checks before the held-out comparison:
+
+- Margin monotonicity: 0 drops over margins -10..10 at 41 time points.
+- Time monotonicity: 0 wrong-way steps for margins ±1, ±2, ±3, ±4 over 40
+  steps.
+- Fresh-process candidate latency during training: 5.712 ms/call.
+
+The shipped analytic baseline verified independently with:
+
+```powershell
+$env:PYTHONPATH="."; python scripts\live_wp\verify_artifacts.py nhl 2024-25 2025-26
+```
+
+Reproduced artifact metrics: Brier **0.174911**, log loss **0.513699**,
+calibration gap **0.0456**, train/test game overlap **0**, margin monotone
+`True`, and time monotone `True` for checked positive margins. Fresh serving
+latency for the shipped baseline was about **0.04 ms/call**.
+
+## Honest conclusion
+
+The data-starvation hypothesis did not hold up. With 5.3x more NHL training
+games, flexible learned models improved validation loss, but the best
+shipping-eligible learned model still failed the held-out log-loss gate. NHL
+continues to ship the analytic normal baseline and still has no external ESPN
+benchmark.
+
+Two caveats on the refit, stated plainly:
+
+- The pre-expansion parameters score **better** on the held-out season
+  (0.174603 vs 0.174911 Brier). A block bootstrap resampled by game puts the
+  difference at `[-0.000565, -0.000036]`, so it is small but does not straddle
+  zero. We shipped the refit anyway: the only way to learn that the old
+  parameters won here was to look at the holdout, and picking parameters on
+  that basis is selecting on the test set.
+- Counting rounds 1-3 below, **eight** learned NHL models across four rounds
+  have now failed to beat a two-line formula. At some point that stops being a
+  tuning problem and starts being evidence that score and clock alone are
+  close to sufficient for hockey.
+
+## Earlier rounds (preserved history)
+
+This history is kept deliberately. This repository has already had to retract
+fabricated accuracy claims once, and the record of what failed is part of why
+the current numbers can be trusted.
+
+Rounds 1 and 2 were run on a much smaller harvest (497 games / 157,945
+snapshots, `--max-games 500 --per-season 250`) and trained seven learned models
+between them. Not one beat the baseline on held-out data.
+
+**Round 3 found a second, worse problem in the round-1 artifact: it was not
+monotone in margin.** At 75% of regulation remaining it rated a four-goal home
+lead at 0.809, *below* the 0.821 it gave a three-goal lead. A win probability
+display that says a team got worse by scoring is not shippable at any Brier
+score. That defect is the direct ancestor of the margin-monotonicity gate that
+every league must now pass.
+
+Held-out 2025-26 on the old small sample:
 
 | Method | Brier | Log loss | Monotone in margin |
 | --- | ---: | ---: | :---: |
-| **Published analytic baseline** | **0.175316** | **0.515720** | **yes** |
+| Analytic baseline (`mu=0.3908`, `sigma=2.7339`) | 0.175316 | 0.515720 | yes |
 | Round-1 logistic artifact | 0.175683 | 0.517337 | **no** |
 | Round-2 isotonic-calibrated logistic | 0.176891 | 0.583302 | — |
 | Leader baseline | 0.184228 | 0.551188 | yes |
 | Constant 0.5 | 0.250000 | 0.693147 | — |
 
-Tied states (28,838 snapshots): Brier **0.248675**, versus 0.250887 for round 1.
-Round 1 was *worse than a constant 0.5* on tied states; the baseline is now
-better than a coin flip, which is the least you should expect.
+On tied states (28,838 snapshots) the baseline scored 0.248675 against round
+1's 0.250887. Round 1 was *worse than a constant 0.5* on tied games, which is
+the least a win probability model should clear.
 
-**The honest trade-off:** the baseline's max calibration gap is **0.1064**,
-which is *worse* than the round-1 model's 0.0871. We accepted that because the
-baseline wins on both headline metrics (Brier and log loss) and is monotone,
-whereas the round-1 model's calibration edge came attached to a defect that
-would produce visibly absurd output.
+The round-3 trade-off was accepted knowingly: the baseline's max calibration
+gap (0.1064) was worse than the round-1 model's (0.0871), but the baseline won
+both headline metrics and was monotone, while round 1's calibration edge came
+attached to a defect that produced visibly absurd output.
 
-Serving sanity checks through the frozen interface:
-
-| State | Home win prob |
-| --- | ---: |
-| Puck drop, tied | 0.5568 |
-| Tied, 5 minutes left | 0.5164 |
-| Home +1, late | 0.9523 |
-| Home -1, late | 0.0544 |
-| Home +3 at 75% remaining | 0.9179 |
-| Home +4 at 75% remaining | 0.9651 (correctly above +3) |
-| Tied, overtime | 0.5000 |
-
-Puck drop at 0.5568 sits at the NHL home-win base rate, and overtime is treated
-as the coin flip it effectively is.
-
-**There is still no external benchmark for NHL.** ESPN publishes a win
-probability curve for NBA, NFL and MLB but not for hockey: 0 of 157,945
-harvested snapshots carried `espn_home_wp`. Every NHL number above is measured
-against our own baselines only.
-
-## Round 2 experiment (not published)
-
-Round 2 kept the fixed split and used only a chronological, game-level
-validation carve-out from 2024-25 for model selection:
-
-- Fit inside train: first 199 2024-25 games / 63,200 snapshots.
-- Validation inside train: last 50 2024-25 games / 15,779 snapshots.
-- Final test: 2025-26, still untouched until selecting the validation winner.
-
-Validation results:
-
-| Approach | Validation Brier | Validation log loss | Tied Brier | Tied log loss |
-| --- | ---: | ---: | ---: | ---: |
-| degree-2 logistic regression | 0.152634 | 0.456909 | 0.247962 | 0.689152 |
-| degree-3 logistic regression | 0.154223 | 0.460938 | 0.249253 | 0.691886 |
-| spline + interaction logistic regression | 0.154452 | 0.461947 | 0.252170 | 0.698600 |
-| monotone HistGradientBoosting depth 3 | 0.153907 | 0.459612 | 0.249929 | 0.693376 |
-| ExtraTrees | 0.155760 | 0.464920 | 0.252919 | 0.700097 |
-| degree-2 logistic + isotonic calibration on validation | **0.147456** | **0.439195** | **0.245723** | **0.684500** |
-
-The validation-selected model was degree-2 logistic regression with isotonic
-calibration fit only on the 2024-25 validation games. Its held-out 2025-26
-score was:
-
-| Method | Brier | Log loss |
-| --- | ---: | ---: |
-| Round-2 selected model | 0.176891 | 0.583302 |
-| Round-1 published artifact | 0.175683 | 0.517337 |
-| Normal baseline (`mu=0.4`, `sigma=2.75`) | **0.175363** | **0.516340** |
-| Leader baseline | 0.184228 | 0.551188 |
-| Constant 0.5 | 0.250000 | 0.693147 |
-
-Honest bottom line: round 2 fixed some of the tied-state defect but made the
-overall held-out model worse, especially log loss, so
-`models\live_wp\nhl_live_wp.joblib` was **not overwritten**.
-
-Round-2 tied states: 28,838 snapshots, Brier 0.249711, log loss 0.692611
-(round 1: Brier 0.250887, log loss 0.695005). This is a small improvement over
-both round 1 and a constant 0.5 Brier, but not enough to justify publishing the
-artifact.
-
-Round-2 calibration max gap: 0.0766. ESPN NHL win probability remains
-unavailable in this harvest; 0 snapshots had `espn_home_wp`, so there is no ESPN
-benchmark.
-
-Round-2 phase breakdown:
-
-| Regulation remaining | Snapshots | Brier | Log loss |
-| --- | ---: | ---: | ---: |
-| 1.00-0.75 | 19,535 | 0.246321 | 0.688263 |
-| 0.75-0.50 | 19,824 | 0.205934 | 0.672497 |
-| 0.50-0.25 | 19,843 | 0.150487 | 0.637237 |
-| 0.25-0.00 | 19,764 | 0.105646 | 0.335941 |
-
-Round-2 sanity checks:
-
-- Puck drop tied: 0.5331, near the 2025-26 tied-state/home base rate.
-- Mid-game: home down 1 = 0.1711, tied = 0.5638, home up 1 = 0.8057.
-- One-goal home lead: early = 0.8057, late = 0.9730. This is strong but below
-  the explicit "not near 99%" guard.
-- Tied OT state: 0.5638.
-- Edge states were finite and strictly inside (0, 1).
-- Fresh serving check for the unchanged published artifact:
-  `predict_home_win_prob(GameState(league='nhl', margin=1, frac_remaining=0.2))`
-  returned 0.852593.
-
-## Round 1 held-out 2025-26 results (superseded)
-
-| Method | Brier | Log loss |
-| --- | ---: | ---: |
-| Model | 0.175683 | 0.517337 |
-| Normal baseline (`mu=0.4`, `sigma=2.75`) | 0.175363 | 0.516340 |
-| Leader baseline | 0.184228 | 0.551188 |
-| Constant 0.5 | 0.250000 | 0.693147 |
-
-The model beats the leader and constant baselines, but it did **not** beat the
-normal baseline on this holdout.
-
-Calibration: max calibration gap = 0.0871. Largest bucket miss was 0.2-0.3:
-predicted 0.2559, actual 0.1688 over 4,164 snapshots.
-
-## Phase breakdown for the model
-
-| Regulation remaining | Snapshots | Brier | Log loss |
-| --- | ---: | ---: | ---: |
-| 1.00-0.75 | 19,535 | 0.240329 | 0.672596 |
-| 0.75-0.50 | 19,824 | 0.205455 | 0.601825 |
-| 0.50-0.25 | 19,843 | 0.151251 | 0.468373 |
-| 0.25-0.00 | 19,764 | 0.106454 | 0.328291 |
-
-Tied states: 28,838 snapshots, Brier 0.250887, log loss 0.695005. The model
-does not add useful signal on tied states beyond the home/team base rate.
-
-## Sanity checks
-
-- Puck drop tied: 0.5451 (train-season home win rate was 0.5502).
-- Mid-game: home down 1 = 0.3141, tied = 0.5966, home up 1 = 0.7895.
-- One-goal home lead: early = 0.7100, late = 0.8911.
-- Tied OT state: 0.6051.
-- Serving check for margin +1, `frac_remaining=0.2`: 0.8526.
-
-A late one-goal lead is strong but not treated as certain.
+Note that these numbers were measured on the old 248-game holdout and are
+**not** comparable to the full-season figures above.

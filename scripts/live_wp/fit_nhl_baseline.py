@@ -1,8 +1,9 @@
-"""Fit and save the NHL live win-probability artifact.
+"""Fit and save the NHL analytic live win-probability artifact.
 
-Round 2 conclusion: no learned model beat the two-parameter analytic baseline
-on the held-out 2025-26 season, so the baseline is what we ship. See
-docs/live_wp/nhl.md. Run with PYTHONPATH=. from the repo root.
+After the full-season retrain, the best learned model still failed to beat the
+two-parameter analytic baseline on held-out 2025-26 log loss, so NHL continues
+to ship this baseline. See docs/live_wp/nhl.md. Run with PYTHONPATH=. from the
+repo root.
 """
 
 from __future__ import annotations
@@ -97,10 +98,11 @@ def main() -> None:
             "mu": model.mu,
             "sigma": model.sigma,
             "notes": (
-                "Analytic two-parameter baseline. Six learned models were tried in round 2 "
-                "and none beat it on held-out data; the round-1 logistic model also broke "
-                "monotonicity in margin. No ESPN win-probability curve exists for NHL, so "
-                "there is no external benchmark for this league."
+                "Analytic two-parameter baseline. The full-season NHL retrain tried "
+                "regularized learned models, baseline blends, and monotone envelopes; none "
+                "beat the refit analytic baseline on held-out log loss. No ESPN "
+                "win-probability curve exists for NHL, so there is no external benchmark "
+                "for this league."
             ),
         },
         OUT,

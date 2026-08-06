@@ -34,17 +34,22 @@ def test_nhl_output_in_open_interval() -> None:
 
 
 def test_nhl_monotonic_in_margin() -> None:
-    away_lead = _prob(margin=-1, frac_remaining=0.4, period=2)
-    tied = _prob(margin=0, frac_remaining=0.4, period=2)
-    home_lead = _prob(margin=1, frac_remaining=0.4, period=2)
-    assert away_lead < tied < home_lead
+    for step in range(41):
+        frac = step / 40
+        probs = [_prob(margin=margin, frac_remaining=frac, period=3) for margin in range(-4, 5)]
+        assert all(a <= b for a, b in zip(probs, probs[1:]))
 
 
 def test_nhl_time_leverage_for_same_lead() -> None:
-    early = _prob(margin=1, frac_remaining=0.8, period=1)
-    late = _prob(margin=1, frac_remaining=0.05, period=3)
-    assert late > early
-    assert late < 0.98
+    for margin in (1, 2, 3, 4):
+        probs = [_prob(margin=margin, frac_remaining=1.0 - step / 40, period=3) for step in range(41)]
+        assert all(a <= b for a, b in zip(probs, probs[1:]))
+    for margin in (-1, -2, -3, -4):
+        probs = [_prob(margin=margin, frac_remaining=1.0 - step / 40, period=3) for step in range(41)]
+        assert all(a >= b for a, b in zip(probs, probs[1:]))
+
+    late_one_goal = _prob(margin=1, frac_remaining=0.05, period=3)
+    assert late_one_goal < 0.98
 
 
 def test_nhl_edge_states_are_finite() -> None:

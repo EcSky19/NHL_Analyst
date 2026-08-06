@@ -67,6 +67,15 @@ def test_nba_same_lead_is_more_valuable_late():
     assert late > early
 
 
+def test_nba_time_monotonicity_grid():
+    for margin in (3, 5, 8, 12):
+        probs = [score(margin, 1.0 - i / 40, period=4) for i in range(41)]
+        assert probs == sorted(probs)
+    for margin in (-3, -5, -8, -12):
+        probs = [score(margin, 1.0 - i / 40, period=4) for i in range(41)]
+        assert probs == sorted(probs, reverse=True)
+
+
 def test_nba_edge_states_are_finite():
     for margin, frac in ((0, 1.0), (0, 0.0), (40, 0.0), (-40, 0.0)):
         prob = score(margin, frac)

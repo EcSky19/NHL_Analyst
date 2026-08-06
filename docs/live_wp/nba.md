@@ -1,144 +1,123 @@
 # NBA live win probability
 
-Late-game calibration experiment generated 2026-08-06 from
+Retrain generated 2026-08-06 from full-season coverage in
 `data/live_wp/nba_snapshots.db` by `scripts/live_wp/train_nba.py`.
 
 ## Data and fixed split
 
-- Harvested 500 completed NBA games, 239,153 labelled snapshots.
-- Split is by whole game, not by snapshot:
-  - Train/model-selection pool: `season_start_year == 2023`, 250 games, 119,349 snapshots.
-  - Final held-out test: `season_start_year == 2024`, 250 games, 119,804 snapshots.
-  - Game id overlap: 0.
-- Model selection used only a stratified game-level validation split carved from
-  2023: 200 fit games / 50 validation games. The 2024 season was scored only
-  after choosing the validation winner.
+- Split is by whole game, not by snapshot.
+- Train/model-selection pool: `games.season_start_year == 2023`, 1,231 games, 574,228 snapshots.
+- Final held-out test: `games.season_start_year == 2024`, 1,231 games, 581,626 snapshots.
+- Game id overlap: 0.
+- NBA `snapshots` has no `season` column; training joins `games` and uses `games.season_start_year`.
+- Model selection used only a stratified 2023 game-level validation split: 984 fit games / 247 validation games. The 2024 season was scored only after choosing the validation winner.
 
 ## Correction: the "overconfidence defect" was not a defect
 
 **This investigation was launched on a premise that turned out to be wrong, and
 the premise came from intuition rather than measurement.** Everything below was
 written while chasing a supposed overconfidence bug at "home +10 with 2:00
-left", where the published model returns `0.9980` and that was assumed to be
-too high.
+left", where the earlier published model returned `0.9980` and that was assumed
+to be too high.
 
-Measuring the held-out 2024 season settled it. Of the 193 snapshots with a home
-margin of +9..+11 and roughly 1:26-2:38 remaining:
+Measuring the full held-out 2024 season settled it. Of the 796 snapshots with a
+home margin of +9..+11 and roughly 1:24-2:36 remaining:
 
 | Source | Home win probability |
 |---|---:|
-| **Actually observed outcome** | **0.9948** (192 of 193) |
-| Published model | 0.9980 |
-| ESPN's published curve | 0.9865 |
+| **Actually observed outcome** | **0.9950** (792 of 796) |
+| 2026-08-06 retrained model | 0.9954 |
+| ESPN's published curve | 0.9870 |
 
-A 10-point lead with two minutes left really is very nearly decided. The
-published model is the **closest of the three to the observed rate**, and ESPN
-is slightly *under*-confident in this state. The proposed "fix" would have moved
-the number to `0.968`, i.e. further from reality, and it independently failed
-the shipping gate by making held-out log loss worse (`0.494886` vs `0.491963`).
+A 10-point lead with two minutes left really is very nearly decided. The model
+is closest to the observed rate in this state, and ESPN is slightly
+under-confident. The disclosure is preserved here because the original
+"overconfidence defect" premise was disproved by measurement, not silently
+forgotten.
 
-So the artifact was correctly left alone, for a better reason than the one
-originally recorded. The sections below are kept as an honest record of the
-experiment, but read "defect" in them as "hypothesised defect, since
-disproved".
+## Refit analytic baseline
 
-## Problem targeted (as originally hypothesised — see correction above)
+The old two-parameter normal baseline was fit on the prior ~250-game sample. On
+the expanded 2023 training season:
 
-The published monotone `HistGradientBoostingClassifier` is overconfident in
-late blowouts: home +10 with 2:00 left in regulation scores about `0.9980`.
-That is too close to certain and looks unreasonable beside ESPN. Comparable
-2024 ESPN states in this harvest (margin exactly +10 and within ±30 seconds of
-2:00) averaged `0.987962` with range `0.960` to `0.999`.
+| baseline | mu | sigma | held-out Brier | held-out log loss |
+|---|---:|---:|---:|---:|
+| old OLS normal from prior artifact | 2.0988 | 18.8195 | 0.164166 | 0.492453 |
+| new OLS normal on full 2023 | 1.8373 | 19.3191 | **0.164147** | **0.492408** |
+| refit normal, optimized for Brier | 1.6604 | 18.2928 | 0.164216 | 0.492706 |
+| refit normal, optimized for log loss | 1.6810 | 18.7406 | 0.164172 | 0.492512 |
 
-Shipping rule remains unchanged: ship only if held-out 2024 log loss beats the
-published artifact (`0.491963`) and the model is monotone non-decreasing in home
-margin on an explicit grid.
+The fair shipping gate used the refit log-loss baseline for log loss and the
+refit Brier baseline for the known Brier weakness.
 
 ## 2023 validation experiments
 
-Selection among defect-fixing candidates required monotonicity and home +10 at
-2:00 <= `0.98`, then lowest validation log loss.
+Selection required both monotonicity checks to pass and validation log loss to
+beat the refit validation baseline (`0.479885`). Among those, the known NBA
+weakness made validation Brier the first tiebreaker.
 
-| approach | validation Brier | validation log loss | +10 / 2:00 | monotone grid | defect gate |
-|---|---:|---:|---:|---|---|
-| round-1 two-feature logistic | 0.137913 | 0.425276 | 0.809556 | pass | pass |
-| **40% HGB / 60% smooth logistic logit blend** | **0.136415** | **0.416763** | **0.967664** | pass | pass |
-| 50% HGB / 50% smooth logistic logit blend | 0.136617 | 0.416848 | 0.979890 | pass | pass |
-| 70% HGB / 30% smooth logistic logit blend | 0.137290 | 0.418355 | 0.992319 | pass | fail |
-| polynomial logistic degree 3 | 0.139611 | 0.425676 | 0.964282 | fail | pass |
-| spline logistic | 0.138543 | 0.427120 | 0.786502 | fail | pass |
-| published-style monotone HGB | 0.138831 | 0.422870 | 0.998210 | pass | fail |
-| classical gradient boosting | 0.139783 | 0.427094 | 0.987707 | fail | fail |
+| approach | validation Brier | validation log loss | margin monotone | time monotone |
+|---|---:|---:|---|---|
+| **HGB grid blend leaf7 alpha=0.2** | **0.158116** | 0.469330 | pass | pass |
+| HGB grid blend leaf7 alpha=0.4 | 0.158121 | 0.469371 | pass | pass |
+| HGB grid blend leaf15 alpha=0.4 | 0.158179 | 0.469149 | pass | pass |
+| HGB grid blend leaf15 alpha=0.6 | 0.158184 | 0.469305 | pass | pass |
+| HGB grid blend leaf31 alpha=0.4 | 0.158190 | 0.469115 | pass | pass |
+| poly2 baseline correction alpha=0.4 diagnostic | 0.158283 | **0.468817** | fail | fail |
 
-I also checked validation-only calibration transforms during exploration:
-isotonic calibration of the 80%-fit HGB had validation log loss `0.390269` but
-still scored +10/2:00 at `0.9958`; sigmoid calibration had validation log loss
-`0.406716` and rounded to `1.0000` for the defect state. Neither was a credible
-fix for this defect.
+The poly2 diagnostic had the best validation log loss, but it was not shippable
+because it violated monotonicity. The selected model is a regularized monotone
+`HistGradientBoostingClassifier` blended with the refit normal baseline and
+projected to a precomputed cumulative grid enforcing margin and time
+monotonicity.
 
-## Held-out 2024 result for the validation winner
-
-The validation winner fixed the target state and passed monotonicity, but it did
-**not** beat the published model on held-out log loss. Therefore
-`models/live_wp/nba_live_wp.joblib` was **not overwritten**.
+## Held-out 2024 result
 
 | predictor | n | Brier | log loss | max calibration gap |
 |---|---:|---:|---:|---:|
-| validation winner: 40/60 logit blend | 119,804 | 0.168327 | 0.494886 | 0.0711 |
-| **published NBA artifact** | 119,804 | **0.167947** | **0.491963** | **0.0656** |
-| analytic normal baseline | 119,804 | 0.166237 | 0.509335 | — |
-| normal baseline recomputed in script | 119,804 | 0.166073 | 0.508698 | — |
-| ESPN published WP | 119,803 | 0.157319 | 0.462902 | — |
+| **2026-08-06 shipped retrain** | 581,626 | 0.164364 | **0.484255** | 0.0448 |
+| previous NBA artifact re-scored on new holdout | 581,626 | 0.165848 | 0.490248 | 0.0313 |
+| refit normal, log-loss objective | 581,626 | 0.164172 | 0.492512 | — |
+| refit normal, Brier objective | 581,626 | **0.164216** | 0.492706 | — |
+| ESPN published WP | 581,625 | **0.149702** | **0.448265** | — |
 
-Honest bottom line: the smooth blend fixes the visual absurdity but gives up too
-much held-out log loss, so it fails the repo shipping rule. ESPN still beats both
-our published artifact and the attempted replacement.
+Shipping decision: **artifact overwritten**. The retrain beats the refit
+analytic baseline on held-out log loss and passes both monotonicity gates. It
+does **not** beat the refit baseline on Brier (`0.164364` vs `0.164216`), so the
+known Brier weakness was narrowed but not eliminated.
 
-## Held-out phase breakdown for the validation winner
+The previously published `0.167947 / 0.491963` came from the old evaluation set
+and should not be presented as a modeling improvement. On the new 2024 holdout,
+the previous artifact re-scores at `0.165848 / 0.490248`.
+
+## Held-out phase breakdown for the shipped model
 
 | regulation remaining | n | Brier | log loss |
 |---|---:|---:|---:|
-| 1.00-0.75 | 28,768 | 0.232652 | 0.660937 |
-| 0.75-0.50 | 30,059 | 0.200372 | 0.585188 |
-| 0.50-0.25 | 29,665 | 0.154850 | 0.463149 |
-| 0.25-0.00 | 31,312 | 0.091235 | 0.285704 |
+| 1.00-0.75 | 140,445 | 0.231465 | 0.654708 |
+| 0.75-0.50 | 147,410 | 0.196722 | 0.572675 |
+| 0.50-0.25 | 144,375 | 0.148107 | 0.449875 |
+| 0.25-0.00 | 149,396 | 0.085069 | 0.269994 |
 
-Late-game direct comparison (`frac_remaining <= 0.25`):
+## Error concentration relative to ESPN
 
-| predictor | n | Brier | log loss |
-|---|---:|---:|---:|
-| validation winner | 32,551 | 0.092191 | 0.288530 |
-| ESPN | 32,550 | 0.089219 | 0.268831 |
+The ESPN gap is largest early and in close states:
 
-## Defect and tail sanity for the validation winner
+| bucket | n | ours log loss | ESPN log loss | gap |
+|---|---:|---:|---:|---:|
+| time 1.00-0.75 | 140,445 | 0.654708 | 0.580189 | 0.074519 |
+| time 0.75-0.50 | 147,410 | 0.572675 | 0.526597 | 0.046079 |
+| margin 0 | 28,595 | 0.691994 | 0.632115 | 0.059879 |
+| margin 1-3 | 136,492 | 0.669241 | 0.615247 | 0.053994 |
+| margin 4-7 | 142,398 | 0.600164 | 0.559267 | 0.040898 |
+| time 0.25-0.00 | 149,395 | 0.269993 | 0.263973 | 0.006021 |
 
-Before/after target state:
+This points to missing pregame/team-strength information and early-game state,
+not a late-blowout overconfidence defect.
 
-| state | published artifact | validation winner | comparable ESPN mean |
-|---|---:|---:|---:|
-| home +10, 2:00 left | 0.9980 | 0.968486 | 0.987962 |
+## Monotonicity, loading, and latency
 
-Late-tail table for the validation winner:
-
-| margin | 2:00 left | 0:30 left |
-|---:|---:|---:|
-| +5 | 0.742681 | 0.943209 |
-| +10 | 0.968486 | 0.970440 |
-| +15 | 0.982639 | 0.983548 |
-| +20 | 0.989417 | 0.990155 |
-
-## Monotonicity and edge states
-
-The validation winner passed the explicit monotone grid: 3,840 adjacent margin
-pairs checked across `frac_remaining` values `1.0, 0.75, 0.5, 0.25, 0.10,
-120/2880, 30/2880, 0.0` and periods `1, 2, 4, 5`; failures: 0.
-
-Edge outputs were finite and strictly inside `(0, 1)` before serving clamp:
-
-- tie at start: 0.532738
-- tie at end: 0.618059
-- +60 at end: 0.999996
-- -60 at end: 0.000006
-
-Because the held-out log-loss gate failed, these checks are documentation of the
-rejected candidate, not the shipped artifact.
+- Margin monotonicity: pass, 4,800 adjacent margin pairs checked over 41 time steps.
+- Time monotonicity: pass, margins ±3, ±5, ±8, ±12 over 40 steps each.
+- Fresh-process serving check succeeded.
+- Fresh-process NBA latency measured under the ~10 ms/call gate during verification.
