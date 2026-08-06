@@ -195,7 +195,7 @@ Measured on a held-out season, alongside ESPN's own published win-probability cu
 | League | Ours (Brier) | Ours (log loss) | Analytic baseline (Brier) | ESPN (Brier) |
 | --- | ---: | ---: | ---: | ---: |
 | NBA | 0.167947 | 0.491963 | 0.166237 | **0.157319** |
-| NFL | 0.164034 | 0.479629 | 0.163775 | **0.145762** |
+| NFL | 0.163903 | 0.479367 | 0.163775 | **0.145762** |
 | MLB | **0.154305** | **0.462951** | 0.155233 | 0.153735 (partial coverage) |
 | NHL | 0.175316 | 0.515720 | *is* the baseline | none published |
 
@@ -204,6 +204,8 @@ Read that honestly:
 - **ESPN's model is better than ours in every league where it publishes one.** We do not match it, and we are not claiming to. The gap is largest in the NFL.
 - **MLB is our one clear success**: it beats the analytic baseline on both Brier and log loss, and lands within 0.001 Brier of ESPN on the snapshots ESPN covers.
 - Our NBA and NFL models beat the two-parameter analytic baseline on log loss and calibration but **lose to it on Brier** — a genuinely mixed result, not a win.
+- The NFL model additionally consumes ESPN's **situational** state (possession, down, distance, field position). On the situational snapshot set that improves it from 0.161824/0.474385 to 0.160183/0.469577, closing **11.8%** of the log-loss gap to ESPN. Situation is not the whole story: our earlier hypothesis that possession/down/distance explained most of the ESPN gap was measurably wrong.
+- The table above is measured on the score/clock-only snapshot set, so all four leagues stay comparable. NFL scores better there than the table suggests once situation is available.
 - **NHL ships the analytic baseline itself**, because seven learned models across two rounds all failed to beat it, and the best of them was additionally non-monotone in margin (it rated a 4-goal lead below a 3-goal lead). See `docs\live_wp\nhl.md`.
 - ESPN publishes **no** win-probability curve for NHL, so that league has no external benchmark at all.
 - Every shipped model is required to be **monotone in both margin and time**: more lead is never worse, and a lead never loses value as the clock runs out. The time half of that rule was added late and caught NFL and MLB already violating it; both were refit and came out slightly more accurate, not less.
