@@ -34,5 +34,11 @@ data/mlb/*.sqlite
 data/mlb/*.sqlite3
 data/mlb/raw/
 
+# Live win-probability snapshot databases (~68 MB total).
+# Reproducible from scratch with scripts/live_wp/harvest_*.py
+data/live_wp/*.db
+data/live_wp/*.db-shm
+data/live_wp/*.db-wal
+
 # UI runtime cache
 data/ui_cache/

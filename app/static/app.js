@@ -137,7 +137,7 @@
   sample.nhl.live = [];
   sample.nfl.live = [];
   sample.nba.live = [];
-  sample.mlb.live = [{ ...game('2026-08-05', 'DET', 'SEA', 'live', ''), league: 'mlb', game_id: '401816412', home_name: 'Seattle Mariners', away_name: 'Detroit Tigers', home_score: 4, away_score: 2, detailed_status: 'Top 9th', venue: 'T-Mobile Park', start_time_utc: '2026-08-06T01:40:00Z', live: { period: 9, period_label: '9', clock: '0:00', last_play: 'Torkelson struck out swinging.' } }];
+  sample.mlb.live = [{ ...game('2026-08-05', 'DET', 'SEA', 'live', ''), league: 'mlb', game_id: '401816412', home_name: 'Seattle Mariners', away_name: 'Detroit Tigers', home_score: 4, away_score: 2, detailed_status: 'Top 9th', venue: 'T-Mobile Park', start_time_utc: '2026-08-06T01:40:00Z', live: { period: 9, period_label: '9', clock: '0:00', last_play: 'Torkelson struck out swinging.' }, win_probability: { available: false, home: null, away: null, model: 'mlb_live_wp', reason: 'No validated live win-probability model exists for MLB.' } }];
   sample.nhl.weekSchedule = [];
   sample.nfl.weekSchedule = [];
   sample.nba.weekSchedule = [];
@@ -696,6 +696,7 @@
         </div>
         <div class="live-context">${period ? `<span${periodTitle}>${escapeHtml(period)}</span>` : ''}${clock}${gameRow.detailed_status ? `<span>${escapeHtml(gameRow.detailed_status)}</span>` : ''}</div>
         ${extras}
+        ${liveWinProbabilityMarkup(gameRow, away, home)}
         ${live.last_play ? `<p class="last-play"><strong>Last play:</strong> ${escapeHtml(live.last_play)}</p>` : ''}
         <p class="honesty">${escapeHtml(gameRow.venue || 'Venue TBD')} · ${escapeHtml(score)}</p>
       </article>`;
@@ -707,6 +708,33 @@
     if (hasBall && redZone) classes.push('red-zone');
     const indicator = hasBall ? `<span class="possession-chip${redZone ? ' red-zone' : ''}" title="${redZone ? 'Possession in the red zone' : 'Possession'}">${redZone ? 'RZ' : 'Poss'}</span>` : '';
     return `<span class="${classes.join(' ')}">${escapeHtml(label)}${indicator}</span>`;
+  }
+
+
+  function liveWinProbabilityMarkup(gameRow, awayLabel, homeLabel) {
+    const wp = normalizeObject(gameRow.win_probability);
+    const homeProb = asNumber(wp.home);
+    const awayProb = asNumber(wp.away);
+    const valid = wp.available === true && homeProb != null && awayProb != null && homeProb > 0 && homeProb < 1 && awayProb > 0 && awayProb < 1;
+    if (!valid) {
+      const reason = wp.reason || 'No validated live win-probability model is available for this league.';
+      return `<div class="live-winprob unavailable"><strong>Live win probability unavailable</strong><p class="honesty">${escapeHtml(reason)} Model estimate only; not betting advice.</p></div>`;
+    }
+    const homePct = clampPct(homeProb);
+    const awayPct = clampPct(awayProb);
+    return `
+      <div class="live-winprob" aria-label="Live win probability model estimate">
+        <div class="wp-head"><strong>Live win probability</strong><span>Model estimate - Not betting advice.</span></div>
+        <div class="wp-labels"><span>${escapeHtml(awayLabel)} ${pct(awayProb)}</span><span>${escapeHtml(homeLabel)} ${pct(homeProb)}</span></div>
+        <div class="live-wp-track" aria-hidden="true"><span class="away" style="width:${awayPct}%"></span><span class="home" style="width:${homePct}%"></span></div>
+        <p class="honesty">${escapeHtml(wp.model || `${state.league}_live_wp`)} from the validated live model.</p>
+      </div>`;
+  }
+
+  function clampPct(valueIn) {
+    const n = asNumber(valueIn);
+    if (n == null) return 0;
+    return Math.max(0, Math.min(100, n * 100)).toFixed(2);
   }
 
   function formatPeriodLabel(label) {

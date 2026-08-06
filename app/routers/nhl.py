@@ -16,6 +16,8 @@ from fastapi import APIRouter
 
 from app.cache import cached_fetch
 from app.config import BROWSER_USER_AGENT, fail, ok, season_state_for, settings
+from app.services.espn_pbp import REGULATION, frac_remaining_clock, frac_remaining_innings, parse_clock_seconds
+from app.services.live_winprob import GameState, predict_home_win_prob
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -769,6 +771,7 @@ def live() -> dict[str, Any]:
     try:
         today = datetime.now(timezone.utc).date().isoformat()
         games, cache_meta = _fetch_live_games(today)
+        games = [_with_live_win_probability(row, "nhl") for row in games]
         next_scheduled = None
         if not games:
             next_scheduled, next_meta = _next_scheduled_game_date(datetime.strptime(today, "%Y-%m-%d").date())
@@ -788,3 +791,70 @@ def live() -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         logger.warning("NHL live games failed: %s", exc)
         return fail("upstream_unavailable", "NHL live games are unavailable.", source=SOURCE_API, season_state=season_state, league="nhl", polled_at=polled_at, poll_interval_seconds=30)
+
+
+def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
+    """Return the honest live win-probability payload for one live row."""
+    unavailable = {
+        "available": False,
+        "home": None,
+        "away": None,
+        "model": f"{league}_live_wp",
+        "reason": "Live win probability unavailable because live game state is incomplete.",
+    }
+    if row.get("status") != "live":
+        return unavailable
+    live = row.get("live") if isinstance(row.get("live"), dict) else {}
+    home_score = _wp_int(row.get("home_score"))
+    away_score = _wp_int(row.get("away_score"))
+    period = _wp_int(live.get("period"))
+    if home_score is None or away_score is None or period is None:
+        return unavailable
+
+    if league == "mlb":
+        label = str(live.get("period_label") or row.get("detailed_status") or "")
+        is_top = label.upper().startswith("T") or label.lower().startswith("top")
+        is_overtime = period > 9
+        frac_remaining = 0.0 if is_overtime else frac_remaining_innings(period, is_top)
+    else:
+        is_overtime = period > int(REGULATION[league]["periods"])
+        frac_remaining = frac_remaining_clock(league, period, parse_clock_seconds(live.get("clock")))
+
+    prob, meta = predict_home_win_prob(
+        GameState(
+            league=league,
+            margin=home_score - away_score,
+            frac_remaining=frac_remaining,
+            period=period,
+            is_overtime=is_overtime,
+        )
+    )
+    if prob is None:
+        return {
+            "available": False,
+            "home": None,
+            "away": None,
+            "model": f"{league}_live_wp",
+            "reason": str(meta.get("reason") or "Live win-probability model is unavailable."),
+        }
+    home_prob = round(float(prob), 6)
+    return {
+        "available": True,
+        "home": home_prob,
+        "away": round(1.0 - home_prob, 6),
+        "model": f"{league}_live_wp",
+        "reason": None,
+    }
+
+
+def _with_live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
+    if row.get("status") != "live":
+        return row
+    return {**row, "win_probability": _live_win_probability(row, league)}
+
+
+def _wp_int(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None

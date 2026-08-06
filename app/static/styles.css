@@ -396,6 +396,39 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary), transparent 92%)
   gap: .55rem;
   margin-top: .75rem;
 }
+.live-winprob {
+  display: grid;
+  gap: .45rem;
+  margin-top: .85rem;
+  padding: .75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface), var(--primary) 4%);
+}
+.live-winprob.unavailable {
+  background: var(--surface-2);
+}
+.wp-head, .wp-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.wp-head span, .wp-labels {
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 800;
+}
+.live-wp-track {
+  display: flex;
+  height: .85rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.live-wp-track .away { background: color-mix(in srgb, var(--danger), var(--primary) 25%); }
+.live-wp-track .home { background: linear-gradient(90deg, var(--primary), var(--success)); }
 .last-play {
   margin: .85rem 0 0;
   line-height: 1.45;

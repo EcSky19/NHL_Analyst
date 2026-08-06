@@ -184,6 +184,29 @@ All API routes return HTTP 200 with `{ ok, data, error, meta }`, including valid
 
 Backend fetches use the disk-backed cache in `data\ui_cache\`: standings refresh about every 5 minutes, schedules every 2 minutes, stats every 15 minutes, and predictions every 10 minutes. If an upstream refresh fails but a cached copy exists, the API serves the stale cached payload with `meta.stale: true` instead of blanking the UI. The frontend auto-refreshes data and surfaces stale/offseason notes from `meta`.
 
+### Live win probability
+
+Live game rows expose a `win_probability` object with the modelled chance the **home** team wins, given the current score and how much of the game is left. Models are trained on in-game snapshots derived from ESPN play-by-play (~780k snapshots across 2,069 games) and are split **by game**, never by snapshot, so no game appears in both train and test.
+
+Measured on a held-out season, alongside ESPN's own published win-probability curve as an independent professional benchmark:
+
+| League | Ours (Brier) | Ours (log loss) | Analytic baseline (Brier) | ESPN (Brier) |
+| --- | ---: | ---: | ---: | ---: |
+| NBA | 0.167947 | 0.491963 | 0.166237 | **0.157319** |
+| NFL | 0.164048 | 0.480777 | 0.163775 | **0.145762** |
+| MLB | **0.154604** | **0.463933** | 0.155233 | 0.153735 (partial coverage) |
+| NHL | 0.175316 | 0.515720 | *is* the baseline | none published |
+
+Read that honestly:
+
+- **ESPN's model is better than ours in every league where it publishes one.** We do not match it, and we are not claiming to. The gap is largest in the NFL.
+- **MLB is our one clear success**: it beats the analytic baseline on both Brier and log loss, and lands within 0.001 Brier of ESPN on the snapshots ESPN covers.
+- Our NBA and NFL models beat the two-parameter analytic baseline on log loss and calibration but **lose to it on Brier** — a genuinely mixed result, not a win.
+- **NHL ships the analytic baseline itself**, because seven learned models across two rounds all failed to beat it, and the best of them was additionally non-monotone in margin (it rated a 4-goal lead below a 3-goal lead). See `docs\live_wp\nhl.md`.
+- ESPN publishes **no** win-probability curve for NHL, so that league has no external benchmark at all.
+
+These are model estimates, not betting lines, and they are not accurate enough to bet on. If a league has no validated artifact the API returns `available: false` with a reason and the UI shows "unavailable" rather than inventing a number. Per-league validation details, including failed experiments, are in `docs\live_wp\{league}.md`.
+
 ### Season-state behavior
 
 As of 2026-08-05, NHL and NBA are between seasons, NFL is entering preseason, and MLB is in its regular season. Endpoints include `meta.season_state` so the UI can display offseason/preseason/live-season banners rather than implying the wrong freshness.
