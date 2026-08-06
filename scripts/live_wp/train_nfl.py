@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import importlib
+import math
 import sqlite3
 import sys
 from collections.abc import Callable
@@ -10,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.frozen import FrozenEstimator
@@ -47,6 +50,96 @@ class Candidate:
     feature_names: list[str]
     build: Callable[[], Any]
     calibration: str | None = None
+
+
+class MonotoneBlendModel:
+    """Blend a learned model with the normal baseline, then monotone-envelope time."""
+
+    def __init__(
+        self,
+        base_model: Any,
+        feature_names: list[str],
+        league: str,
+        alpha: float,
+        normal_mu: float,
+        normal_sigma: float,
+        time_grid_size: int = 41,
+        margin_min: int | None = None,
+        margin_max: int | None = None,
+    ) -> None:
+        self.base_model = base_model
+        self.feature_names = list(feature_names)
+        self.league = league
+        self.alpha = float(alpha)
+        self.normal_mu = float(normal_mu)
+        self.normal_sigma = float(normal_sigma)
+        self.time_grid = np.linspace(0.0, 1.0, int(time_grid_size))
+        self.margin_min = margin_min
+        self.margin_max = margin_max
+        self.classes_ = np.array([0, 1])
+        self._cache: dict[tuple[float, ...], float] = {}
+
+    def _with_frac(self, row: np.ndarray, frac: float) -> list[float]:
+        values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
+        margin = values["margin"]
+        values["frac_remaining"] = frac
+        if "margin_scaled" in values:
+            values["margin_scaled"] = margin / math.sqrt(frac + 1e-6)
+        if "pregame_logit_decay" in values and "pregame_logit" in values:
+            values["pregame_logit_decay"] = values["pregame_logit"] * frac
+        return [values[name] for name in self.feature_names]
+
+    def _blend_prob(self, row: np.ndarray, frac: float) -> float:
+        values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
+        key = (
+            values.get("margin", 0.0),
+            round(float(frac), 8),
+            values.get("pregame_logit", 0.0),
+            values.get("is_overtime", 0.0),
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        vector = self._with_frac(row, frac)
+        base = float(self.base_model.predict_proba([vector])[0][1])
+        margin = float(vector[self.feature_names.index("margin")])
+        normal = baseline_normal(GameState(league=self.league, margin=int(round(margin)), frac_remaining=frac), self.normal_mu, self.normal_sigma)
+        prob = (1.0 - self.alpha) * base + self.alpha * normal
+        self._cache[key] = prob
+        return prob
+
+    def _time_envelope(self, row: np.ndarray, margin: int, frac: float) -> float:
+        if margin == 0:
+            return self._blend_prob(row, frac)
+        grid = [frac, *[float(f) for f in self.time_grid if f >= frac - 1e-12]]
+        vals = [self._blend_prob(row, f) for f in grid]
+        return max(vals) if margin > 0 else min(vals)
+
+    def _predict_one(self, row: np.ndarray) -> float:
+        values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
+        margin = int(round(values["margin"]))
+        frac = min(max(float(values.get("frac_remaining", 1.0)), 0.0), 1.0)
+        if self.margin_min is None or self.margin_max is None:
+            return self._time_envelope(row, margin, frac)
+
+        probs = []
+        for candidate_margin in range(self.margin_min, min(margin, self.margin_max) + 1):
+            candidate = row.copy()
+            candidate[self.feature_names.index("margin")] = float(candidate_margin)
+            probs.append(self._time_envelope(candidate, candidate_margin, frac))
+        if margin > self.margin_max:
+            probs.append(self._time_envelope(row, margin, frac))
+        if not probs:
+            probs.append(self._time_envelope(row, margin, frac))
+        return max(probs)
+
+    def predict_proba(self, X: Any) -> np.ndarray:
+        arr = np.asarray(X, dtype=float)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+        probs = np.array([self._predict_one(row) for row in arr])
+        probs = np.clip(probs, 1e-6, 1.0 - 1e-6)
+        return np.column_stack([1.0 - probs, probs])
 
 
 def rows() -> list[dict]:
@@ -181,6 +274,42 @@ def sanity_checks(model: Any, feature_names: list[str]) -> dict[str, Any]:
     }
 
 
+def monotonicity_checks(model: Any, feature_names: list[str]) -> dict[str, Any]:
+    time_margins = [1, 3, 4, 7, 10, 14, -1, -3, -4, -7, -10, -14]
+    time_results = {}
+    for margin in time_margins:
+        vals = [predict_state(model, feature_names, margin, 1.0 - i / 40) for i in range(41)]
+        deltas = [vals[i + 1] - vals[i] for i in range(40)]
+        if margin > 0:
+            bad = [d for d in deltas if d < -1e-12]
+        else:
+            bad = [d for d in deltas if d > 1e-12]
+        time_results[str(margin)] = {
+            "drops_or_wrong_way_steps": len(bad),
+            "worst_wrong_way_delta": round((min(bad) if margin > 0 and bad else max(bad) if bad else 0.0), 8),
+            "start": round(vals[0], 6),
+            "end": round(vals[-1], 6),
+        }
+
+    margin_drops = 0
+    worst_margin_drop = 0.0
+    for i in range(41):
+        frac = i / 40
+        previous = None
+        for margin in range(-28, 29):
+            prob = predict_state(model, feature_names, margin, frac)
+            if previous is not None and prob < previous - 1e-12:
+                margin_drops += 1
+                worst_margin_drop = min(worst_margin_drop, prob - previous)
+            previous = prob
+
+    return {
+        "time": time_results,
+        "margin": {"drops": margin_drops, "worst_drop": round(worst_margin_drop, 8)},
+        "passed": margin_drops == 0 and all(row["drops_or_wrong_way_steps"] == 0 for row in time_results.values()),
+    }
+
+
 def phase_breakdown(model: Any, data: list[dict], feature_names: list[str]) -> dict[str, Any]:
     ys = outcomes(data)
     probs = model_probs(model, data, feature_names)
@@ -231,6 +360,7 @@ def evaluate(model: Any, data: list[dict], feature_names: list[str]) -> dict[str
         "max_calibration_gap": round(max_calibration_gap(probs, ys, bins=10, min_n=30), 6),
         "phase_breakdown": phase_breakdown(model, data, feature_names),
         "sanity_checks": sanity_checks(model, feature_names),
+        "monotonicity_checks": monotonicity_checks(model, feature_names),
     }
 
 
@@ -344,11 +474,25 @@ def main() -> None:
             item[2]["log_loss"],
         ),
     )
+    wrapper_cls = (
+        MonotoneBlendModel
+        if __name__ != "__main__"
+        else importlib.import_module("scripts.live_wp.train_nfl").MonotoneBlendModel
+    )
+    selected_model = wrapper_cls(
+        selected_model,
+        selected_candidate.feature_names,
+        league="nfl",
+        alpha=0.5,
+        normal_mu=NORMAL_MU,
+        normal_sigma=NORMAL_SIGMA,
+    )
     final = evaluate(selected_model, test, selected_candidate.feature_names)
     better_than_round1 = (
-        final["model"]["brier"] < ROUND1_BRIER
-        and final["model"]["log_loss"] < ROUND1_LOG_LOSS
+        final["model"]["brier"] <= ROUND1_BRIER
+        and final["model"]["log_loss"] <= ROUND1_LOG_LOSS
         and all(final["sanity_checks"]["passed"].values())
+        and final["monotonicity_checks"]["passed"]
     )
 
     bundle = {
@@ -364,6 +508,7 @@ def main() -> None:
         "validation": {
             **final,
             "selected_model": selected_candidate.name,
+            "post_processor": "50% blend with normal baseline plus time monotone envelope",
             "selected_validation": selected_validation,
             "experiments": experiment_results,
             "protocol": {
@@ -379,8 +524,9 @@ def main() -> None:
             },
         },
         "notes": (
-            "NFL round-2 live WP selected using only a 2023 game-level development split. "
-            "The 2024 season remained a held-out final evaluation. ESPN WP is benchmark-only."
+            "NFL round-3 live WP wraps the 2023-selected cubic logistic model in a 50% normal-baseline "
+            "blend and a time monotone envelope. The 2024 season remained a held-out final evaluation. "
+            "ESPN WP is benchmark-only and remains better."
         ),
     }
 

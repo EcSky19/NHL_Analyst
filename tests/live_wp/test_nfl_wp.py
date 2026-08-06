@@ -45,6 +45,18 @@ def test_nfl_time_leverage_for_same_lead():
     assert late > early
 
 
+@pytest.mark.parametrize("margin", [1, 3, 4, 7, 10, 14])
+def test_nfl_time_monotonic_for_home_leads(margin: int):
+    probs = [_prob(margin, 1.0 - i / 40) for i in range(41)]
+    assert all(probs[i + 1] >= probs[i] for i in range(40))
+
+
+@pytest.mark.parametrize("margin", [-1, -3, -4, -7, -10, -14])
+def test_nfl_time_monotonic_for_home_trails(margin: int):
+    probs = [_prob(margin, 1.0 - i / 40) for i in range(41)]
+    assert all(probs[i + 1] <= probs[i] for i in range(40))
+
+
 @pytest.mark.parametrize("margin,frac_remaining", [(0, 1.0), (0, 0.0), (14, 0.0), (-14, 0.0)])
 def test_nfl_edge_states_are_finite(margin: int, frac_remaining: float):
     prob = _prob(margin, frac_remaining)

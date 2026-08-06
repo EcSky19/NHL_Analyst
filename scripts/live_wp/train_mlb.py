@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import importlib
+import math
 import sqlite3
 import sys
 from collections import defaultdict
@@ -36,6 +38,147 @@ DB_PATH = ROOT / "data" / "live_wp" / "mlb_snapshots.db"
 NORMAL_MU = 0.25
 NORMAL_SIGMA = 4.5
 MAX_TRAIN_SNAPSHOTS_PER_GAME = 120
+CURRENT_BRIER = 0.154604
+CURRENT_LOG_LOSS = 0.463933
+
+
+class MonotoneBlendModel:
+    """Blend a learned model with the normal baseline, then enforce monotone grids."""
+
+    def __init__(
+        self,
+        base_model,
+        feature_names: list[str],
+        league: str,
+        alpha: float,
+        normal_mu: float,
+        normal_sigma: float,
+        time_grid_size: int = 41,
+        margin_min: int | None = None,
+        margin_max: int | None = None,
+    ) -> None:
+        self.base_model = base_model
+        self.feature_names = list(feature_names)
+        self.league = league
+        self.alpha = float(alpha)
+        self.normal_mu = float(normal_mu)
+        self.normal_sigma = float(normal_sigma)
+        self.time_grid = np.linspace(0.0, 1.0, int(time_grid_size))
+        self.margin_min = margin_min
+        self.margin_max = margin_max
+        self.classes_ = np.array([0, 1])
+        self._cache: dict[tuple[float, ...], float] = {}
+
+    def _normal_prob(self, margin: int, frac: float) -> float:
+        frac = min(max(float(frac), 0.0), 1.0)
+        if frac <= 1e-6:
+            return 1.0 if margin > 0 else (0.0 if margin < 0 else 0.5)
+        mean = margin + self.normal_mu * frac
+        sd = max(self.normal_sigma * math.sqrt(frac), 1e-6)
+        return 0.5 * (1.0 + math.erf(mean / (sd * math.sqrt(2.0))))
+
+    def _with_frac(self, row: np.ndarray, frac: float) -> list[float]:
+        values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
+        margin = values["margin"]
+        values["frac_remaining"] = frac
+        if "margin_scaled" in values:
+            values["margin_scaled"] = margin / math.sqrt(frac + 1e-6)
+        if "pregame_logit_decay" in values and "pregame_logit" in values:
+            values["pregame_logit_decay"] = values["pregame_logit"] * frac
+        return [values[name] for name in self.feature_names]
+
+    def _blend_prob(self, row: np.ndarray, frac: float) -> float:
+        values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
+        key = (
+            values.get("margin", 0.0),
+            round(float(frac), 8),
+            values.get("pregame_logit", 0.0),
+            values.get("is_overtime", 0.0),
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        vector = self._with_frac(row, frac)
+        base = float(self.base_model.predict_proba([vector])[0][1])
+        margin = float(vector[self.feature_names.index("margin")])
+        normal = self._normal_prob(int(round(margin)), frac)
+        prob = (1.0 - self.alpha) * base + self.alpha * normal
+        self._cache[key] = prob
+        return prob
+
+    def _time_envelope(self, row: np.ndarray, margin: int, frac: float) -> float:
+        if margin == 0:
+            return self._blend_prob(row, frac)
+        grid = [frac, *[float(f) for f in self.time_grid if f >= frac - 1e-12]]
+        vals = [self._blend_prob(row, f) for f in grid]
+        return max(vals) if margin > 0 else min(vals)
+
+    def _batch_time_envelopes(self, candidates: list[tuple[np.ndarray, int]], frac: float) -> list[float]:
+        matrix = []
+        slices = []
+        normal_inputs = []
+        start = 0
+        for row, margin in candidates:
+            grid = [frac] if margin == 0 else [frac, *[float(f) for f in self.time_grid if f >= frac - 1e-12]]
+            for grid_frac in grid:
+                matrix.append(self._with_frac(row, grid_frac))
+                normal_inputs.append((margin, grid_frac))
+            stop = start + len(grid)
+            slices.append((margin, start, stop))
+            start = stop
+
+        base_probs = self.base_model.predict_proba(matrix)[:, 1]
+        normal_probs = np.array(
+            [self._normal_prob(int(round(margin)), grid_frac) for margin, grid_frac in normal_inputs],
+            dtype=float,
+        )
+        blended = (1.0 - self.alpha) * base_probs + self.alpha * normal_probs
+
+        out = []
+        for margin, start, stop in slices:
+            vals = blended[start:stop]
+            if margin > 0:
+                out.append(float(np.max(vals)))
+            elif margin < 0:
+                out.append(float(np.min(vals)))
+            else:
+                out.append(float(vals[0]))
+        return out
+
+    def _predict_one(self, row: np.ndarray) -> float:
+        values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
+        margin = int(round(values["margin"]))
+        frac = min(max(float(values.get("frac_remaining", 1.0)), 0.0), 1.0)
+        if self.margin_min is None or self.margin_max is None:
+            return self._batch_time_envelopes([(row, margin)], frac)[0]
+
+        candidates = []
+        for candidate_margin in range(self.margin_min, min(margin, self.margin_max) + 1):
+            candidate = row.copy()
+            candidate[self.feature_names.index("margin")] = float(candidate_margin)
+            candidates.append((candidate, candidate_margin))
+        if margin > self.margin_max:
+            candidates.append((row, margin))
+        if not candidates:
+            candidates.append((row, margin))
+        probs = self._batch_time_envelopes(candidates, frac)
+        return max(probs)
+
+    def predict_proba(self, X) -> np.ndarray:
+        arr = np.asarray(X, dtype=float)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+        probs = np.empty(arr.shape[0], dtype=float)
+        seen: dict[tuple[float, ...], float] = {}
+        for i, row in enumerate(arr):
+            key = tuple(float(v) for v in row)
+            prob = seen.get(key)
+            if prob is None:
+                prob = self._predict_one(row)
+                seen[key] = prob
+            probs[i] = prob
+        probs = np.clip(probs, 1e-6, 1.0 - 1e-6)
+        return np.column_stack([1.0 - probs, probs])
 
 
 def rows() -> list[dict]:
@@ -84,6 +227,47 @@ def metric_block(probs: list[float], ys: list[int]) -> dict:
     return {
         "brier": round(brier_score(probs, ys), 6),
         "log_loss": round(log_loss(probs, ys), 6),
+    }
+
+
+def predict_state(model, margin: int, frac_remaining: float) -> float:
+    feats = build_features(GameState(league="mlb", margin=margin, frac_remaining=frac_remaining))
+    return float(model.predict_proba([[feats[name] for name in FEATURE_NAMES]])[0][1])
+
+
+def monotonicity_checks(model) -> dict:
+    time_margins = [1, 2, 3, 5, -1, -2, -3, -5]
+    time_results = {}
+    for margin in time_margins:
+        vals = [predict_state(model, margin, 1.0 - i / 40) for i in range(41)]
+        deltas = [vals[i + 1] - vals[i] for i in range(40)]
+        if margin > 0:
+            bad = [d for d in deltas if d < -1e-12]
+        else:
+            bad = [d for d in deltas if d > 1e-12]
+        time_results[str(margin)] = {
+            "drops_or_wrong_way_steps": len(bad),
+            "worst_wrong_way_delta": round((min(bad) if margin > 0 and bad else max(bad) if bad else 0.0), 8),
+            "start": round(vals[0], 6),
+            "end": round(vals[-1], 6),
+        }
+
+    margin_drops = 0
+    worst_margin_drop = 0.0
+    for i in range(41):
+        frac = i / 40
+        previous = None
+        for margin in range(-10, 11):
+            prob = predict_state(model, margin, frac)
+            if previous is not None and prob < previous - 1e-12:
+                margin_drops += 1
+                worst_margin_drop = min(worst_margin_drop, prob - previous)
+            previous = prob
+
+    return {
+        "time": time_results,
+        "margin": {"drops": margin_drops, "worst_drop": round(worst_margin_drop, 8)},
+        "passed": margin_drops == 0 and all(row["drops_or_wrong_way_steps"] == 0 for row in time_results.values()),
     }
 
 
@@ -165,6 +349,7 @@ def evaluate(model, data: list[dict]) -> dict:
         "max_calibration_gap": round(max_calibration_gap(model_probs, ys, bins=10, min_n=30), 6),
         "phase_breakdown": phase_breakdown,
         "sanity_checks": sanity,
+        "monotonicity_checks": monotonicity_checks(model),
     }
 
 
@@ -187,6 +372,21 @@ def main() -> None:
     )
     model = CalibratedClassifierCV(base_model, method="sigmoid", cv=3)
     model.fit([vector(r) for r in train], outcomes(train))
+    wrapper_cls = (
+        MonotoneBlendModel
+        if __name__ != "__main__"
+        else importlib.import_module("scripts.live_wp.train_mlb").MonotoneBlendModel
+    )
+    model = wrapper_cls(
+        model,
+        FEATURE_NAMES,
+        league="mlb",
+        alpha=0.3,
+        normal_mu=NORMAL_MU,
+        normal_sigma=NORMAL_SIGMA,
+        margin_min=-15,
+        margin_max=15,
+    )
 
     validation = evaluate(model, test)
     all_games = len({r["game_id"] for r in data})
@@ -200,6 +400,8 @@ def main() -> None:
         "n_snapshots": len(data),
         "brier": validation["model"]["brier"],
         "log_loss": validation["model"]["log_loss"],
+        "train_seasons": [s for s in seasons if s < test_season],
+        "test_seasons": [test_season],
         "validation": {
             **validation,
             "protocol": {
@@ -214,23 +416,32 @@ def main() -> None:
                 "test_season": test_season,
                 "normal_baseline": {"mu": NORMAL_MU, "sigma": NORMAL_SIGMA},
                 "estimator": "GradientBoostingClassifier calibrated with 3-fold sigmoid calibration on training games only",
+                "post_processor": "30% blend with normal baseline plus time and margin monotone envelopes",
             },
         },
         "notes": (
-            "MLB live WP trained only on frozen live_winprob.build_features fields. "
+            "MLB live WP trained only on frozen live_winprob.build_features fields and post-processed "
+            "with a 30% normal-baseline blend plus monotone envelopes. "
             "No test-set tuning; the latest harvested season is a held-out game-level season. "
             "Top/bottom half-inning is represented only through frac_remaining; outs are harvested "
-            "but intentionally not used because the frozen serving feature map has no outs field."
+            "but intentionally not used because the frozen serving feature map has no outs field. "
+            "ESPN WP remains better on its partial-coverage benchmark."
         ),
     }
 
     path = artifact_path("mlb")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(bundle, path)
+    should_save = (
+        validation["model"]["brier"] <= CURRENT_BRIER
+        and validation["model"]["log_loss"] <= CURRENT_LOG_LOSS
+        and validation["monotonicity_checks"]["passed"]
+    )
+    if should_save:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(bundle, path)
 
     prob, meta = predict_home_win_prob(GameState(league="mlb", margin=1, frac_remaining=0.1))
     print(json.dumps(bundle["validation"], indent=2, sort_keys=True))
-    print(f"saved={path}")
+    print(f"saved={should_save} path={path}")
     print(f"serving_check_margin1_frac0.1={prob} available={meta.get('available')}")
 
 

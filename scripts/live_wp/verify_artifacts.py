@@ -4,7 +4,7 @@ Deliberately re-derives everything from the snapshot database rather than
 trusting the metrics recorded inside the artifact: it re-scores the model,
 re-fits the analytic baseline on the training season under both Brier and log
 loss, checks train/test game overlap, compares against ESPN's published curve
-where one exists, and checks monotonicity in margin.
+where one exists, and checks monotonicity in margin and in elapsed time.
 
 Usage (from the repo root):
 
@@ -157,3 +157,19 @@ for frac in (0.75, 0.25, 0.05):
     ok = all(a <= b + 1e-9 for a, b in zip(probs, probs[1:]))
     print(f"[{LEAGUE}] frac={frac} margins -4..4 monotone={ok} "
           + " ".join(f"{v:.3f}" for v in probs))
+
+# Monotonicity in TIME: a fixed lead must gain value as the clock runs out.
+# Not gated historically, which is how NFL/MLB shipped with local reversals.
+STEPS = 40
+for margin in (1, 2, 3):
+    seq = [
+        art["model"].predict_proba(
+            np.array([[build_features(GameState(LEAGUE, margin, 1.0 - i / STEPS))[n]
+                       for n in names]], dtype=float)
+        )[0][1]
+        for i in range(STEPS + 1)
+    ]
+    drops = [a - b for a, b in zip(seq, seq[1:]) if b < a - 1e-9]
+    print(f"[{LEAGUE}] margin=+{margin} time-monotone={not drops} "
+          f"drops={len(drops)}/{STEPS} worst={max(drops, default=0.0):.5f} "
+          f"{seq[0]:.4f}->{seq[-1]:.4f}")

@@ -19,10 +19,29 @@ and returns `P(final margin > 0)`.
 
 ## Selection policy
 
-Ship whichever candidate wins held-out **log loss**, subject to one hard gate:
-the predicted probability must be monotone non-decreasing in home margin at
-every time point. A candidate that fails the monotonicity gate is disqualified
-regardless of its aggregate score.
+Ship whichever candidate wins held-out **log loss**, subject to two hard gates
+on the shape of the predicted probability surface:
+
+1. **Monotone in margin** — non-decreasing in home margin at every time point.
+2. **Monotone in time** — at a fixed positive margin, non-decreasing as the
+   clock runs out. A lead must gain value as the time available to overturn it
+   disappears.
+
+A candidate that fails either gate is disqualified regardless of its aggregate
+score.
+
+Gate 2 was added late, after gate 1 had already been used to select every
+shipped model. Auditing against it retroactively found that **NFL and MLB had
+been shipped in violation of it**: holding the lead fixed and running the clock
+down in 40 steps, NFL fell on 19 of 40 steps (worst single drop 0.00397 at +3)
+and MLB on 6 of 40 (worst 0.00299 at +1). NHL and NBA were clean at 0 of 40.
+The reversals were small and the overall trend was correct in both leagues, but
+they were user-visible: the live view could tick a leading team downward when
+nothing had happened to them.
+
+Both were then refit to satisfy gate 2, and both came out *better* on held-out
+log loss than the models they replaced, so nothing was traded away to get the
+correct shape. See the per-league docs.
 
 Log loss is the tiebreaking metric because it is a proper scoring rule and is
 far more sensitive than Brier to overconfident tail predictions. That is exactly

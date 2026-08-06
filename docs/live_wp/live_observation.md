@@ -161,3 +161,108 @@ Parsed live game observations:
   - Previous observation: 2026-08-06T09:43:17-07:00, score 0-0, label=live, wp={"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}
   - Movement note: raw win_probability changed=True
 
+### MLB poll 8 at 2026-08-06T09:51:18-07:00
+Returned game count (best-effort parsed): 3; live/in-progress count: 3
+Raw payload:
+```json
+{"ok":true,"data":[{"game_id":"824804","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:35:00Z","home":"BAL","away":"LAA","home_name":"Baltimore Orioles","away_name":"Los Angeles Angels","home_score":0,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Oriole Park at Camden Yards","live":{"period":2,"period_label":"T2","clock":null,"last_play":null,"balls":0,"strikes":0,"outs":0},"win_probability":{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}},{"game_id":"824481","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:40:00Z","home":"CIN","away":"ATH","home_name":"Cincinnati Reds","away_name":"Athletics","home_score":1,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Great American Ball Park","live":{"period":1,"period_label":"B1","clock":null,"last_play":null,"balls":2,"strikes":2,"outs":0},"win_probability":{"available":true,"home":0.585974,"away":0.414026,"model":"mlb_live_wp","reason":null}},{"game_id":"824401","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T17:10:00Z","home":"CLE","away":"NYM","home_name":"Cleveland Guardians","away_name":"New York Mets","home_score":0,"away_score":0,"status":"live","detailed_status":"Warmup","venue":"Progressive Field","live":{"period":1,"period_label":"T1","clock":null,"last_play":null,"balls":0,"strikes":0,"outs":0},"win_probability":{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}}],"error":null,"meta":{"source":"mlb-statsapi","fetched_at":"2026-08-06T16:39:17Z","cached":true,"stale":false,"age_seconds":721.7,"season":"2026","season_state":"regular","league":"mlb","count":3,"polled_at":"2026-08-06T16:51:19Z","poll_interval_seconds":30,"empty_reason":null}}
+```
+Parsed live game observations:
+- Game: LAA at BAL; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+  - Previous observation: 2026-08-06T09:47:18-07:00, score 0-0, label=live, wp={"available":true,"home":0.499661,"away":0.500339,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=True
+- Game: ATH at CIN; score 0-1; label=live
+  - win_probability raw: `{"available":true,"home":0.585974,"away":0.414026,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane: home leads and home favoured
+  - Previous observation: 2026-08-06T09:47:18-07:00, score 0-0, label=live, wp={"available":true,"home":0.499661,"away":0.500339,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=True
+- Game: NYM at CLE; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+
+### MLB poll 9 at 2026-08-06T09:55:19-07:00
+Returned game count (best-effort parsed): 3; live/in-progress count: 3
+Raw payload:
+```json
+{"ok":true,"data":[{"game_id":"824804","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:35:00Z","home":"BAL","away":"LAA","home_name":"Baltimore Orioles","away_name":"Los Angeles Angels","home_score":0,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Oriole Park at Camden Yards","live":{"period":2,"period_label":"T2","clock":null,"last_play":null,"balls":1,"strikes":2,"outs":0,"runners_on_base":{"first":true,"second":false,"third":false},"runners":{"first":"Zach Neto","second":null,"third":null}},"win_probability":{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}},{"game_id":"824481","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:40:00Z","home":"CIN","away":"ATH","home_name":"Cincinnati Reds","away_name":"Athletics","home_score":1,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Great American Ball Park","live":{"period":1,"period_label":"B1","clock":null,"last_play":null,"balls":0,"strikes":1,"outs":1,"runners_on_base":{"first":true,"second":false,"third":false},"runners":{"first":"JJ Bleday","second":null,"third":null}},"win_probability":{"available":true,"home":0.585974,"away":0.414026,"model":"mlb_live_wp","reason":null}},{"game_id":"824401","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T17:10:00Z","home":"CLE","away":"NYM","home_name":"Cleveland Guardians","away_name":"New York Mets","home_score":0,"away_score":0,"status":"live","detailed_status":"Warmup","venue":"Progressive Field","live":{"period":1,"period_label":"T1","clock":null,"last_play":null,"balls":0,"strikes":0,"outs":0},"win_probability":{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}}],"error":null,"meta":{"source":"mlb-statsapi","fetched_at":"2026-08-06T16:55:19Z","cached":false,"stale":false,"age_seconds":0.0,"season":"2026","season_state":"regular","league":"mlb","count":3,"polled_at":"2026-08-06T16:55:20Z","poll_interval_seconds":30,"empty_reason":null}}
+```
+Parsed live game observations:
+- Game: LAA at BAL; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+  - Previous observation: 2026-08-06T09:51:18-07:00, score 0-0, label=live, wp={"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+- Game: ATH at CIN; score 0-1; label=live
+  - win_probability raw: `{"available":true,"home":0.585974,"away":0.414026,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane: home leads and home favoured
+  - Previous observation: 2026-08-06T09:51:18-07:00, score 0-1, label=live, wp={"available":true,"home":0.585974,"away":0.414026,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+- Game: NYM at CLE; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+  - Previous observation: 2026-08-06T09:51:18-07:00, score 0-0, label=live, wp={"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+
+### MLB poll 10 at 2026-08-06T09:59:20-07:00
+Returned game count (best-effort parsed): 3; live/in-progress count: 3
+Raw payload:
+```json
+{"ok":true,"data":[{"game_id":"824804","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:35:00Z","home":"BAL","away":"LAA","home_name":"Baltimore Orioles","away_name":"Los Angeles Angels","home_score":0,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Oriole Park at Camden Yards","live":{"period":2,"period_label":"T2","clock":null,"last_play":null,"balls":2,"strikes":0,"outs":0,"runners_on_base":{"first":true,"second":true,"third":true},"runners":{"first":"Moisés Ballesteros","second":"Vaughn Grissom","third":"Zach Neto"}},"win_probability":{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}},{"game_id":"824481","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:40:00Z","home":"CIN","away":"ATH","home_name":"Cincinnati Reds","away_name":"Athletics","home_score":1,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Great American Ball Park","live":{"period":1,"period_label":"E1","clock":null,"last_play":null,"balls":3,"strikes":3,"outs":3},"win_probability":{"available":true,"home":0.584223,"away":0.415777,"model":"mlb_live_wp","reason":null}},{"game_id":"824401","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T17:10:00Z","home":"CLE","away":"NYM","home_name":"Cleveland Guardians","away_name":"New York Mets","home_score":0,"away_score":0,"status":"live","detailed_status":"Warmup","venue":"Progressive Field","live":{"period":1,"period_label":"T1","clock":null,"last_play":null,"balls":0,"strikes":0,"outs":0},"win_probability":{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}}],"error":null,"meta":{"source":"mlb-statsapi","fetched_at":"2026-08-06T16:55:20Z","cached":true,"stale":false,"age_seconds":240.7,"season":"2026","season_state":"regular","league":"mlb","count":3,"polled_at":"2026-08-06T16:59:21Z","poll_interval_seconds":30,"empty_reason":null}}
+```
+Parsed live game observations:
+- Game: LAA at BAL; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+  - Previous observation: 2026-08-06T09:55:19-07:00, score 0-0, label=live, wp={"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+- Game: ATH at CIN; score 0-1; label=live
+  - win_probability raw: `{"available":true,"home":0.584223,"away":0.415777,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane: home leads and home favoured
+  - Previous observation: 2026-08-06T09:55:19-07:00, score 0-1, label=live, wp={"available":true,"home":0.585974,"away":0.414026,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=True
+- Game: NYM at CLE; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+  - Previous observation: 2026-08-06T09:55:19-07:00, score 0-0, label=live, wp={"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+
+### MLB poll 11 at 2026-08-06T10:03:11-07:00
+Returned game count (best-effort parsed): 3; live/in-progress count: 3
+Raw payload:
+```json
+{"ok":true,"data":[{"game_id":"824804","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:35:00Z","home":"BAL","away":"LAA","home_name":"Baltimore Orioles","away_name":"Los Angeles Angels","home_score":0,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Oriole Park at Camden Yards","live":{"period":2,"period_label":"T2","clock":null,"last_play":null,"balls":1,"strikes":2,"outs":2,"runners_on_base":{"first":true,"second":true,"third":true},"runners":{"first":"Moisés Ballesteros","second":"Vaughn Grissom","third":"Zach Neto"}},"win_probability":{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}},{"game_id":"824481","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T16:40:00Z","home":"CIN","away":"ATH","home_name":"Cincinnati Reds","away_name":"Athletics","home_score":1,"away_score":0,"status":"live","detailed_status":"In Progress","venue":"Great American Ball Park","live":{"period":2,"period_label":"T2","clock":null,"last_play":null,"balls":1,"strikes":1,"outs":2},"win_probability":{"available":true,"home":0.584223,"away":0.415777,"model":"mlb_live_wp","reason":null}},{"game_id":"824401","league":"mlb","game_date":"2026-08-06","start_time_utc":"2026-08-06T17:10:00Z","home":"CLE","away":"NYM","home_name":"Cleveland Guardians","away_name":"New York Mets","home_score":0,"away_score":0,"status":"live","detailed_status":"Warmup","venue":"Progressive Field","live":{"period":1,"period_label":"T1","clock":null,"last_play":null,"balls":0,"strikes":0,"outs":0},"win_probability":{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}}],"error":null,"meta":{"source":"mlb-statsapi","fetched_at":"2026-08-06T16:55:20Z","cached":true,"stale":false,"age_seconds":472.0,"season":"2026","season_state":"regular","league":"mlb","count":3,"polled_at":"2026-08-06T17:03:12Z","poll_interval_seconds":30,"empty_reason":null}}
+```
+Parsed live game observations:
+- Game: LAA at BAL; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+  - Previous observation: 2026-08-06T09:59:20-07:00, score 0-0, label=live, wp={"available":true,"home":0.497715,"away":0.502285,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+- Game: ATH at CIN; score 0-1; label=live
+  - win_probability raw: `{"available":true,"home":0.584223,"away":0.415777,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane: home leads and home favoured
+  - Previous observation: 2026-08-06T09:59:20-07:00, score 0-1, label=live, wp={"available":true,"home":0.584223,"away":0.415777,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+- Game: NYM at CLE; score 0-0; label=live
+  - win_probability raw: `{"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}`
+  - available=True; sum_ok=True; inside_0_1=True; direction=sane-ish: tied and near MLB home base range
+  - Previous observation: 2026-08-06T09:59:20-07:00, score 0-0, label=live, wp={"available":true,"home":0.495296,"away":0.504704,"model":"mlb_live_wp","reason":null}
+  - Movement note: raw win_probability changed=False
+
+## Verdict
+Finished polling at 2026-08-06T10:03:12-07:00. Distinct parsed live games observed: 3.
+
+## Shutdown
+Stopped uvicorn PID 12036 at 2026-08-06T10:03:13-07:00.
+
+## Manual summary and sanity verdict
+- Observation window: 2026-08-06 09:23:11-07:00 through 10:03:11-07:00, 11 MLB polls about 4 minutes apart.
+- Non-MLB checks: NHL, NFL, and NBA `/live` each returned `data: []` with count 0. NHL/NBA reported offseason; NFL reported preseason/no current game.
+- Genuinely in-progress MLB games were observed after warmup: LAA at BAL reached `detailed_status: In Progress` by poll 6 (09:43:17), and ATH at CIN reached `In Progress` by poll 6/poll 7. NYM at CLE was only observed as `Warmup` during this window.
+- Win-probability invariants held for all observed live rows: `available: true`, home/away were finite probabilities strictly between 0 and 1, and home+away equaled 1 within 1e-6.
+- Directional sanity: tied early games stayed near 50/50 (examples 0.495296/0.504704, 0.499661/0.500339, 0.497715/0.502285). CIN leading ATH 1-0 in the 1st/2nd had CIN favoured (home 0.585974 then 0.584223), which is directionally sane.
+- Movement: LAA@BAL changed from 0.495296 home to 0.499661 home when the game moved from warmup/T1 to M1, then to 0.497715 by T2. ATH@CIN changed from 0.499661 tied to 0.585974 home after CIN took a 1-0 lead, then 0.584223 as the inning progressed. This confirms the live pipeline was reading changing game state, though not on every poll.
+- Important issue: `/api/mlb/live` and `/api/mlb/schedule/week` included `Warmup` games with `status: live`, non-null 0-0 scores, and available win probability before genuine in-game play. That violates the requested check that no game is marked live unless really in progress and unplayed games should have null scores, never 0.
+- Possible freshness concern: `/api/mlb/live` often returned `cached: true` with `age_seconds` much larger than the advertised `poll_interval_seconds: 30` (for example 721.7 seconds at poll 8), so probability/game state may update in coarse cached steps rather than every poll.
