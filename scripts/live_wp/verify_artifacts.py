@@ -160,8 +160,18 @@ for frac in (0.75, 0.25, 0.05):
 
 # Monotonicity in TIME: a fixed lead must gain value as the clock runs out.
 # Not gated historically, which is how NFL/MLB shipped with local reversals.
-STEPS = 40
-for margin in (1, 2, 3):
+#
+# The sweep resolution deliberately does NOT match the 41-point grid the
+# training-time monotone envelopes are built on. Sweeping the envelope's own
+# grid is circular: it samples exactly the points the envelope makes monotone
+# by construction, and is blind to reversals in between. A 401-point sweep at
+# an offset caught real MLB reversals of up to 1.4e-02 that a 40-step sweep
+# reported as perfectly clean.
+#
+# Negative margins are swept too. The envelope mirrors to a min for a trailing
+# team, and applying it in only one direction is a mistake we have made before.
+STEPS = 400
+for margin in (1, 2, 3, -1, -2, -3):
     seq = [
         art["model"].predict_proba(
             np.array([[build_features(GameState(LEAGUE, margin, 1.0 - i / STEPS))[n]
@@ -169,7 +179,11 @@ for margin in (1, 2, 3):
         )[0][1]
         for i in range(STEPS + 1)
     ]
-    drops = [a - b for a, b in zip(seq, seq[1:]) if b < a - 1e-9]
-    print(f"[{LEAGUE}] margin=+{margin} time-monotone={not drops} "
+    if margin > 0:
+        drops = [a - b for a, b in zip(seq, seq[1:]) if b < a - 1e-9]
+    else:
+        drops = [b - a for a, b in zip(seq, seq[1:]) if b > a + 1e-9]
+    sign = "+" if margin > 0 else ""
+    print(f"[{LEAGUE}] margin={sign}{margin} time-monotone={not drops} "
           f"drops={len(drops)}/{STEPS} worst={max(drops, default=0.0):.5f} "
           f"{seq[0]:.4f}->{seq[-1]:.4f}")

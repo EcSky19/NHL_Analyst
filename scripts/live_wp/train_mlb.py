@@ -37,11 +37,12 @@ from app.services.live_winprob import (
 DB_PATH = ROOT / "data" / "live_wp" / "mlb_snapshots.db"
 NORMAL_MU = 0.25
 NORMAL_SIGMA = 4.5
-BLEND_ALPHA = 0.3
+BLEND_ALPHA = 0.5
+BLEND_ALPHA_POWER = 0.5
 MAX_TRAIN_SNAPSHOTS_PER_GAME = 120
-CURRENT_BRIER = 0.154305
-CURRENT_LOG_LOSS = 0.462951
-MLB_FEATURE_NAMES = [*FEATURE_NAMES, "outs", "outs_known"]
+CURRENT_BRIER = 0.157857
+CURRENT_LOG_LOSS = 0.470732
+MLB_FEATURE_NAMES = list(FEATURE_NAMES)
 
 
 class MonotoneBlendModel:
@@ -55,7 +56,8 @@ class MonotoneBlendModel:
         alpha: float,
         normal_mu: float,
         normal_sigma: float,
-        time_grid_size: int = 41,
+        alpha_power: float = 0.0,
+        time_grid_size: int = 401,
         margin_min: int | None = None,
         margin_max: int | None = None,
     ) -> None:
@@ -63,6 +65,7 @@ class MonotoneBlendModel:
         self.feature_names = list(feature_names)
         self.league = league
         self.alpha = float(alpha)
+        self.alpha_power = float(alpha_power)
         self.normal_mu = float(normal_mu)
         self.normal_sigma = float(normal_sigma)
         self.time_grid = np.linspace(0.0, 1.0, int(time_grid_size))
@@ -70,6 +73,7 @@ class MonotoneBlendModel:
         self.margin_max = margin_max
         self.classes_ = np.array([0, 1])
         self._cache: dict[tuple[float, ...], float] = {}
+        self._surface_cache: dict[tuple[float, tuple[float, ...]], np.ndarray] = {}
 
     def _normal_prob(self, margin: int, frac: float) -> float:
         frac = min(max(float(frac), 0.0), 1.0)
@@ -78,6 +82,13 @@ class MonotoneBlendModel:
         mean = margin + self.normal_mu * frac
         sd = max(self.normal_sigma * math.sqrt(frac), 1e-6)
         return 0.5 * (1.0 + math.erf(mean / (sd * math.sqrt(2.0))))
+
+    def _alpha_for_frac(self, frac: float) -> float:
+        frac = min(max(float(frac), 0.0), 1.0)
+        alpha_power = float(getattr(self, "alpha_power", 0.0))
+        if alpha_power <= 0.0:
+            return self.alpha
+        return self.alpha * (frac**alpha_power)
 
     def _with_frac(self, row: np.ndarray, frac: float) -> list[float]:
         values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
@@ -98,14 +109,15 @@ class MonotoneBlendModel:
         base = float(self.base_model.predict_proba([vector])[0][1])
         margin = float(vector[self.feature_names.index("margin")])
         normal = self._normal_prob(int(round(margin)), frac)
-        prob = (1.0 - self.alpha) * base + self.alpha * normal
+        alpha = self._alpha_for_frac(frac)
+        prob = (1.0 - alpha) * base + alpha * normal
         self._cache[key] = prob
         return prob
 
     def _time_envelope(self, row: np.ndarray, margin: int, frac: float) -> float:
         if margin == 0:
             return self._blend_prob(row, frac)
-        grid = [frac, *[float(f) for f in self.time_grid if f >= frac - 1e-12]]
+        grid = [float(f) for f in self.time_grid if f >= frac - 1e-12]
         vals = [self._blend_prob(row, f) for f in grid]
         return max(vals) if margin > 0 else min(vals)
 
@@ -115,7 +127,7 @@ class MonotoneBlendModel:
         normal_inputs = []
         start = 0
         for row, margin in candidates:
-            grid = [frac] if margin == 0 else [frac, *[float(f) for f in self.time_grid if f >= frac - 1e-12]]
+            grid = [frac] if margin == 0 else [float(f) for f in self.time_grid if f >= frac - 1e-12]
             for grid_frac in grid:
                 matrix.append(self._with_frac(row, grid_frac))
                 normal_inputs.append((margin, grid_frac))
@@ -128,7 +140,8 @@ class MonotoneBlendModel:
             [self._normal_prob(int(round(margin)), grid_frac) for margin, grid_frac in normal_inputs],
             dtype=float,
         )
-        blended = (1.0 - self.alpha) * base_probs + self.alpha * normal_probs
+        alphas = np.array([self._alpha_for_frac(grid_frac) for _margin, grid_frac in normal_inputs], dtype=float)
+        blended = (1.0 - alphas) * base_probs + alphas * normal_probs
 
         out = []
         for margin, start, stop in slices:
@@ -145,6 +158,9 @@ class MonotoneBlendModel:
         values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
         margin = int(round(values["margin"]))
         frac = min(max(float(values.get("frac_remaining", 1.0)), 0.0), 1.0)
+        surface_prob = self._surface_predict(values, margin, frac)
+        if surface_prob is not None:
+            return surface_prob
         if self.margin_min is None or self.margin_max is None:
             return self._batch_time_envelopes([(row, margin)], frac)[0]
 
@@ -159,6 +175,72 @@ class MonotoneBlendModel:
             candidates.append((row, margin))
         probs = self._batch_time_envelopes(candidates, frac)
         return max(probs)
+
+    def _surface_predict(self, values: dict[str, float], margin: int, frac: float) -> float | None:
+        if self.margin_min is None or self.margin_max is None:
+            return None
+        if margin < self.margin_min or margin > self.margin_max:
+            return None
+        if self.feature_names != FEATURE_NAMES:
+            return None
+        if abs(values.get("pregame_logit", 0.0)) > 1e-12:
+            return None
+
+        grid = tuple(float(f) for f in self.time_grid)
+        grid_idx = int(np.searchsorted(grid, frac - 1e-12, side="left"))
+        if grid_idx >= len(grid):
+            return None
+
+        overtime = float(values.get("is_overtime", 0.0))
+        key = (overtime, grid)
+        surface_cache = getattr(self, "_surface_cache", None)
+        if surface_cache is None:
+            self._surface_cache = {}
+            surface_cache = self._surface_cache
+        surface = surface_cache.get(key)
+        if surface is None:
+            surface = self._build_surface(overtime)
+            surface_cache[key] = surface
+
+        margin_idx = margin - self.margin_min
+        return float(surface[margin_idx, grid_idx])
+
+    def _build_surface(self, overtime: float) -> np.ndarray:
+        margins = list(range(int(self.margin_min), int(self.margin_max) + 1))
+        grid = [float(f) for f in self.time_grid]
+        matrix = []
+        normal_inputs = []
+        for margin in margins:
+            for frac in grid:
+                values = {
+                    "margin": float(margin),
+                    "margin_scaled": float(margin) / math.sqrt(frac + 1e-6),
+                    "frac_remaining": frac,
+                    "pregame_logit": 0.0,
+                    "pregame_logit_decay": 0.0,
+                    "is_overtime": overtime,
+                }
+                matrix.append([values[name] for name in self.feature_names])
+                normal_inputs.append((margin, frac))
+
+        base_probs = self.base_model.predict_proba(matrix)[:, 1]
+        normal_probs = np.array(
+            [self._normal_prob(margin, frac) for margin, frac in normal_inputs],
+            dtype=float,
+        )
+        alphas = np.array([self._alpha_for_frac(frac) for _margin, frac in normal_inputs], dtype=float)
+        blended = ((1.0 - alphas) * base_probs + alphas * normal_probs).reshape(len(margins), len(grid))
+
+        time_enveloped = np.empty_like(blended)
+        for i, margin in enumerate(margins):
+            if margin > 0:
+                time_enveloped[i] = np.maximum.accumulate(blended[i, ::-1])[::-1]
+            elif margin < 0:
+                time_enveloped[i] = np.minimum.accumulate(blended[i, ::-1])[::-1]
+            else:
+                time_enveloped[i] = blended[i]
+
+        return np.maximum.accumulate(time_enveloped, axis=0)
 
     def predict_proba(self, X) -> np.ndarray:
         arr = np.asarray(X, dtype=float)
@@ -198,7 +280,11 @@ def rows() -> list[dict]:
 def state(row: dict) -> GameState:
     period = int(row["period"])
     raw_outs = row.get("outs")
-    outs = int(raw_outs) if raw_outs in (0, 1, 2) else None
+    try:
+        raw_outs_int = int(raw_outs) if raw_outs is not None else None
+    except (TypeError, ValueError):
+        raw_outs_int = None
+    outs = raw_outs_int if raw_outs_int in (0, 1, 2) else None
     return GameState(
         league="mlb",
         margin=int(row["margin"]),
@@ -383,6 +469,7 @@ def main() -> None:
         alpha=BLEND_ALPHA,
         normal_mu=NORMAL_MU,
         normal_sigma=NORMAL_SIGMA,
+        alpha_power=BLEND_ALPHA_POWER,
         margin_min=-15,
         margin_max=15,
     )
@@ -415,24 +502,31 @@ def main() -> None:
                 "test_season": test_season,
                 "normal_baseline": {"mu": NORMAL_MU, "sigma": NORMAL_SIGMA},
                 "estimator": "GradientBoostingClassifier calibrated with 3-fold sigmoid calibration on training games only",
-                "post_processor": f"{BLEND_ALPHA:.0%} blend with normal baseline plus time and margin monotone envelopes",
-                "outs_handling": "outs 0-2 are used with outs_known=1; transient outs=3 is treated as unknown",
+                "post_processor": (
+                    f"{BLEND_ALPHA:.0%} normal-baseline blend"
+                    f"{'' if BLEND_ALPHA_POWER == 0 else f' decaying as frac_remaining^{BLEND_ALPHA_POWER:g}'} "
+                    "plus time and margin monotone envelopes"
+                ),
+                "outs_handling": "transient outs=3 is normalized to unknown; the shipped core-feature artifact does not consume outs",
             },
         },
         "notes": (
             "MLB live WP trained only on frozen live_winprob.build_features fields and post-processed "
-            f"with a {BLEND_ALPHA:.0%} normal-baseline blend plus monotone envelopes. "
+            f"with a {BLEND_ALPHA:.0%} normal-baseline blend"
+            f"{'' if BLEND_ALPHA_POWER == 0 else f' decaying as frac_remaining^{BLEND_ALPHA_POWER:g}'} "
+            "plus monotone envelopes. "
             "No test-set tuning; the latest harvested season is a held-out game-level season. "
-            "Top/bottom half-inning is represented through frac_remaining. Outs 0-2 are used with "
-            "an outs_known flag; transient outs=3 is treated as unobserved to avoid extrapolating "
-            "outside the active half-inning training range. "
+            "Top/bottom half-inning is represented through frac_remaining. Transient outs=3 is "
+            "treated as unobserved to avoid extrapolating outside the active half-inning range; "
+            "the shipped core-feature artifact does not consume outs. "
             "ESPN WP remains better on its partial-coverage benchmark."
         ),
     }
 
     path = artifact_path("mlb")
     should_save = (
-        validation["model"]["log_loss"] < CURRENT_LOG_LOSS
+        validation["model"]["brier"] < CURRENT_BRIER
+        and validation["model"]["log_loss"] < CURRENT_LOG_LOSS
         and validation["monotonicity_checks"]["passed"]
     )
     if should_save:

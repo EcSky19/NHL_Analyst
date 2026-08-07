@@ -196,17 +196,16 @@ Measured on a held-out season, alongside ESPN's own published win-probability cu
 | --- | ---: | ---: | ---: | ---: |
 | NBA | 0.164364 | 0.484255 | 0.164216 | **0.149702** |
 | NFL | 0.163903 | 0.479367 | 0.163775 | **0.145762** |
-| MLB | 0.154305 † | 0.462951 † | 0.155233 † | 0.153735 † (partial coverage) |
+| MLB | **0.155322** | **0.463994** | 0.156060 | 0.151983 (partial coverage) |
 | NHL | 0.174911 | 0.513699 | *is* the baseline | none published |
 
-† The MLB row is still measured on the small pre-expansion sample (264 games/season) and is **not** comparable to the other rows. It is being re-derived on the full 2,430-game seasons and will be corrected.
-
-The NBA and NHL rows moved when the training data was expanded to full seasons. **Do not read those movements as accuracy improvements** — the evaluation set changed underneath them, so the old and new numbers measure different things.
+All four rows are now measured on full regular seasons (~10,500 games, ~4.8M snapshots). They replace earlier figures measured on samples roughly a fifth to a ninth of the size. **Do not read the movement between the old and new numbers as accuracy improvements** — the evaluation sets changed, so the old and new figures measure different things.
 
 Read that honestly:
 
 - **ESPN's model is better than ours in every league where it publishes one.** We do not match it, and we are not claiming to. The gap is largest in the NFL.
-- **MLB is our one clear success**: it beats the analytic baseline on both Brier and log loss, and lands within 0.001 Brier of ESPN on the snapshots ESPN covers. (Being re-verified on the expanded data — see the † note above.)
+- **MLB is our one clear success**: it beats the analytic baseline on both Brier and log loss, and is the closest we get to ESPN, though it still trails ESPN by about 0.003 Brier on the snapshots ESPN covers.
+- **MLB is still systematically underconfident**, and we have not fixed it. A time-varying blend weight helped — mean prediction moved from 0.4881 to 0.5123 against an actual 0.5282, and a late one-run lead moved from 0.8041 to 0.8602 — but a one-run lead late actually wins **0.9204** of the time (n=8,827), so the model is still well short. This is an open problem, not a solved one.
 - **The training data was ~5x too small until recently**, and that was a real defect rather than merely a missing enhancement. The NBA sample carried a 0.5820 home-win rate against a true 0.5435, so the model had been fitting four points of sampling noise as if it were home-court advantage. Full seasons are now harvested for every league.
 - **More data did not rescue the NHL.** The hypothesis that seven failed learned models were starved of data was testable, and it was wrong: with 5x the data an eighth learned candidate still lost to the two-parameter analytic baseline on held-out data. The baseline still ships.
 - Refitting the NHL baseline on the full season made held-out accuracy *very slightly worse* (0.174911 vs 0.174603 Brier for the pre-expansion parameters; a game-level block bootstrap puts the difference at [-0.000565, -0.000036], so it is small but not zero). We kept the full-season refit anyway, because the only way to know the old parameters scored better here was to look at the held-out season, and choosing parameters on that basis is selecting on the test set.
@@ -216,6 +215,7 @@ Read that honestly:
 - **NHL ships the analytic baseline itself**, because eight learned models across three rounds all failed to beat it, and one of them was additionally non-monotone in margin (it rated a 4-goal lead below a 3-goal lead). See `docs\live_wp\nhl.md`.
 - ESPN publishes **no** win-probability curve for NHL, so that league has no external benchmark at all.
 - Every shipped model is required to be **monotone in both margin and time**: more lead is never worse, and a lead never loses value as the clock runs out. The time half of that rule was added late and caught NFL and MLB already violating it; both were refit and came out slightly more accurate, not less.
+- **That time gate was itself broken, and we found it by measuring rather than trusting it.** The monotone envelopes are built on a 41-point time grid, and the gate swept 40 steps — sampling exactly the points the envelope makes correct by construction. Re-sweeping at 401 points exposed real MLB reversals of up to **1.4e-02**, meaning a trailing team's win probability *rising* as the clock ran out, on an artifact that reported "0/40 drops, monotone". The gate now sweeps 400 steps at a resolution deliberately misaligned from the envelope grid, and sweeps negative margins too, since the worst violation was on the mirrored side. Any earlier claim in this repo that a model was time-monotone was measuring the wrong thing.
 - We know part of *why* ESPN wins the NFL: their model sees possession, down, distance and field position, and ours sees only score and clock. Measured on data we harvested to test exactly this, adding that situational state improves our NFL Brier from 0.170280 to 0.166505 — real, but it closes only about a sixth of the gap to ESPN, so situational blindness is not the whole explanation. See `docs\live_wp\nfl_situation_data.md`.
 
 These are model estimates, not betting lines, and they are not accurate enough to bet on. If a league has no validated artifact the API returns `available: false` with a reason and the UI shows "unavailable" rather than inventing a number. Per-league validation details, including failed experiments, are in `docs\live_wp\{league}.md`.
