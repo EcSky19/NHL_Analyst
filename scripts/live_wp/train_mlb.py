@@ -40,9 +40,10 @@ NORMAL_SIGMA = 4.5
 BLEND_ALPHA = 0.5
 BLEND_ALPHA_POWER = 0.5
 MAX_TRAIN_SNAPSHOTS_PER_GAME = 120
-CURRENT_BRIER = 0.157857
-CURRENT_LOG_LOSS = 0.470732
+CURRENT_BRIER = 0.155322
+CURRENT_LOG_LOSS = 0.463994
 MLB_FEATURE_NAMES = list(FEATURE_NAMES)
+MLB_EXTRAS_ALPHA = 0.0
 
 
 class MonotoneBlendModel:
@@ -73,7 +74,8 @@ class MonotoneBlendModel:
         self.margin_max = margin_max
         self.classes_ = np.array([0, 1])
         self._cache: dict[tuple[float, ...], float] = {}
-        self._surface_cache: dict[tuple[float, tuple[float, ...]], np.ndarray] = {}
+        self._surface_cache: dict[tuple[tuple[tuple[str, float], ...], tuple[float, ...]], np.ndarray] = {}
+        self.extras_probs: dict[int, float] = {}
 
     def _normal_prob(self, margin: int, frac: float) -> float:
         frac = min(max(float(frac), 0.0), 1.0)
@@ -83,7 +85,9 @@ class MonotoneBlendModel:
         sd = max(self.normal_sigma * math.sqrt(frac), 1e-6)
         return 0.5 * (1.0 + math.erf(mean / (sd * math.sqrt(2.0))))
 
-    def _alpha_for_frac(self, frac: float) -> float:
+    def _alpha_for_frac(self, frac: float, is_overtime: float = 0.0) -> float:
+        if is_overtime >= 0.5:
+            return 0.0
         frac = min(max(float(frac), 0.0), 1.0)
         alpha_power = float(getattr(self, "alpha_power", 0.0))
         if alpha_power <= 0.0:
@@ -100,6 +104,21 @@ class MonotoneBlendModel:
             values["pregame_logit_decay"] = values["pregame_logit"] * frac
         return [values[name] for name in self.feature_names]
 
+    def _extras_prob(self, margin: int) -> float | None:
+        extras_probs = getattr(self, "extras_probs", None) or {}
+        if not extras_probs:
+            return None
+        if margin in extras_probs:
+            return float(extras_probs[margin])
+        known = sorted(int(k) for k in extras_probs)
+        if not known:
+            return None
+        if margin < known[0]:
+            return float(extras_probs[known[0]])
+        if margin > known[-1]:
+            return float(extras_probs[known[-1]])
+        return None
+
     def _blend_prob(self, row: np.ndarray, frac: float) -> float:
         vector = self._with_frac(row, frac)
         key = tuple(round(float(v), 8) for v in vector)
@@ -109,7 +128,13 @@ class MonotoneBlendModel:
         base = float(self.base_model.predict_proba([vector])[0][1])
         margin = float(vector[self.feature_names.index("margin")])
         normal = self._normal_prob(int(round(margin)), frac)
-        alpha = self._alpha_for_frac(frac)
+        is_overtime = float(vector[self.feature_names.index("is_overtime")]) if "is_overtime" in self.feature_names else 0.0
+        extras = self._extras_prob(int(round(margin))) if is_overtime >= 0.5 and frac <= 1e-12 else None
+        if extras is not None:
+            prob = extras
+            self._cache[key] = prob
+            return prob
+        alpha = self._alpha_for_frac(frac, is_overtime)
         prob = (1.0 - alpha) * base + alpha * normal
         self._cache[key] = prob
         return prob
@@ -140,8 +165,24 @@ class MonotoneBlendModel:
             [self._normal_prob(int(round(margin)), grid_frac) for margin, grid_frac in normal_inputs],
             dtype=float,
         )
-        alphas = np.array([self._alpha_for_frac(grid_frac) for _margin, grid_frac in normal_inputs], dtype=float)
+        is_overtimes = np.array(
+            [
+                float(matrix[i][self.feature_names.index("is_overtime")])
+                if "is_overtime" in self.feature_names
+                else 0.0
+                for i in range(len(matrix))
+            ],
+            dtype=float,
+        )
+        alphas = np.array(
+            [self._alpha_for_frac(grid_frac, is_overtimes[i]) for i, (_margin, grid_frac) in enumerate(normal_inputs)],
+            dtype=float,
+        )
         blended = (1.0 - alphas) * base_probs + alphas * normal_probs
+        for i, (margin, grid_frac) in enumerate(normal_inputs):
+            extras = self._extras_prob(int(round(margin))) if is_overtimes[i] >= 0.5 and grid_frac <= 1e-12 else None
+            if extras is not None:
+                blended[i] = extras
 
         out = []
         for margin, start, stop in slices:
@@ -181,8 +222,6 @@ class MonotoneBlendModel:
             return None
         if margin < self.margin_min or margin > self.margin_max:
             return None
-        if self.feature_names != FEATURE_NAMES:
-            return None
         if abs(values.get("pregame_logit", 0.0)) > 1e-12:
             return None
 
@@ -191,21 +230,32 @@ class MonotoneBlendModel:
         if grid_idx >= len(grid):
             return None
 
-        overtime = float(values.get("is_overtime", 0.0))
-        key = (overtime, grid)
+        context_names = [
+            name
+            for name in self.feature_names
+            if name
+            not in {
+                "margin",
+                "margin_scaled",
+                "frac_remaining",
+                "pregame_logit_decay",
+            }
+        ]
+        context = tuple((name, round(float(values.get(name, 0.0)), 8)) for name in context_names)
+        key = (context, grid)
         surface_cache = getattr(self, "_surface_cache", None)
         if surface_cache is None:
             self._surface_cache = {}
             surface_cache = self._surface_cache
         surface = surface_cache.get(key)
         if surface is None:
-            surface = self._build_surface(overtime)
+            surface = self._build_surface(dict(context))
             surface_cache[key] = surface
 
         margin_idx = margin - self.margin_min
         return float(surface[margin_idx, grid_idx])
 
-    def _build_surface(self, overtime: float) -> np.ndarray:
+    def _build_surface(self, context: dict[str, float]) -> np.ndarray:
         margins = list(range(int(self.margin_min), int(self.margin_max) + 1))
         grid = [float(f) for f in self.time_grid]
         matrix = []
@@ -218,8 +268,11 @@ class MonotoneBlendModel:
                     "frac_remaining": frac,
                     "pregame_logit": 0.0,
                     "pregame_logit_decay": 0.0,
-                    "is_overtime": overtime,
+                    "is_overtime": 0.0,
+                    "outs": 0.0,
+                    "outs_known": 0.0,
                 }
+                values.update(context)
                 matrix.append([values[name] for name in self.feature_names])
                 normal_inputs.append((margin, frac))
 
@@ -228,8 +281,25 @@ class MonotoneBlendModel:
             [self._normal_prob(margin, frac) for margin, frac in normal_inputs],
             dtype=float,
         )
-        alphas = np.array([self._alpha_for_frac(frac) for _margin, frac in normal_inputs], dtype=float)
+        is_overtime_idx = self.feature_names.index("is_overtime") if "is_overtime" in self.feature_names else None
+        is_overtimes = np.array(
+            [float(row[is_overtime_idx]) if is_overtime_idx is not None else 0.0 for row in matrix],
+            dtype=float,
+        )
+        alphas = np.array(
+            [self._alpha_for_frac(frac, is_overtimes[i]) for i, (_margin, frac) in enumerate(normal_inputs)],
+            dtype=float,
+        )
         blended = ((1.0 - alphas) * base_probs + alphas * normal_probs).reshape(len(margins), len(grid))
+        if float(context.get("is_overtime", 0.0)) >= 0.5:
+            for i, margin in enumerate(margins):
+                extras = self._extras_prob(margin)
+                if extras is not None:
+                    blended[i, 0] = extras
+                    if margin < 0:
+                        blended[i] = np.maximum(blended[i], extras)
+                    elif margin > 0:
+                        blended[i] = np.minimum(blended[i], extras)
 
         time_enveloped = np.empty_like(blended)
         for i, margin in enumerate(margins):
@@ -372,6 +442,33 @@ def sampled_training_rows(data: list[dict]) -> list[dict]:
     return sampled
 
 
+def extras_prob_table(data: list[dict], margin_min: int, margin_max: int) -> dict[int, float]:
+    by_margin: dict[int, list[int]] = defaultdict(list)
+    all_extras: list[int] = []
+    for row in data:
+        if int(row["period"]) <= 9 or abs(float(row["frac_remaining"])) > 1e-12:
+            continue
+        margin = int(row["margin"])
+        outcome = int(row["home_won"])
+        all_extras.append(outcome)
+        if margin_min <= margin <= margin_max:
+            by_margin[margin].append(outcome)
+    prior = (sum(all_extras) / len(all_extras)) if all_extras else 0.5
+    table = {}
+    for margin in range(margin_min, margin_max + 1):
+        values = by_margin.get(margin, [])
+        if margin > 0:
+            raw = 1.0
+        elif values:
+            raw = (sum(values) + MLB_EXTRAS_ALPHA * prior) / (len(values) + MLB_EXTRAS_ALPHA)
+        else:
+            raw = 0.0 if margin < 0 else prior
+        table[margin] = min(max(float(raw), 1e-6), 1.0 - 1e-6)
+    for margin in range(margin_min + 1, margin_max + 1):
+        table[margin] = max(table[margin], table[margin - 1])
+    return table
+
+
 def evaluate(model, data: list[dict]) -> dict:
     ys = outcomes(data)
     st = [state(r) for r in data]
@@ -456,7 +553,8 @@ def main() -> None:
         GradientBoostingClassifier(n_estimators=120, learning_rate=0.05, max_depth=2, random_state=42),
     )
     model = CalibratedClassifierCV(base_model, method="sigmoid", cv=3)
-    model.fit([vector(r, MLB_FEATURE_NAMES) for r in train], outcomes(train))
+    feature_names = MLB_FEATURE_NAMES
+    model.fit([vector(r, feature_names) for r in train], outcomes(train))
     wrapper_cls = (
         MonotoneBlendModel
         if __name__ != "__main__"
@@ -464,7 +562,7 @@ def main() -> None:
     )
     model = wrapper_cls(
         model,
-        MLB_FEATURE_NAMES,
+        feature_names,
         league="mlb",
         alpha=BLEND_ALPHA,
         normal_mu=NORMAL_MU,
@@ -473,6 +571,7 @@ def main() -> None:
         margin_min=-15,
         margin_max=15,
     )
+    model.extras_probs = extras_prob_table(train_all, -15, 15)
 
     validation = evaluate(model, test)
     all_games = len({r["game_id"] for r in data})
@@ -480,7 +579,7 @@ def main() -> None:
     test_games = len({r["game_id"] for r in test})
     bundle = {
         "model": model,
-        "feature_names": MLB_FEATURE_NAMES,
+        "feature_names": feature_names,
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "n_games": all_games,
         "n_snapshots": len(data),
@@ -507,11 +606,12 @@ def main() -> None:
                     f"{'' if BLEND_ALPHA_POWER == 0 else f' decaying as frac_remaining^{BLEND_ALPHA_POWER:g}'} "
                     "plus time and margin monotone envelopes"
                 ),
+                "extras_handling": "extra-inning frac_remaining=0 states use a 2024 empirical margin table instead of the regulation normal baseline",
                 "outs_handling": "transient outs=3 is normalized to unknown; the shipped core-feature artifact does not consume outs",
             },
         },
         "notes": (
-            "MLB live WP trained only on frozen live_winprob.build_features fields and post-processed "
+            "MLB live WP trained only on frozen live_winprob.build_features core fields and post-processed "
             f"with a {BLEND_ALPHA:.0%} normal-baseline blend"
             f"{'' if BLEND_ALPHA_POWER == 0 else f' decaying as frac_remaining^{BLEND_ALPHA_POWER:g}'} "
             "plus monotone envelopes. "

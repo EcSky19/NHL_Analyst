@@ -65,3 +65,35 @@ def test_mlb_edge_states_are_finite(margin: int, frac_remaining: float):
     prob = _prob(margin, frac_remaining)
     assert math.isfinite(prob)
     assert 0.0 < prob < 1.0
+
+
+@pytest.mark.parametrize("points", [401, 1601, 4001])
+@pytest.mark.parametrize("is_overtime", [False, True])
+def test_mlb_high_resolution_time_monotonicity(points: int, is_overtime: bool):
+    for margin in (1, 2, 3, -1, -2, -3):
+        probs = []
+        for i in range(points):
+            frac = 1.0 - i / (points - 1)
+            prob, meta = predict_home_win_prob(
+                GameState(league="mlb", margin=margin, frac_remaining=frac, is_overtime=is_overtime)
+            )
+            assert meta["available"] is True
+            assert prob is not None
+            probs.append(prob)
+        if margin > 0:
+            assert all(probs[i + 1] >= probs[i] - 1e-9 for i in range(points - 1))
+        else:
+            assert all(probs[i + 1] <= probs[i] + 1e-9 for i in range(points - 1))
+
+
+@pytest.mark.parametrize("points", [401, 1601, 4001])
+@pytest.mark.parametrize("is_overtime", [False, True])
+def test_mlb_high_resolution_margin_monotonicity(points: int, is_overtime: bool):
+    for i in range(points):
+        frac = i / (points - 1)
+        probs = [
+            predict_home_win_prob(GameState(league="mlb", margin=margin, frac_remaining=frac, is_overtime=is_overtime))[0]
+            for margin in range(-15, 16)
+        ]
+        assert all(prob is not None for prob in probs)
+        assert all(probs[j + 1] >= probs[j] - 1e-9 for j in range(len(probs) - 1))

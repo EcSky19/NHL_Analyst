@@ -37,6 +37,10 @@ pregame features are zero.
 The current artifact blends the learned probability with the analytic normal
 baseline (`mu=0.25`, `sigma=4.5`) using a time-varying normal weight
 `0.5 * sqrt(frac_remaining)`, then applies time and margin monotone envelopes.
+For extra innings (`is_overtime=True`, `frac_remaining=0.0`) the regulation
+normal baseline is not used; those states use a monotone empirical margin table
+fit from 2024 extra-inning snapshots only. This avoids treating every
+`frac_remaining=0.0` MLB row as a completed game.
 The time envelope uses a 401-point precomputed surface and does not include an
 off-grid `blend(frac_remaining)` term, so the surface is monotone between grid
 points as well as on the grid. The blend schedule was selected on a
@@ -52,7 +56,7 @@ outs because validation did not require it.
 
 | Predictor | Brier | Log loss | Notes |
 | --- | ---: | ---: | --- |
-| MLB model current | 0.155322 | 0.463994 | All held-out snapshots |
+| MLB model current | 0.155260 | 0.463786 | All held-out snapshots |
 | Previously shipped artifact re-scored on expanded 2025 | 0.157857 | 0.470732 | All held-out snapshots |
 | Leader baseline | 0.171609 | 0.523497 | 0.85 if home leads, 0.15 if trails |
 | Constant 0.5 | 0.250000 | 0.693147 | All held-out snapshots |
@@ -100,7 +104,7 @@ time-varying blend candidate (0.155303 / 0.463914 to 0.155322 / 0.463994).
 | Innings 1-3 | 534,595 | 0.213190 | 0.611637 | 0.214580 | 0.209350 (72,031/534,595) |
 | Innings 4-6 | 466,829 | 0.146026 | 0.445656 | 0.148518 | 0.142356 (62,019/466,829) |
 | Innings 7-9 | 367,725 | 0.081469 | 0.268508 | 0.085474 | 0.076260 (46,792/367,725) |
-| Extra/no regulation left | 18,478 | 0.184290 | 0.540032 | 0.212861 | 0.155400 (2,364/18,478) |
+| Extra/no regulation left | 18,478 | 0.180725 | 0.529009 | 0.212861 | 0.155400 (2,364/18,478) |
 
 Early-game skill remains the weakest phase; the normal baseline was slightly
 better in innings 1-3 by Brier and log loss.
@@ -120,7 +124,49 @@ half-inning range.
 
 Extra innings use `is_overtime=True` and `frac_remaining=0.0`. The model remains
 finite at those states, but it cannot distinguish top vs bottom of an extra
-inning through the current frozen feature map.
+inning through the current frozen feature map. A 2024 empirical margin table is
+therefore used only at the extra-inning endpoint; it materially fixes the
+average home-trailing-by-one extra-inning state, but it still cannot resolve
+top/bottom-specific extra-inning context.
+
+How much of that is demonstrable, measured independently: **almost none of the
+aggregate movement is statistically significant, and the per-cell claim is.**
+Extra-inning snapshots are extremely clustered -- 18,478 rows come from only 209
+games, and the whole `margin=0` cell is those same 209 games -- so the effective
+sample is far smaller than the row counts suggest. Game-level cluster bootstraps
+on held-out 2025 give:
+
+| Quantity | Change | 95% CI | Verdict |
+| --- | ---: | ---: | --- |
+| Full-season Brier | -0.000057 | [-0.000137, +0.000015] | not significant |
+| Extras-only Brier | -0.004282 | [-0.010252, +0.001359] | not significant |
+| Extras-only log loss | -0.014038 | [-0.033667, +0.004440] | not significant (better in 93.3% of resamples) |
+
+The one defensible claim is per-cell falsifiability, the same standard applied to
+the NBA overtime fix: for `margin=-1` in extras (128 games) the observed rate is
+0.2887 with a cluster CI of [0.2068, 0.3767]. The old model predicted 0.1425,
+which is **outside** that interval and therefore measurably wrong; the new model
+predicts 0.2929, which is inside it. No aggregate metric regressed, so the change
+ships on that basis rather than on the aggregate numbers.
+
+Two things this measurement retracted:
+
+- The `margin=0` extras cell was originally diagnosed as a defect (0.6057
+  predicted against 0.6664 observed). On 209 games the cluster CI is
+  [0.5859, 0.7441], which **contains** the prediction. That "defect" was largely
+  an artifact of counting correlated snapshots as independent, and it correctly
+  did not move.
+- The sparse negative cells that appear to regress (`margin=-2`: 0.0526 to
+  0.1181; `margin=-4`: 0.0280 to 0.0577) rest on 49 and 21 games. `margin=-2`
+  stays inside its CI both before and after; `margin=-4` has a degenerate CI
+  (no home wins at all), so neither the regression nor the improvement there is
+  measurable.
+
+Known latent risk: the empirical table lets predictions reach the 1e-6 clip,
+where the old artifact floored at 0.0126. Across both seasons (2.77M snapshots)
+**no** prediction within 1e-3 of 0 or 1 was contradicted by the outcome, so this
+is not an observed defect -- but a single contradicted 1e-6 prediction would cost
+13.8 nats, so the floor is worth revisiting if extras data ever grows.
 
 If the home team is leading after the top of the 9th, MLB simply ends the game;
 live serving should normally see that game as final rather than as an in-game
@@ -136,7 +182,7 @@ Measured from the saved artifact:
 - Home -1 late: 0.212800.
 - Tied bottom 9th proxy: 0.580569.
 - Home +1 bottom 9th proxy: 0.914887.
-- Tied extra-inning state: 0.605688.
+- Tied extra-inning state: 0.602595.
 
 These pass the intended directionality checks: home win probability rises with
 lead, the same lead is worth more later, and bottom-9 proxies favor the home
