@@ -8,7 +8,13 @@ from typing import Any
 from fastapi import APIRouter
 
 from app.config import fail, ok, season_state_for, settings
-from app.services.espn_pbp import REGULATION, frac_remaining_clock, frac_remaining_innings, parse_clock_seconds
+from app.services.espn_pbp import (
+    REGULATION,
+    frac_remaining_clock,
+    frac_remaining_innings,
+    ot_frac_remaining_clock,
+    parse_clock_seconds,
+)
 from app.services.live_winprob import GameState, predict_home_win_prob
 from app.services.nba_service import (
     ESPN_SOURCE,
@@ -305,7 +311,9 @@ def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
         frac_remaining = 0.0 if is_overtime else frac_remaining_innings(period, is_top)
     else:
         is_overtime = period > int(REGULATION[league]["periods"])
-        frac_remaining = frac_remaining_clock(league, period, parse_clock_seconds(live.get("clock")))
+        clock_seconds = parse_clock_seconds(live.get("clock"))
+        frac_remaining = frac_remaining_clock(league, period, clock_seconds)
+        ot_frac_remaining = ot_frac_remaining_clock(league, period, clock_seconds)
 
     prob, meta = predict_home_win_prob(
         GameState(
@@ -314,6 +322,7 @@ def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
             frac_remaining=frac_remaining,
             period=period,
             is_overtime=is_overtime,
+            ot_frac_remaining=ot_frac_remaining if league == "nba" else None,
         )
     )
     if prob is None:

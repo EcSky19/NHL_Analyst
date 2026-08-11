@@ -125,6 +125,16 @@ def frac_remaining_clock(league: str, period: int, clock_seconds: float | None) 
     return max(0.0, min(1.0, 1.0 - elapsed / total))
 
 
+def ot_frac_remaining_clock(league: str, period: int, clock_seconds: float | None) -> float | None:
+    """Share of the current overtime period still to play, or None if unknown."""
+    conf = REGULATION[league]
+    if period <= int(conf["periods"]) or clock_seconds is None:
+        return None
+    period_seconds = float(conf["ot_minutes"]) * 60.0
+    remaining = period_seconds - clock_seconds if conf["counts_up"] else clock_seconds
+    return max(0.0, min(1.0, remaining / period_seconds))
+
+
 def frac_remaining_innings(inning: int, is_top: bool) -> float:
     """Fraction of a regulation baseball game still to play."""
     half_innings_done = (inning - 1) * 2 + (0 if is_top else 1)

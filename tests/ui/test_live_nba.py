@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 
 CONTRACT_KEYS = {
     "game_id",
@@ -87,3 +89,28 @@ def test_nba_completed_games_are_never_labelled_scheduled(client):
     assert completed
     assert all(row["status"] != "scheduled" for row in completed)
     assert {row["status"] for row in payload["data"]} <= ALLOWED_STATUSES
+
+
+def test_nba_live_win_probability_threads_overtime_clock(monkeypatch) -> None:
+    import app.routers.nba as nba
+
+    seen = {}
+
+    def fake_predict(state):
+        seen["state"] = state
+        return 0.6, {"available": True}
+
+    monkeypatch.setattr(nba, "predict_home_win_prob", fake_predict)
+    row = {
+        "status": "live",
+        "home_score": 101,
+        "away_score": 99,
+        "live": {"period": 5, "clock": "4:00"},
+    }
+
+    wp = nba._live_win_probability(row, "nba")
+
+    assert wp["available"] is True
+    assert seen["state"].is_overtime is True
+    assert seen["state"].frac_remaining == 0.0
+    assert seen["state"].ot_frac_remaining == pytest.approx(240 / 300)

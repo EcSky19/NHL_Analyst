@@ -69,6 +69,12 @@ class GameState:
     # features it actually consumes -- so adding fields here can never disturb
     # an existing model. Only populate a field when it is genuinely known.
     outs: int | None = None                 # MLB: outs in the current half-inning, 0-2
+    # Share of the CURRENT overtime period still to play, in [0, 1]. Only
+    # meaningful when is_overtime is True. `frac_remaining` measures regulation
+    # only and is pinned to 0.0 for every overtime snapshot, so without this
+    # field an overtime game has no time coordinate at all: the first second and
+    # the last second of overtime are indistinguishable to a model.
+    ot_frac_remaining: float | None = None
     offense_is_home: bool | None = None     # NFL: which side has possession
     down: int | None = None                 # NFL: 1-4
     distance: int | None = None             # NFL: yards needed for a first down
@@ -103,6 +109,12 @@ def build_features(state: GameState) -> dict[str, float]:
     pregame_logit = logit(pregame) if pregame is not None else 0.0
     offense = state.offense_is_home
     yte = state.yards_to_endzone
+    ot_frac_raw = state.ot_frac_remaining
+    ot_known = state.is_overtime and ot_frac_raw is not None
+    # Default 1.0 ("none of the extra period has elapsed") rather than 0.0, so
+    # that a regulation snapshot -- where no overtime has begun -- is not
+    # encoded as an overtime period that has already run out.
+    ot_frac = min(max(float(ot_frac_raw), 0.0), 1.0) if ot_known else 1.0
     return {
         "margin": margin,
         "margin_scaled": margin / math.sqrt(frac + _EPS),
@@ -111,6 +123,18 @@ def build_features(state: GameState) -> dict[str, float]:
         # The pregame prior should fade as the game resolves itself.
         "pregame_logit_decay": pregame_logit * frac,
         "is_overtime": 1.0 if state.is_overtime else 0.0,
+        # --- Overtime clock. -------------------------------------------------
+        # `margin_scaled` divides by sqrt(frac_remaining), and frac_remaining is
+        # 0.0 throughout overtime, so in overtime margin_scaled saturates at
+        # margin/sqrt(1e-6) = 1000 * margin. Every overtime lead therefore looks
+        # identical and enormous. These two keys restore the missing clock so a
+        # model can tell the start of an extra period from its final seconds.
+        "ot_frac_remaining": ot_frac,
+        "ot_frac_known": 1.0 if ot_known else 0.0,
+        # The overtime analogue of margin_scaled: a lead is worth far more with
+        # 10 seconds of overtime left than with the full period to play. Zero
+        # outside overtime, where the concept does not apply.
+        "margin_scaled_ot": (margin / math.sqrt(ot_frac + _EPS)) if ot_known else 0.0,
         # --- Optional situational state. -----------------------------------
         # Each value is paired with a *_known flag so a model can tell a
         # genuine zero from an unobserved field instead of silently treating

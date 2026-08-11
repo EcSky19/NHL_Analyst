@@ -33,6 +33,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 
+from app.services.espn_pbp import ot_frac_remaining_clock
 from app.services.live_winprob import (
     FEATURE_NAMES,
     GameState,
@@ -47,7 +48,15 @@ SEED = 20260806
 OLD_NORMAL_PARAMS = {"mu": 2.0987954533865993, "sigma": 18.81951172745765}
 PUBLISHED_OLD_SAMPLE = {"brier": 0.167947, "log_loss": 0.491963}
 CORE_FEATURES = ["margin", "margin_scaled", "frac_remaining", "is_overtime"]
-GRID_FEATURES = ["margin", "frac_remaining", "is_overtime"]
+GRID_FEATURES = [
+    "margin",
+    "frac_remaining",
+    "is_overtime",
+    "ot_frac_remaining",
+    "ot_frac_known",
+    "margin_scaled",
+    "margin_scaled_ot",
+]
 POLY_FEATURES = ["margin", "frac_remaining", "is_overtime"]
 
 
@@ -89,7 +98,7 @@ class GridBlendModel:
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "GridBlendModel":
         arr = np.asarray(X, dtype=float)
-        core = self._core_matrix(arr[:, 0], arr[:, 1], arr[:, 2])
+        core = self._core_matrix(arr)
         self.base_model.fit(core, y)
         self._build_grid()
         return self
@@ -105,17 +114,24 @@ class GridBlendModel:
         return np.clip(out, 1e-6, 1.0 - 1e-6)
 
     @staticmethod
-    def _core_matrix(margin: np.ndarray, frac: np.ndarray, is_overtime: np.ndarray) -> np.ndarray:
-        margin = np.asarray(margin, dtype=float)
-        frac = np.clip(np.asarray(frac, dtype=float), 0.0, 1.0)
-        return np.column_stack(
-            [margin, margin / np.sqrt(frac + 1e-6), frac, np.asarray(is_overtime, dtype=float)]
-        )
+    def _core_matrix(arr: np.ndarray) -> np.ndarray:
+        arr = np.asarray(arr, dtype=float)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+        return arr
 
-    def _raw_prob(self, margin: np.ndarray, frac: np.ndarray, is_overtime: np.ndarray) -> np.ndarray:
-        core = self._core_matrix(margin, frac, is_overtime)
+    def _raw_prob(self, features: np.ndarray) -> np.ndarray:
+        core = self._core_matrix(features)
         learned = self.base_model.predict_proba(core)[:, 1]
-        normal = self._normal_prob(np.asarray(margin, dtype=float), np.asarray(frac, dtype=float))
+        margin = core[:, 0]
+        frac = core[:, 1]
+        is_overtime = core[:, 2] >= 0.5
+        ot_frac = core[:, 3]
+        # NBA overtime is five minutes, so translate the overtime clock to the
+        # equivalent share of regulation before blending with the regulation
+        # normal baseline. Using zero would reintroduce the saturated bug.
+        effective_frac = np.where(is_overtime, ot_frac * (5.0 / 48.0), frac)
+        normal = self._normal_prob(margin, effective_frac)
         return np.clip((1.0 - self.alpha) * learned + self.alpha * normal, 1e-6, 1.0 - 1e-6)
 
     def _build_grid(self) -> None:
@@ -124,7 +140,15 @@ class GridBlendModel:
         grids = []
         for overtime in (0.0, 1.0):
             mm, ff = np.meshgrid(self.margins_, self.fracs_, indexing="ij")
-            raw = self._raw_prob(mm.ravel(), ff.ravel(), np.full(mm.size, overtime)).reshape(mm.shape)
+            features = []
+            for margin, f in zip(mm.ravel(), ff.ravel()):
+                if overtime:
+                    state = GameState("nba", int(margin), 0.0, 5, True, ot_frac_remaining=float(f))
+                else:
+                    state = GameState("nba", int(margin), float(f), 4, False)
+                feats = build_features(state)
+                features.append([feats[name] for name in GRID_FEATURES])
+            raw = self._raw_prob(np.asarray(features, dtype=float)).reshape(mm.shape)
             projected = np.maximum.accumulate(raw, axis=0)
             for idx, margin in enumerate(self.margins_):
                 if margin > 0:
@@ -140,8 +164,11 @@ class GridBlendModel:
         if arr.ndim == 1:
             arr = arr.reshape(1, -1)
         margin = np.rint(arr[:, 0]).astype(int)
-        frac = np.clip(arr[:, 1], 0.0, 1.0)
         ot = (arr[:, 2] >= 0.5).astype(int) if arr.shape[1] > 2 else np.zeros(len(arr), dtype=int)
+        if arr.shape[1] > 3:
+            frac = np.clip(np.where(ot == 1, arr[:, 3], arr[:, 1]), 0.0, 1.0)
+        else:
+            frac = np.clip(arr[:, 1], 0.0, 1.0)
         margin_idx = np.clip(margin - self.margin_min, 0, len(self.margins_) - 1)
         out = np.empty(len(arr), dtype=float)
         for i, (overtime, mi, f) in enumerate(zip(ot, margin_idx, frac)):
@@ -213,7 +240,7 @@ def rows_from_db() -> list[dict[str, Any]]:
     rows = conn.execute(
         """
         SELECT s.game_id, g.game_date, g.season_start_year, s.seq, s.period,
-               s.frac_remaining, s.margin, s.home_won, s.espn_home_wp
+               s.clock_seconds, s.frac_remaining, s.margin, s.home_won, s.espn_home_wp
         FROM snapshots s
         JOIN games g ON g.game_id = s.game_id
         WHERE s.home_won IS NOT NULL AND g.n_snapshots > 0
@@ -226,7 +253,16 @@ def rows_from_db() -> list[dict[str, Any]]:
 
 def state_for(row: dict[str, Any]) -> GameState:
     period = int(row["period"])
-    return GameState("nba", int(row["margin"]), float(row["frac_remaining"]), period, period > 4)
+    is_overtime = period >= 5
+    ot_frac = ot_frac_remaining_clock("nba", period, row.get("clock_seconds")) if is_overtime else None
+    return GameState(
+        league="nba",
+        margin=int(row["margin"]),
+        frac_remaining=float(row["frac_remaining"]),
+        period=period,
+        is_overtime=is_overtime,
+        ot_frac_remaining=ot_frac,
+    )
 
 
 def matrix(rows: list[dict[str, Any]], feature_names: list[str]) -> np.ndarray:
@@ -358,6 +394,35 @@ def matrix_for_states(feature_names: list[str], margins: Iterable[int] | Iterabl
     return np.asarray(rows, dtype=float)
 
 
+def overtime_metric(rows: list[dict[str, Any]], probs: np.ndarray, name: str) -> dict[str, Any]:
+    idx = [i for i, r in enumerate(rows) if int(r["period"]) >= 5]
+    if not idx:
+        return {"name": name, "n": 0, "brier": None, "log_loss": None}
+    return metric_row(name, probs[idx], labels([rows[i] for i in idx]))
+
+
+def overtime_margin_table(rows: list[dict[str, Any]], probs: np.ndarray) -> list[dict[str, Any]]:
+    out = []
+    margins = [-2, -1, 0, 1, 2, 3]
+    for margin in margins:
+        idx = [i for i, r in enumerate(rows) if int(r["period"]) >= 5 and int(r["margin"]) == margin]
+        if not idx:
+            out.append({"margin": margin, "n": 0})
+            continue
+        y = labels([rows[i] for i in idx])
+        pred = np.asarray(probs[idx], dtype=float)
+        out.append(
+            {
+                "margin": margin,
+                "n": len(idx),
+                "model_pred": float(np.mean(pred)),
+                "actual": float(np.mean(y)),
+                "gap": float(np.mean(y) - np.mean(pred)),
+            }
+        )
+    return out
+
+
 def phase_metrics(rows: list[dict[str, Any]], probs: np.ndarray) -> list[dict[str, Any]]:
     phases = [("1.00-0.75", 0.75, 1.000001), ("0.75-0.50", 0.50, 0.75), ("0.50-0.25", 0.25, 0.50), ("0.25-0.00", -1e-9, 0.25)]
     y = labels(rows)
@@ -467,6 +532,7 @@ def score_existing_artifact(test_rows: list[dict[str, Any]]) -> dict[str, Any]:
     probs = art["model"].predict_proba(matrix(test_rows, names))[:, 1]
     y = labels(test_rows)
     out = metric_row("current_artifact_rescored_new_holdout", probs, y)
+    out["overtime"] = overtime_metric(test_rows, probs, "current_artifact_overtime")
     out["max_calibration_gap"] = max_calibration_gap(probs.tolist(), y.tolist(), bins=10, min_n=100)
     out["artifact_claim_on_old_sample"] = PUBLISHED_OLD_SAMPLE
     return out
@@ -537,7 +603,7 @@ def main() -> int:
             min_samples_leaf=min_leaf,
             max_leaf_nodes=max_leaf,
             random_state=args.seed,
-            monotonic_cst=[1, 1, 0, 0],
+            monotonic_cst=[1, 0, 0, 0, 0, 1, 1],
             early_stopping=False,
         )
         candidates.append(
@@ -595,6 +661,7 @@ def main() -> int:
     selected_model.fit(x_train_grid if selected_features == GRID_FEATURES else matrix(train, selected_features), y_train)
     test_probs = selected_model.predict_proba(x_test_grid if selected_features == GRID_FEATURES else matrix(test, selected_features))[:, 1]
     final = metric_row("selected_model", test_probs, y_test)
+    final["overtime"] = overtime_metric(test, test_probs, "selected_model_overtime")
     final["max_calibration_gap"] = max_calibration_gap(test_probs.tolist(), y_test.tolist(), bins=10, min_n=100)
     final_mono = monotonicity(selected_model, selected_features)
 
@@ -651,6 +718,7 @@ def main() -> int:
             "validation_baseline": val_baseline_logloss,
             "candidates": val_results,
             "holdout_metrics": final,
+            "overtime_margin_calibration": overtime_margin_table(test, test_probs),
             "espn": espn_metric,
             "monotonicity": final_mono,
             "phase_breakdown": phase_metrics(test, test_probs),

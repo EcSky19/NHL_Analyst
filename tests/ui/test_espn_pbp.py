@@ -52,6 +52,12 @@ class TestClockDirection:
         assert P.frac_remaining_clock("nba", 5, 300.0) == 0.0
         assert P.frac_remaining_clock("nhl", 4, 10.0) == 0.0
 
+    def test_nba_overtime_fraction_uses_current_ot_clock(self):
+        assert P.ot_frac_remaining_clock("nba", 5, 300.0) == pytest.approx(1.0)
+        assert P.ot_frac_remaining_clock("nba", 5, 0.0) == pytest.approx(0.0)
+        assert P.ot_frac_remaining_clock("nba", 4, 60.0) is None
+        assert P.ot_frac_remaining_clock("nba", 5, None) is None
+
     def test_missing_clock_falls_back_to_whole_periods(self):
         assert P.frac_remaining_clock("nba", 3, None) == pytest.approx(0.5)
 

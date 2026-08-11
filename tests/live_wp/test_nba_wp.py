@@ -4,10 +4,10 @@ import math
 
 import pytest
 
-from app.services.live_winprob import FEATURE_NAMES, GameState, has_model, load_model, predict_home_win_prob
+from app.services.live_winprob import GameState, has_model, load_model, predict_home_win_prob
 
 
-def score(margin: int, frac_remaining: float, period: int = 4) -> float:
+def score(margin: int, frac_remaining: float, period: int = 4, ot_frac_remaining: float | None = None) -> float:
     prob, meta = predict_home_win_prob(
         GameState(
             league="nba",
@@ -15,6 +15,7 @@ def score(margin: int, frac_remaining: float, period: int = 4) -> float:
             frac_remaining=frac_remaining,
             period=period,
             is_overtime=period > 4,
+            ot_frac_remaining=ot_frac_remaining,
         )
     )
     assert meta["available"] is True
@@ -33,7 +34,19 @@ def test_nba_artifact_declares_fixed_split_and_serving_features():
     assert isinstance(bundle, dict)
     assert bundle["train_seasons"] == [2023]
     assert bundle["test_seasons"] == [2024]
-    assert set(bundle["feature_names"]).issubset(FEATURE_NAMES)
+    assert set(bundle["feature_names"]).issubset(
+        {
+            "margin",
+            "margin_scaled",
+            "frac_remaining",
+            "pregame_logit",
+            "pregame_logit_decay",
+            "is_overtime",
+            "ot_frac_remaining",
+            "ot_frac_known",
+            "margin_scaled_ot",
+        }
+    )
     assert bundle["validation"]["fixed_holdout_split"]["game_id_overlap"] == 0
 
 
@@ -65,6 +78,13 @@ def test_nba_same_lead_is_more_valuable_late():
     early = score(8, 0.8, period=1)
     late = score(8, 0.2, period=4)
     assert late > early
+
+
+def test_nba_overtime_clock_changes_fixed_margin_probability():
+    start = score(2, 0.0, period=5, ot_frac_remaining=1.0)
+    final_seconds = score(2, 0.0, period=5, ot_frac_remaining=5 / 300)
+    assert abs(start - 0.5) < abs(final_seconds - 0.5)
+    assert start < final_seconds
 
 
 def test_nba_time_monotonicity_grid():

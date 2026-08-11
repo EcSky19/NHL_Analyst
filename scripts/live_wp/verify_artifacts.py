@@ -19,6 +19,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.special import ndtr
 
+from app.services.espn_pbp import REGULATION, ot_frac_remaining_clock
 from app.services.live_winprob import (
     GameState,
     baseline_normal,
@@ -40,7 +41,9 @@ print(f"[{LEAGUE}] claimed brier={art.get('brier')} log_loss={art.get('log_loss'
 
 con = sqlite3.connect(f"data/live_wp/{LEAGUE}_snapshots.db")
 cols = {d[1] for d in con.execute("PRAGMA table_info(snapshots)")}
-SEL = "s.game_id, s.period, s.frac_remaining, s.margin, s.home_won, s.espn_home_wp"
+HAS_CLOCK = "clock_seconds" in cols
+CLOCK_COL = "s.clock_seconds" if HAS_CLOCK else "NULL"
+SEL = (f"s.game_id, s.period, s.frac_remaining, s.margin, s.home_won, s.espn_home_wp, {CLOCK_COL}")
 if "season" in cols:
     q = f"SELECT {SEL} FROM snapshots s WHERE s.season = ? AND s.home_won IS NOT NULL"
 else:
@@ -66,10 +69,19 @@ periods = {"nhl": 3, "nba": 4, "nfl": 4, "mlb": 9}[LEAGUE]
 
 def build(rowset):
     X, y, espn, states = [], [], [], []
-    for _gid, period, frac, margin, won, ewp in rowset:
+    for _gid, period, frac, margin, won, ewp, clock in rowset:
+        is_ot = bool(period and period > periods)
+        # Overtime snapshots carry frac_remaining == 0.0, so without the
+        # overtime clock the model is being scored in a state it is never
+        # actually served in. Reconstruct it exactly as training does.
+        ot_frac = (
+            ot_frac_remaining_clock(LEAGUE, int(period), clock)
+            if (is_ot and LEAGUE in REGULATION and clock is not None)
+            else None
+        )
         st = GameState(
             league=LEAGUE, margin=margin, frac_remaining=frac,
-            period=period, is_overtime=bool(period and period > periods),
+            period=period, is_overtime=is_ot, ot_frac_remaining=ot_frac,
         )
         feats = build_features(st)
         X.append([feats[n] for n in names])
