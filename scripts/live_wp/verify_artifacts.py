@@ -10,8 +10,18 @@ Usage (from the repo root):
 
     $env:PYTHONPATH="."; python scripts\\live_wp\\verify_artifacts.py nba 2023 2024
     $env:PYTHONPATH="."; python scripts\\live_wp\\verify_artifacts.py nhl 2024-25 2025-26
+
+A full run re-scores every snapshot and takes minutes. To check only whether a
+training script has moved since its artifact was written (see "the artifacts
+are not self-contained" in docs/live_wp/README.md), which is fast:
+
+    $env:PYTHONPATH="."; python scripts\\live_wp\\verify_artifacts.py mlb --provenance-only
+
+which exits non-zero if the source has drifted or is uncommitted.
 """
+import shutil
 import sqlite3
+import subprocess
 import sys
 
 import joblib
@@ -31,8 +41,14 @@ from app.services.live_winprob import (
 )
 
 LEAGUE = sys.argv[1]
-TRAIN_SEASON = sys.argv[2]
-TEST_SEASON = sys.argv[3]
+# Provenance is cheap; re-scoring is not. Allow checking drift on its own so
+# there is no excuse to skip it before trusting a published number.
+PROVENANCE_ONLY = "--provenance-only" in sys.argv[1:]
+_pos = [a for a in sys.argv[2:] if not a.startswith("-")]
+TRAIN_SEASON = _pos[0] if _pos else None
+TEST_SEASON = _pos[1] if len(_pos) > 1 else None
+if not PROVENANCE_ONLY and (TRAIN_SEASON is None or TEST_SEASON is None):
+    sys.exit("usage: verify_artifacts.py <league> <train_season> <test_season> [--provenance-only]")
 
 art = joblib.load(f"models/live_wp/{LEAGUE}_live_wp.joblib")
 names = art["feature_names"]
@@ -44,6 +60,56 @@ print(f"[{LEAGUE}] feature_names={names}")
 _model_obj = art["model"] if isinstance(art, dict) else art
 print(f"[{LEAGUE}] model class={type(_model_obj).__module__}.{type(_model_obj).__qualname__} "
       f"(behaviour comes from that CURRENT source file, not from the .joblib)")
+
+
+def _git(*args):
+    """Run a git command, returning stripped stdout or None if git is unusable."""
+    if shutil.which("git") is None:
+        return None
+    try:
+        out = subprocess.run(("git",) + args, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip() if out.returncode == 0 else None
+
+
+def _source_drift(model_obj, artifact_path):
+    """Report whether the model's source file moved after the artifact was written.
+
+    Documenting the provenance hazard is not the same as detecting it. Because
+    the pickle only references the class, a training script edited after the
+    last retrain silently changes what the artifact does. Git already knows
+    both timestamps, so the drift is checkable rather than merely warned about.
+    """
+    module = type(model_obj).__module__
+    source = module.replace(".", "/") + ".py"
+    if _git("ls-files", "--error-unmatch", source) is None:
+        return f"source {source} is not tracked by git; drift cannot be checked"
+    dirty = _git("status", "--porcelain", "--", source, artifact_path) or ""
+    src_t = _git("log", "-1", "--format=%ct", "--", source)
+    art_t = _git("log", "-1", "--format=%ct", "--", artifact_path)
+    if not src_t or not art_t:
+        return f"no commit history for {source} or {artifact_path}; drift cannot be checked"
+    src_sha = _git("log", "-1", "--format=%h", "--", source)
+    lines = []
+    if int(src_t) > int(art_t):
+        lines.append(
+            f"DRIFT: {source} was last committed in {src_sha}, AFTER the last commit "
+            f"touching {artifact_path}. The served logic is newer than the fitted "
+            f"arrays; these metrics may not describe any model that was ever trained.")
+    else:
+        lines.append(f"source {source} last changed in {src_sha}, at or before the artifact: no drift")
+    if dirty:
+        lines.append(f"UNCOMMITTED changes to {source} and/or {artifact_path}; "
+                     "these numbers describe your working tree, not any commit")
+    return "\n".join(f"[{LEAGUE}] {ln}" for ln in lines)
+
+
+_ART_PATH = f"models/live_wp/{LEAGUE}_live_wp.joblib"
+_drift = _source_drift(_model_obj, _ART_PATH)
+print(_drift if _drift.startswith("[") else f"[{LEAGUE}] {_drift}")
+if PROVENANCE_ONLY:
+    sys.exit(1 if "DRIFT:" in _drift or "UNCOMMITTED" in _drift else 0)
 print(f"[{LEAGUE}] train_seasons={art.get('train_seasons')} test_seasons={art.get('test_seasons')}")
 print(f"[{LEAGUE}] claimed brier={art.get('brier')} log_loss={art.get('log_loss')}")
 

@@ -177,6 +177,21 @@ obvious:
 
 You cannot tell which case you are in without looking, so always pin.
 
+Documenting a hazard is not detecting it, so `verify_artifacts.py` now checks
+it. Git already knows when each training script and each artifact was last
+committed, so a source file that moved *after* its artifact — the exact
+condition under which published metrics describe a model that was never
+trained — is a fact, not a judgement call:
+
+```powershell
+$env:PYTHONPATH="."; python scripts\live_wp\verify_artifacts.py mlb --provenance-only
+```
+
+It prints the model class and its source file, reports drift or no drift, also
+flags an uncommitted working tree, and exits non-zero if either fires, so it
+can gate a publish. It runs in about a second, unlike a full re-score, so there
+is no reason to skip it. All four leagues are currently clean.
+
 ## Per-league details
 
 - [NHL](nhl.md)
