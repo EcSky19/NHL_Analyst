@@ -210,6 +210,23 @@ yl = list(y)
 print(f"[{LEAGUE}] REPRODUCED brier={brier_score(list(p), yl):.6f} log_loss={log_loss(list(p), yl):.6f}")
 print(f"[{LEAGUE}] calib_gap={max_calibration_gap(list(p), yl):.4f}")
 
+def _fmt_prob(v, dp=3):
+    """Format a probability without rounding a bounded value to a certain one.
+
+    Plain rounding prints 0.999999999 as "1.000", which reports a deliberately
+    bounded near-certainty (see the MLB walk-off rule) as an unbounded one --
+    the precise confusion that bound exists to prevent. Values inside the
+    rounding shadow of 0 or 1 are shown as their distance from it instead.
+    """
+    v = float(v)
+    edge = 0.5 * 10 ** (-dp)
+    if 0.0 < v < edge:
+        return f"0+{v:.0e}"
+    if 1.0 - edge < v < 1.0:
+        return f"1-{1.0 - v:.0e}"
+    return f"{v:.{dp}f}"
+
+
 # What we publish must be what we serve. predict_home_win_prob clips every
 # served value into SERVE_CLIP, so scoring the raw model measures something no
 # user ever receives. The gap is small but it is not zero, and "small" is a
@@ -219,11 +236,7 @@ n_clipped = int(((p < SERVE_CLIP[0]) | (p > SERVE_CLIP[1])).sum())
 print(f"[{LEAGUE}] AS-SERVED  brier={brier_score(list(p_served), yl):.6f} "
       f"log_loss={log_loss(list(p_served), yl):.6f} "
       f"(clipped {n_clipped} rows, {100 * n_clipped / max(len(p), 1):.3f}%, "
-      # 8dp rounds 0.999999999 to "1.00000000", which would report a bounded
-      # near-certainty as an unbounded one -- the exact confusion the MLB
-      # walk-off bound exists to avoid. Show the distance from the bounds.
-      f"raw range [{p.min():.8f}, {p.max():.8f}]"
-      f" = [0+{p.min():.3e}, 1-{1.0 - p.max():.3e}])")
+      f"raw range [{_fmt_prob(p.min(), 8)}, {_fmt_prob(p.max(), 8)}])")
 
 base = None
 for label, objective in (("brier", brier_score), ("logloss", log_loss)):
@@ -257,7 +270,7 @@ for frac in (0.75, 0.25, 0.05):
     ]
     ok = all(a <= b + 1e-9 for a, b in zip(probs, probs[1:]))
     print(f"[{LEAGUE}] frac={frac} margins -4..4 monotone={ok} "
-          + " ".join(f"{v:.3f}" for v in probs))
+          + " ".join(_fmt_prob(v) for v in probs))
 
 # Monotonicity in TIME: a fixed lead must gain value as the clock runs out.
 # Not gated historically, which is how NFL/MLB shipped with local reversals.
@@ -287,4 +300,4 @@ for margin in (1, 2, 3, -1, -2, -3):
     sign = "+" if margin > 0 else ""
     print(f"[{LEAGUE}] margin={sign}{margin} time-monotone={not drops} "
           f"drops={len(drops)}/{STEPS} worst={max(drops, default=0.0):.5f} "
-          f"{seq[0]:.4f}->{seq[-1]:.4f}")
+          f"{_fmt_prob(seq[0], 4)}->{_fmt_prob(seq[-1], 4)}")

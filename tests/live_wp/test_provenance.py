@@ -88,3 +88,48 @@ def test_missing_seasons_is_an_error_not_a_silent_partial_run():
                          capture_output=True, text=True, env=ENV, timeout=180)
     assert out.returncode != 0
     assert "usage:" in (out.stderr + out.stdout)
+
+
+def _fmt_prob():
+    """Pull _fmt_prob out of the script, which runs a full re-score on import.
+
+    Located by AST rather than by line offsets so the test does not silently
+    start checking the wrong code when the script is edited.
+    """
+    import ast
+    tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
+    node = next(n for n in tree.body
+                if isinstance(n, ast.FunctionDef) and n.name == "_fmt_prob")
+    ns = {}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), "<fmt>", "exec"), ns)
+    return ns["_fmt_prob"]
+
+
+@pytest.mark.parametrize("value,dp,expected", [
+    # The case this exists for: a bounded near-certainty must not be printed
+    # as certainty. 1 - 1e-9 is what the MLB walk-off rule emits.
+    (1.0 - 1e-9, 3, "1-1e-09"),
+    (1.0 - 1e-9, 4, "1-1e-09"),
+    (1.0 - 1e-9, 8, "1-1e-09"),
+    # A genuine 1.0 must stay visibly distinct from the bounded value.
+    (1.0, 3, "1.000"),
+    (0.0, 3, "0.000"),
+    # Ordinary values must not be disfigured.
+    (0.5, 3, "0.500"),
+    (0.891, 3, "0.891"),
+    (0.9994, 3, "0.999"),
+    # Just inside the rounding shadow, so it must switch representation.
+    (0.9996, 3, "1-4e-04"),
+    (1e-6, 8, "0.00000100"),
+])
+def test_fmt_prob_never_rounds_a_bound_into_a_certainty(value, dp, expected):
+    assert _fmt_prob()(value, dp) == expected
+
+
+def test_fmt_prob_distinguishes_exact_one_from_bounded_one():
+    """The whole point: these two must never render identically."""
+    f = _fmt_prob()
+    for dp in (2, 3, 4, 6, 8):
+        assert f(1.0, dp) != f(1.0 - 1e-9, dp)
+        assert f(0.0, dp) != f(1e-9, dp)
+
