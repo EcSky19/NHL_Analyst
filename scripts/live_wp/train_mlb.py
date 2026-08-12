@@ -119,6 +119,22 @@ class MonotoneBlendModel:
             return float(extras_probs[known[-1]])
         return None
 
+    def _walkoff_prob(self, margin: int, frac: float, is_overtime: float) -> float | None:
+        """Return the bounded certainty for regulation home walk-off states.
+
+        The condition is a rule of baseball, not a fitted estimate: if the home
+        team leads after the top of the 9th, the bottom half is not played and
+        the home team has won. Still, rule certainty is not worth an unbounded
+        log-loss penalty for unforeseen data quirks such as suspended games,
+        scoring corrections, or a mislabeled outcome, so the artifact stays
+        just below 1.0.
+        """
+        if is_overtime >= 0.5:
+            return None
+        if margin > 0 and frac <= (1.0 / 18.0) + 1e-12:
+            return 1.0 - 1e-9
+        return None
+
     def _blend_prob(self, row: np.ndarray, frac: float) -> float:
         vector = self._with_frac(row, frac)
         key = tuple(round(float(v), 8) for v in vector)
@@ -127,8 +143,12 @@ class MonotoneBlendModel:
             return cached
         base = float(self.base_model.predict_proba([vector])[0][1])
         margin = float(vector[self.feature_names.index("margin")])
-        normal = self._normal_prob(int(round(margin)), frac)
         is_overtime = float(vector[self.feature_names.index("is_overtime")]) if "is_overtime" in self.feature_names else 0.0
+        walkoff = self._walkoff_prob(int(round(margin)), frac, is_overtime)
+        if walkoff is not None:
+            self._cache[key] = walkoff
+            return walkoff
+        normal = self._normal_prob(int(round(margin)), frac)
         extras = self._extras_prob(int(round(margin))) if is_overtime >= 0.5 and frac <= 1e-12 else None
         if extras is not None:
             prob = extras
@@ -180,6 +200,10 @@ class MonotoneBlendModel:
         )
         blended = (1.0 - alphas) * base_probs + alphas * normal_probs
         for i, (margin, grid_frac) in enumerate(normal_inputs):
+            walkoff = self._walkoff_prob(int(round(margin)), grid_frac, is_overtimes[i])
+            if walkoff is not None:
+                blended[i] = walkoff
+                continue
             extras = self._extras_prob(int(round(margin))) if is_overtimes[i] >= 0.5 and grid_frac <= 1e-12 else None
             if extras is not None:
                 blended[i] = extras
@@ -199,6 +223,10 @@ class MonotoneBlendModel:
         values = {name: float(row[i]) for i, name in enumerate(self.feature_names)}
         margin = int(round(values["margin"]))
         frac = min(max(float(values.get("frac_remaining", 1.0)), 0.0), 1.0)
+        is_overtime = float(values.get("is_overtime", 0.0))
+        walkoff = self._walkoff_prob(margin, frac, is_overtime)
+        if walkoff is not None:
+            return walkoff
         surface_prob = self._surface_predict(values, margin, frac)
         if surface_prob is not None:
             return surface_prob
@@ -325,7 +353,7 @@ class MonotoneBlendModel:
                 prob = self._predict_one(row)
                 seen[key] = prob
             probs[i] = prob
-        probs = np.clip(probs, 1e-6, 1.0 - 1e-6)
+        probs = np.clip(probs, 1e-6, 1.0 - 1e-9)
         return np.column_stack([1.0 - probs, probs])
 
 

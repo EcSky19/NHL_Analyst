@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from app.services.live_winprob import GameState, artifact_path, load_model, predict_home_win_prob
+from app.services.live_winprob import GameState, artifact_path, build_features, load_model, predict_home_win_prob
 
 
 def _prob(margin: int, frac_remaining: float) -> float:
@@ -46,6 +46,26 @@ def test_mlb_time_leverage_for_same_lead():
     early = _prob(1, 0.8)
     late = _prob(1, 0.2)
     assert late > early
+
+
+def test_mlb_bottom_ninth_home_lead_is_walkoff():
+    assert _prob(1, 1.0 / 18.0) == pytest.approx(0.999)
+    assert _prob(3, 1.0 / 18.0) == pytest.approx(0.999)
+
+
+def test_mlb_walkoff_artifact_probability_is_bounded_below_one():
+    bundle = load_model("mlb")
+    model = bundle["model"]
+    names = bundle["feature_names"]
+    state = GameState(league="mlb", margin=1, frac_remaining=1.0 / 18.0, period=9)
+    feats = build_features(state)
+    prob = float(model.predict_proba([[feats[name] for name in names]])[0][1])
+    assert prob == pytest.approx(1.0 - 1e-9)
+
+
+def test_mlb_walkoff_rule_does_not_apply_before_bottom_ninth_or_tied():
+    assert _prob(1, 1.0 / 9.0) < 1.0 - 1e-4
+    assert _prob(0, 1.0 / 18.0) < 1.0 - 1e-4
 
 
 @pytest.mark.parametrize("margin", [1, 2, 3, 5])

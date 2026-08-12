@@ -219,7 +219,11 @@ n_clipped = int(((p < SERVE_CLIP[0]) | (p > SERVE_CLIP[1])).sum())
 print(f"[{LEAGUE}] AS-SERVED  brier={brier_score(list(p_served), yl):.6f} "
       f"log_loss={log_loss(list(p_served), yl):.6f} "
       f"(clipped {n_clipped} rows, {100 * n_clipped / max(len(p), 1):.3f}%, "
-      f"raw range [{p.min():.8f}, {p.max():.8f}])")
+      # 8dp rounds 0.999999999 to "1.00000000", which would report a bounded
+      # near-certainty as an unbounded one -- the exact confusion the MLB
+      # walk-off bound exists to avoid. Show the distance from the bounds.
+      f"raw range [{p.min():.8f}, {p.max():.8f}]"
+      f" = [0+{p.min():.3e}, 1-{1.0 - p.max():.3e}])")
 
 base = None
 for label, objective in (("brier", brier_score), ("logloss", log_loss)):

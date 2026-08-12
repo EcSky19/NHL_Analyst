@@ -56,7 +56,7 @@ outs because validation did not require it.
 
 | Predictor | Brier | Log loss | Notes |
 | --- | ---: | ---: | --- |
-| MLB model current | 0.155260 | 0.463786 | All held-out snapshots |
+| MLB model current | 0.155257 | 0.463758 | All held-out snapshots; includes bounded walk-off handling for home leads after the top of the 9th |
 | Previously shipped artifact re-scored on expanded 2025 | 0.157857 | 0.470732 | All held-out snapshots |
 | Leader baseline | 0.171609 | 0.523497 | 0.85 if home leads, 0.15 if trails |
 | Constant 0.5 | 0.250000 | 0.693147 | All held-out snapshots |
@@ -168,9 +168,48 @@ where the old artifact floored at 0.0126. Across both seasons (2.77M snapshots)
 is not an observed defect -- but a single contradicted 1e-6 prediction would cost
 13.8 nats, so the floor is worth revisiting if extras data ever grows.
 
-If the home team is leading after the top of the 9th, MLB simply ends the game;
-live serving should normally see that game as final rather than as an in-game
-state with a missing bottom half.
+If the home team is leading after the top of the 9th, MLB simply ends the game.
+The artifact therefore returns bounded near-certainty (`1.0 - 1e-9`) for
+regulation states with `margin > 0`, `is_overtime=False`, and
+`frac_remaining <= 1/18 + 1e-12`. This is a rule of the sport rather than a
+fitted estimate: the bottom of the 9th is not played when the home team already
+leads. The `1e-12` tolerance is intentional because production bottom-9
+encoding can land a few ULP above exact `1/18`. The bound is also intentional:
+confidence in a rule of baseball is not worth an unbounded log-loss penalty for
+unforeseen data quirks such as suspended games, scoring corrections, or a
+mislabeled outcome.
+
+The harvested data verified the rule with zero counterexamples: 2024 had 438
+firing rows over 101 games, 2025 had 468 rows over 112 games, and the combined
+906 rows over 213 games were all home wins. The analogous positive-margin
+`frac_remaining=0.0` extra-inning rows in 2024 also had zero exceptions
+(464/464 rows, 107 games), but extras continue to use the separate empirical
+table because extra innings are encoded separately.
+
+The walk-off rule specifically fixes the repeated bottom-9, home +1 defect: a
+state that is certain by the rules of the sport was being rated 0.9149. It does
+not fix the other three replicated late-inning cells, which remain open and
+measured below. With a 3000-resample cluster bootstrap by `game_id` on 2024:
+
+| Cell | Games | Rows | Old pred | New pred | Actual (95% CI) | Verdict |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| Bottom 9, home +1 | 84 | 369 | 0.914887 | 0.999999999 | 1.000000 [1.000000, 1.000000] | fixed by bounded rule certainty |
+| Bottom 8, home +1 | 330 | 8,173 | 0.833516 | 0.833516 | 0.873975 [0.835074, 0.910132] | open; unchanged and still outside |
+| Bottom 8, home +2 | 304 | 7,313 | 0.925872 | 0.925872 | 0.954328 [0.928550, 0.977302] | open; unchanged and still outside |
+| Top 9, home -1 | 294 | 6,970 | 0.215398 | 0.215398 | 0.165136 [0.116814, 0.213444] | open; unchanged and still outside |
+
+Full-season cluster-bootstrap deltas (old minus new) are tiny but positive:
+
+| Season | Brier delta (95% CI) | Log-loss delta (95% CI) | Interpretation |
+| --- | ---: | ---: | --- |
+| 2024 train season | +0.000001942 [+0.000001531, +0.000002417] | +0.000024480 [+0.000019414, +0.000030369] | statistically positive but practically tiny |
+| 2025 held-out season | +0.000002284 [+0.000001854, +0.000002724] | +0.000028371 [+0.000023070, +0.000033760] | statistically positive but practically tiny |
+
+These aggregate movements are statistically detectable because the rule fires
+on rows that were previously badly underrated, but they are practically
+negligible -- roughly four orders of magnitude smaller than the model/baseline
+differences discussed elsewhere on this page. The change is justified by the
+per-cell correctness argument, not by a meaningful aggregate accuracy gain.
 
 ## Sanity checks
 
@@ -181,7 +220,7 @@ Measured from the saved artifact:
 - Home +1 late: 0.860049.
 - Home -1 late: 0.212800.
 - Tied bottom 9th proxy: 0.580569.
-- Home +1 bottom 9th proxy: 0.914887.
+- Home +1 bottom 9th proxy: 0.999999999.
 - Tied extra-inning state: 0.602595.
 
 These pass the intended directionality checks: home win probability rises with
