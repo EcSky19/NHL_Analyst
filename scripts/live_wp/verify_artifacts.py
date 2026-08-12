@@ -37,6 +37,13 @@ TEST_SEASON = sys.argv[3]
 art = joblib.load(f"models/live_wp/{LEAGUE}_live_wp.joblib")
 names = art["feature_names"]
 print(f"[{LEAGUE}] feature_names={names}")
+# The artifact is NOT self-contained: pickle stores a reference to the model
+# class, not its code, so the logic comes from whatever scripts/live_wp/
+# train_*.py says right now. Checking out an old .joblib therefore does not
+# give you the old model. Print the provenance so this is impossible to forget.
+_model_obj = art["model"] if isinstance(art, dict) else art
+print(f"[{LEAGUE}] model class={type(_model_obj).__module__}.{type(_model_obj).__qualname__} "
+      f"(behaviour comes from that CURRENT source file, not from the .joblib)")
 print(f"[{LEAGUE}] train_seasons={art.get('train_seasons')} test_seasons={art.get('test_seasons')}")
 print(f"[{LEAGUE}] claimed brier={art.get('brier')} log_loss={art.get('log_loss')}")
 

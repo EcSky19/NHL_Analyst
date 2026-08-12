@@ -127,6 +127,56 @@ $env:PYTHONPATH="."; python scripts\live_wp\verify_artifacts.py mlb 2024 2025
 The verification script deliberately re-derives every metric from the snapshot
 database instead of trusting numbers stored in the artifact.
 
+### The artifacts are not self-contained
+
+A `.joblib` here does **not** freeze the model's behaviour. Pickle stores a
+*reference* to the model class, not its code, and these classes live in the
+training scripts:
+
+```python
+>>> type(joblib.load("models/live_wp/mlb_live_wp.joblib")["model"]).__module__
+'scripts.live_wp.train_mlb'
+```
+
+So the arrays are frozen but the logic is whatever `scripts/live_wp/train_*.py`
+says **today**. Editing a training script can change what production serves
+with no retrain, and checking out an old artifact does not give you the old
+model.
+
+That breaks the obvious way to measure a change:
+
+```powershell
+# WRONG - scores the OLD artifact with the NEW class code
+git show HEAD:models/live_wp/mlb_live_wp.joblib > old.joblib
+```
+
+We used exactly that method and it silently reported a change of **zero** on
+every one of 1.39M held-out snapshots, because both sides were running the new
+rule. The correct method pins source and artifact together:
+
+```powershell
+git worktree add --detach $env:TEMP\old_tree <commit>
+# score the old artifact inside the old worktree, the new one in the repo,
+# feeding both an identical feature matrix, then compare
+git worktree remove --force $env:TEMP\old_tree
+```
+
+Whether the shortcut happens to be safe depends on how much of a model's
+behaviour is *data* versus *code*, which differs per league and is not
+obvious:
+
+- **NBA** (`GridBlendModel`) serves predictions by interpolating a grid that is
+  pickled into the artifact. The class code mostly builds that grid at training
+  time, so an old artifact keeps behaving like the old model. Re-checking the
+  published overtime numbers with the pinned method reproduced them exactly
+  (overtime log loss 0.570655 to 0.428562, overtime Brier 0.164774 to 0.142148,
+  full season 0.164364 to 0.164083).
+- **MLB** (`MonotoneBlendModel`) applies rules such as the walk-off case in
+  live class code at predict time, so an old artifact adopts new behaviour
+  immediately and the shortcut compares a model to itself.
+
+You cannot tell which case you are in without looking, so always pin.
+
 ## Per-league details
 
 - [NHL](nhl.md)
