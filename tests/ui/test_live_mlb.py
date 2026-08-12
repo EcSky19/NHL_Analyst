@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import app.services.live_wp_state as _wp_state
 
 SHARED_GAME_KEYS = {
     "game_id",
@@ -168,7 +169,7 @@ def test_mlb_live_win_probability_normalizes_outs_boundaries(monkeypatch):
         captured.append(state)
         return 0.5, {"available": True}
 
-    monkeypatch.setattr(mlb, "predict_home_win_prob", fake_predict)
+    monkeypatch.setattr(_wp_state, "predict_home_win_prob", fake_predict)
 
     base = {
         "status": "live",

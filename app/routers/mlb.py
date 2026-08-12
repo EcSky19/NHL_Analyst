@@ -21,6 +21,7 @@ from app.services.espn_pbp import (
     parse_clock_seconds,
 )
 from app.services.live_winprob import GameState, predict_home_win_prob
+from app.services.live_wp_state import live_win_probability as _shared_live_win_probability
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -734,75 +735,7 @@ def schedule(date: str | None = None, season: str | None = None) -> dict[str, An
 
 def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
     """Return the honest live win-probability payload for one live row."""
-    unavailable = {
-        "available": False,
-        "home": None,
-        "away": None,
-        "model": f"{league}_live_wp",
-        "reason": "Live win probability unavailable because live game state is incomplete.",
-    }
-    if row.get("status") != "live":
-        return unavailable
-    live = row.get("live") if isinstance(row.get("live"), dict) else {}
-    home_score = _wp_int(row.get("home_score"))
-    away_score = _wp_int(row.get("away_score"))
-    period = _wp_int(live.get("period"))
-    if home_score is None or away_score is None or period is None:
-        return unavailable
-
-    outs: int | None = None
-    if league == "mlb":
-        # _period_label emits T5 / M5 (middle) / B5 / E5 (end) / bare "5".
-        # "M" (top over, bottom not started) is equivalent to bottom of the
-        # same inning, but "E" means the inning is COMPLETE, so the live state
-        # is the top of the next inning. Folding E into the bottom case leaves
-        # the model half an inning behind the real game.
-        # Outs are only meaningful during an active top/bottom half-inning.
-        # MLB can transiently publish outs=3 at M/E boundaries; treat that and
-        # any non-T/B state as unobserved instead of extrapolating beyond 0-2.
-        label = str(live.get("period_label") or row.get("detailed_status") or "").strip().upper()
-        inning, is_top = period, False
-        if label.startswith("T"):
-            is_top = True
-            raw_outs = _wp_int(live.get("outs"))
-            outs = raw_outs if raw_outs in (0, 1, 2) else None
-        elif label.startswith("E"):
-            inning, is_top = period + 1, True
-        elif label.startswith("B"):
-            raw_outs = _wp_int(live.get("outs"))
-            outs = raw_outs if raw_outs in (0, 1, 2) else None
-        is_overtime = inning > MLB_REGULATION_INNINGS
-        frac_remaining = 0.0 if is_overtime else frac_remaining_innings(inning, is_top)
-    else:
-        is_overtime = period > int(REGULATION[league]["periods"])
-        frac_remaining = frac_remaining_clock(league, period, parse_clock_seconds(live.get("clock")))
-
-    prob, meta = predict_home_win_prob(
-        GameState(
-            league=league,
-            margin=home_score - away_score,
-            frac_remaining=frac_remaining,
-            period=period,
-            is_overtime=is_overtime,
-            outs=outs,
-        )
-    )
-    if prob is None:
-        return {
-            "available": False,
-            "home": None,
-            "away": None,
-            "model": f"{league}_live_wp",
-            "reason": str(meta.get("reason") or "Live win-probability model is unavailable."),
-        }
-    home_prob = round(float(prob), 6)
-    return {
-        "available": True,
-        "home": home_prob,
-        "away": round(1.0 - home_prob, 6),
-        "model": f"{league}_live_wp",
-        "reason": None,
-    }
+    return _shared_live_win_probability(row, league)
 
 
 def _with_live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:

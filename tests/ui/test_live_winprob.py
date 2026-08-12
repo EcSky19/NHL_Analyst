@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 from typing import Any
+import app.services.live_wp_state as _wp_state
 
 
 def _live_game(game_id: str = "823598") -> dict[str, Any]:
@@ -29,7 +30,7 @@ def test_mlb_live_win_probability_available(client, mocked_mlb, monkeypatch):
 
     meta = {"cached": True, "stale": False, "age_seconds": 0.0, "fetched_at": "2026-08-05T00:00:00Z"}
     monkeypatch.setattr(mlb, "_fetch_live_window", lambda: ([_live_game()], meta, "2026"))
-    monkeypatch.setattr(mlb, "predict_home_win_prob", lambda state: (0.62, {"available": True}))
+    monkeypatch.setattr(_wp_state, "predict_home_win_prob", lambda state: (0.62, {"available": True}))
 
     payload = client.get("/api/mlb/live").json()
 
@@ -46,7 +47,7 @@ def test_mlb_live_win_probability_unavailable_surfaces_model_reason(client, mock
     meta = {"cached": True, "stale": False, "age_seconds": 0.0, "fetched_at": "2026-08-05T00:00:00Z"}
     reason = "No validated live win-probability model exists for MLB."
     monkeypatch.setattr(mlb, "_fetch_live_window", lambda: ([_live_game()], meta, "2026"))
-    monkeypatch.setattr(mlb, "predict_home_win_prob", lambda state: (None, {"available": False, "reason": reason}))
+    monkeypatch.setattr(_wp_state, "predict_home_win_prob", lambda state: (None, {"available": False, "reason": reason}))
 
     payload = client.get("/api/mlb/live").json()
 

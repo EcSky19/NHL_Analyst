@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import app.services.live_wp_state as _wp_state
 
 
 CONTRACT_KEYS = {
@@ -100,7 +101,7 @@ def test_nba_live_win_probability_threads_overtime_clock(monkeypatch) -> None:
         seen["state"] = state
         return 0.6, {"available": True}
 
-    monkeypatch.setattr(nba, "predict_home_win_prob", fake_predict)
+    monkeypatch.setattr(_wp_state, "predict_home_win_prob", fake_predict)
     row = {
         "status": "live",
         "home_score": 101,

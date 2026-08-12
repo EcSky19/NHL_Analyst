@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import app.services.live_wp_state as _wp_state
 
 
 CONTRACT_KEYS = {
@@ -213,7 +214,7 @@ def test_nfl_live_win_probability_threads_situation(monkeypatch) -> None:
         seen["state"] = state
         return 0.7, {"available": True}
 
-    monkeypatch.setattr(nfl, "predict_home_win_prob", fake_predict)
+    monkeypatch.setattr(_wp_state, "predict_home_win_prob", fake_predict)
     row = {
         "status": "live",
         "home": "KC",
@@ -247,7 +248,7 @@ def test_nfl_yard_line_conversion_for_away_possession(monkeypatch) -> None:
     import app.routers.nfl as nfl
 
     seen = {}
-    monkeypatch.setattr(nfl, "predict_home_win_prob", lambda state: seen.setdefault("state", state) and (0.3, {"available": True}))
+    monkeypatch.setattr(_wp_state, "predict_home_win_prob", lambda state: seen.setdefault("state", state) and (0.3, {"available": True}))
     row = {
         "status": "live",
         "home": "KC",
@@ -278,7 +279,7 @@ def test_nfl_live_win_probability_omitted_situation_is_neutral(monkeypatch) -> N
     import app.routers.nfl as nfl
 
     seen = {}
-    monkeypatch.setattr(nfl, "predict_home_win_prob", lambda state: seen.setdefault("state", state) and (0.55, {"available": True}))
+    monkeypatch.setattr(_wp_state, "predict_home_win_prob", lambda state: seen.setdefault("state", state) and (0.55, {"available": True}))
     row = {
         "status": "live",
         "home": "KC",

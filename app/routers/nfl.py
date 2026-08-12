@@ -11,6 +11,7 @@ from app.config import fail, ok, season_state_for, settings, utc_now_iso
 from app.services.espn_client import ET_ZONE, fetch_scoreboard
 from app.services.espn_pbp import REGULATION, frac_remaining_clock, frac_remaining_innings, parse_clock_seconds
 from app.services.live_winprob import GameState, predict_home_win_prob
+from app.services.live_wp_state import live_win_probability as _shared_live_win_probability
 from app.services.nfl_service import (
     ESPN_SOURCE,
     SOURCE,
@@ -299,58 +300,7 @@ def _season_opener(games: list[dict[str, Any]], season: int | None) -> str | Non
 
 def _live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
     """Return the honest live win-probability payload for one live row."""
-    unavailable = {
-        "available": False,
-        "home": None,
-        "away": None,
-        "model": f"{league}_live_wp",
-        "reason": "Live win probability unavailable because live game state is incomplete.",
-    }
-    if row.get("status") != "live":
-        return unavailable
-    live = row.get("live") if isinstance(row.get("live"), dict) else {}
-    home_score = _wp_int(row.get("home_score"))
-    away_score = _wp_int(row.get("away_score"))
-    period = _wp_int(live.get("period"))
-    if home_score is None or away_score is None or period is None:
-        return unavailable
-
-    if league == "mlb":
-        label = str(live.get("period_label") or row.get("detailed_status") or "")
-        is_top = label.upper().startswith("T") or label.lower().startswith("top")
-        is_overtime = period > 9
-        frac_remaining = 0.0 if is_overtime else frac_remaining_innings(period, is_top)
-    else:
-        is_overtime = period > int(REGULATION[league]["periods"])
-        frac_remaining = frac_remaining_clock(league, period, parse_clock_seconds(live.get("clock")))
-    situation = _nfl_situation_inputs(row) if league == "nfl" else {}
-
-    prob, meta = predict_home_win_prob(
-        GameState(
-            league=league,
-            margin=home_score - away_score,
-            frac_remaining=frac_remaining,
-            period=period,
-            is_overtime=is_overtime,
-            **situation,
-        )
-    )
-    if prob is None:
-        return {
-            "available": False,
-            "home": None,
-            "away": None,
-            "model": f"{league}_live_wp",
-            "reason": str(meta.get("reason") or "Live win-probability model is unavailable."),
-        }
-    home_prob = round(float(prob), 6)
-    return {
-        "available": True,
-        "home": home_prob,
-        "away": round(1.0 - home_prob, 6),
-        "model": f"{league}_live_wp",
-        "reason": None,
-    }
+    return _shared_live_win_probability(row, league)
 
 
 def _with_live_win_probability(row: dict[str, Any], league: str) -> dict[str, Any]:
@@ -394,39 +344,6 @@ def _attach_nfl_live_situations(rows: list[dict[str, Any]]) -> list[dict[str, An
         }
         out.append({**row, "live": live})
     return out
-
-
-def _nfl_situation_inputs(row: dict[str, Any]) -> dict[str, Any]:
-    live = row.get("live") if isinstance(row.get("live"), dict) else {}
-    situation = live.get("situation") if isinstance(live.get("situation"), dict) else {}
-    possession = situation.get("possession") or situation.get("possession_team_id")
-    home_id = situation.get("home_team_id") or row.get("home_team_id")
-    offense_is_home = None
-    if possession is not None and home_id is not None:
-        offense_is_home = str(possession) == str(home_id)
-    elif live.get("possession") is not None and row.get("home") is not None:
-        offense_is_home = str(live.get("possession")) == str(row.get("home"))
-
-    down = _wp_int(situation.get("down"))
-    distance = _wp_int(situation.get("distance"))
-    yards_to_endzone = _wp_int(situation.get("yardsToEndzone") or situation.get("yards_to_endzone"))
-    if yards_to_endzone is None:
-        yards_to_endzone = _nfl_yards_to_endzone(situation.get("yardLine"), offense_is_home)
-
-    return {
-        "offense_is_home": offense_is_home,
-        "down": down,
-        "distance": distance,
-        "yards_to_endzone": yards_to_endzone,
-    }
-
-
-def _nfl_yards_to_endzone(yard_line: Any, offense_is_home: bool | None) -> int | None:
-    yard = _wp_int(yard_line)
-    if yard is None or offense_is_home is None:
-        return None
-    yard = min(max(yard, 0), 100)
-    return 100 - yard if offense_is_home else yard
 
 
 def _wp_int(value: Any) -> int | None:
