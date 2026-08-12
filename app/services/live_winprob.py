@@ -29,6 +29,18 @@ from app.config import REPO_ROOT
 
 MODEL_DIR = REPO_ROOT / "models" / "live_wp"
 
+SERVE_CLIP = (0.001, 0.999)
+"""Every served probability is clipped into this range.
+
+Two reasons. It bounds the cost of a confidently wrong answer at 6.9 nats
+instead of the 13.8 an unclipped 1e-6 would cost, and it keeps the UI honest:
+no model here has earned the right to print a flat 0% or 100%.
+
+Evaluation must apply this too. Scoring a raw model measures something no user
+receives; `scripts/live_wp/verify_artifacts.py` imports this constant and
+reports the as-served metrics beside the raw ones so the two cannot drift.
+"""
+
 FEATURE_NAMES = [
     "margin",
     "margin_scaled",
@@ -309,7 +321,7 @@ def predict_home_win_prob(state: GameState) -> tuple[float | None, dict[str, Any
     except Exception as exc:
         return None, {"available": False, "reason": f"Live model failed to score this state: {exc}"}
 
-    prob = min(max(prob, 0.001), 0.999)
+    prob = min(max(prob, SERVE_CLIP[0]), SERVE_CLIP[1])
     meta: dict[str, Any] = {"available": True}
     if isinstance(bundle, dict):
         for key in ("trained_at", "n_games", "n_snapshots", "brier", "log_loss", "validation", "notes"):

@@ -22,6 +22,7 @@ from scipy.special import ndtr
 from app.services.espn_pbp import REGULATION, ot_frac_remaining_clock
 from app.services.live_winprob import (
     GameState,
+    SERVE_CLIP,
     baseline_normal,
     brier_score,
     build_features,
@@ -135,6 +136,17 @@ p = art["model"].predict_proba(X)[:, 1]
 yl = list(y)
 print(f"[{LEAGUE}] REPRODUCED brier={brier_score(list(p), yl):.6f} log_loss={log_loss(list(p), yl):.6f}")
 print(f"[{LEAGUE}] calib_gap={max_calibration_gap(list(p), yl):.4f}")
+
+# What we publish must be what we serve. predict_home_win_prob clips every
+# served value into SERVE_CLIP, so scoring the raw model measures something no
+# user ever receives. The gap is small but it is not zero, and "small" is a
+# measurement, not an assumption -- so report both rather than trusting it.
+p_served = np.clip(p, *SERVE_CLIP)
+n_clipped = int(((p < SERVE_CLIP[0]) | (p > SERVE_CLIP[1])).sum())
+print(f"[{LEAGUE}] AS-SERVED  brier={brier_score(list(p_served), yl):.6f} "
+      f"log_loss={log_loss(list(p_served), yl):.6f} "
+      f"(clipped {n_clipped} rows, {100 * n_clipped / max(len(p), 1):.3f}%, "
+      f"raw range [{p.min():.8f}, {p.max():.8f}])")
 
 base = None
 for label, objective in (("brier", brier_score), ("logloss", log_loss)):
