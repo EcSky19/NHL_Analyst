@@ -68,8 +68,8 @@ Corresponding Brier scores:
 
 | League | Ours (Brier) | Analytic baseline (Brier) | ESPN (Brier) |
 |---|---:|---:|---:|
-| NBA | 0.167947 | **0.166237** | **0.157319** |
-| NFL | 0.164048 | **0.163775** | **0.145762** |
+| NBA | 0.167947 | 0.166237 (not a significant difference) | **0.157319** |
+| NFL | 0.164048 | 0.163775 (not a significant difference) | **0.145762** |
 | MLB | **0.154604** | 0.155233 | 0.153735 (partial coverage) |
 | NHL | 0.175316 (is the baseline) | — | none published |
 
@@ -77,9 +77,24 @@ Read those tables plainly:
 
 - ESPN's published win-probability model beats ours in every league where ESPN
   publishes one. We do not claim parity. The gap is largest in the NFL.
-- Under Brier, NBA and NFL lose to the two-parameter analytic baseline. They
-  ship anyway because the policy tiebreaker is log loss, where they win. That is
-  a deliberate, documented choice, not an oversight.
+- Under Brier, NBA and NFL do **not** measurably differ from the two-parameter
+  analytic baseline. An earlier version of this page said they "lose" to it, and
+  that was an overstatement in the same family as the accuracy claims this repo
+  has already retracted -- it read a difference off correlated snapshots without
+  asking whether the difference was larger than noise. Re-measured with a
+  game-level cluster bootstrap (3,000 resamples, resampling whole `game_id`s)
+  on the current full-season artifacts, the Brier differences against a Brier-fit
+  baseline are NFL +0.000128 [-0.001913, +0.002123] over 272 games and NBA
+  -0.000133 [-0.000324, +0.000052] over 1,231 games. Both span zero. They ship
+  because they win log loss, which is the policy tiebreaker, and because there
+  is no measurable Brier cost to doing so -- not because we accept a known Brier
+  loss.
+- The log-loss wins are not all equally solid either. NBA's survives both
+  baseline parameterisations comfortably (-0.026752 [-0.038032, -0.016583]
+  against a log-loss-fit baseline). NFL's does not: against a log-loss-fit
+  baseline, which is the fairer opponent on that metric, it is -0.008985
+  [-0.017856, +0.000077], which touches zero. A 272-game NFL season is simply
+  too small to settle it, and the table above should be read with that in mind.
 - MLB is the only league that beats the analytic baseline on both metrics.
 - NHL ships the analytic baseline because it wins log loss and the learned model
   failed the monotonicity gate.
